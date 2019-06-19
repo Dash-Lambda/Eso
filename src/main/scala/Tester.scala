@@ -1,26 +1,66 @@
 import interpreters.BFFunctional.bfRun
+import translators.BrainPuff.bpTobf
 
-import util.control.Breaks._
-
+import scala.annotation.tailrec
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
 object Tester {
   def main(args: Array[String]): Unit = {
-    while(true){
-      val prog = getProg(scala.io.StdIn.readLine("Name of text file containing program: "))
-      prog match{
-        case Success(str) => bfRun(str)
-        case Failure(e) => println(s"Error: $e")
-      }
-      if(prog.isSuccess) break
+    controlLoop
+  }
+  
+  @tailrec
+  def controlLoop: Boolean = {
+    val prompt =
+      """|Choose a language...
+         |  1: Brainfuck
+         |  2: BrainPuff
+         |
+         |  0: Exit
+         |> """.stripMargin
+    
+    grabSel(prompt) match{
+      case 0 => true
+      case 1 =>
+        val prog = grabProg
+        println
+        bfRun(prog) match{
+          case None => println("Error: Program failed")
+          case Some(str) => println(s"Success: $str")
+        }
+        println
+        controlLoop
+      case 2 =>
+        val prog = grabProg
+        println
+        bfRun(bpTobf(prog)) match{
+          case None => println("Error: Program failed")
+          case Some(str) => println(s"Success: $str")
+        }
+        println
+        controlLoop
+      case n =>
+        println(s"Error: $n is not a valid option.\n")
+        controlLoop
     }
   }
   
-  def getProg(nam: String): Try[String] = Try{
+  def grabSel(prompt: String): Int = getInp{print(prompt); scala.io.StdIn.readInt}
+  
+  def grabProg: String = getInp{
+    val nam = scala.io.StdIn.readLine("Name of program text file: ")
     val fin = Source.fromFile(nam)
     val str = fin.getLines.mkString
     fin.close()
     str
+  }
+  
+  @tailrec
+  def getInp[T](func: => T): T = Try{func} match{
+    case Success(inp) => inp
+    case Failure(e) =>
+      println(s"Error: $e")
+      getInp(func)
   }
 }
