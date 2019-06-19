@@ -12,12 +12,12 @@ object BrainPuff {
     .replaceAll("""\?""", ",")
   
   def bfTobp(prog: String): String = prog
-    .replaceAll("[", "*gasp*")
-    .replaceAll("]", "*pomf*")
-    .replaceAll("+", "pf")
-    .replaceAll("-", "bl")
-    .replaceAll(">", "b")
-    .replaceAll("<", "t")
-    .replaceAll(".", "!")
-    .replaceAll(",", "?")
+    .replaceAll("""\[""", "*gasp*")
+    .replaceAll("""\]""", "*pomf*")
+    .replaceAll("""\+""", "pf")
+    .replaceAll("""-""", "bl")
+    .replaceAll(""">""", "b")
+    .replaceAll("""<""", "t")
+    .replaceAll("""\.""", "!")
+    .replaceAll(""",""", "?")
 }

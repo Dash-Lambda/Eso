@@ -1,5 +1,5 @@
 import interpreters.BFFunctional.bfRun
-import translators.BrainPuff.bpTobf
+import translators.BrainPuff.{bpTobf, bfTobp}
 
 import scala.annotation.tailrec
 import scala.io.Source
@@ -7,7 +7,8 @@ import scala.util.{Failure, Success, Try}
 
 object Tester {
   def main(args: Array[String]): Unit = {
-    controlLoop
+    val prog = "><+-.,[]"
+    println(bfTobp(prog))
   }
   
   @tailrec
@@ -27,7 +28,7 @@ object Tester {
         println
         bfRun(prog) match{
           case None => println("Error: Program failed")
-          case Some(str) => println(s"Success: $str")
+          case _ =>
         }
         println
         controlLoop
@@ -36,7 +37,7 @@ object Tester {
         println
         bfRun(bpTobf(prog)) match{
           case None => println("Error: Program failed")
-          case Some(str) => println(s"Success: $str")
+          case _ =>
         }
         println
         controlLoop
