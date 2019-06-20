@@ -1,4 +1,4 @@
-# Functional-Brainf-ck
+# Functional Esoteric Interpreter
 
 This is a purely (or mostly purely) functional interpreter for esoteric programming languages written in Scala.
 
