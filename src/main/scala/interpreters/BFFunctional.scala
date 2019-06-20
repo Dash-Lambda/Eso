@@ -4,7 +4,8 @@ import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
 object BFFunctional {
-  def bfRun(prog: String, log: Boolean = true): Option[String] = bfi("", prog.filter("<>+-.,[]".contains(_)), List[Int](), List[Int](0), 0, 0, log, "")
+  def bfRun(prog: String): Option[String] = bfRun(prog, true)
+  def bfRun(prog: String, log: Boolean): Option[String] = bfi("", prog.filter("<>+-.,[]".contains(_)), List[Int](), List[Int](0), 0, 0, log, "")
   
   @tailrec
   def bfi(plog: String, psrc: String, dlog: List[Int], dsrc: List[Int], dir: Int, cnt: Int, cons: Boolean, result: String): Option[String] = dir match{
