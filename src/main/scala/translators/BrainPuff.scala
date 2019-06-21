@@ -20,11 +20,17 @@ package translators
   */
 
 object BrainPuff extends BFTranslator{
-  final val name = "BrainPuff"
+  final val name = "FlufflePuff"
+  final lazy val kvPairs = Vector[(String, String)](
+    ("[", "*gasp*"),
+    ("]", "*pomf*"),
+    ("+", "pf"),
+    ("-", "bl"),
+    (">", "b"),
+    ("<", "t"),
+    (".", "!"),
+    (",", "?"))
   
-  final lazy val keys: Vector[String] = Vector("*gasp*", "*pomf*", "pf", "bl", "b", "t", "!", "?")
-  final lazy val vals: Vector[String] = Vector("[", "]", "+", "-", ">", "<", ".", ",")
-  
-  def apply(prog: String): String = keys.foldLeft(prog){(str, key) => str.replaceAllLiterally(key, syntax(key))}
-  def unapply(prog: String): String = revSyntax.keys.foldLeft(prog){(str, key) => str.replaceAllLiterally(key, revSyntax(key))}
+  def apply(prog: String): String = vals.foldLeft(prog){(str, key) => str.replaceAllLiterally(key, revSyntax(key))}
+  def unapply(prog: String): String = keys.foldLeft(prog){(str, key) => str.replaceAllLiterally(key, syntax(key))}
 }

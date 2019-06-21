@@ -4,9 +4,10 @@ import scala.collection.immutable
 
 trait BFTranslator {
   def name: String
+  def kvPairs: Vector[(String, String)]
   
-  def keys: Vector[String]
-  def vals: Vector[String]
+  final lazy val keys = kvPairs.map(_._1)
+  final lazy val vals = kvPairs.map(_._2)
   
   final lazy val syntax = buildMap(keys, vals)
   final lazy val revSyntax = buildMap(vals, keys)
