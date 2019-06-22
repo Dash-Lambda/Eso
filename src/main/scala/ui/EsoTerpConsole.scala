@@ -1,23 +1,23 @@
 package ui
 
 import ConsoleHandlers._
-import interpreters.BFFunctional._
 import translators.{BFTranslator, BrainPuff, Ook}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
-import scala.util.{Failure, Success}
 
 object EsoTerpConsole {
   val nativeTrans: Vector[BFTranslator] = Vector[BFTranslator](BrainPuff, Ook)
-  val log: Boolean = true //IMPLEMENT USER CONTROL
-  val pointer: String = "ExoTerp> "
-  val defaultLangFile: String = "CustomLangs.txt"
+  val welcomeText = "Welcome to EsoTerp, the functional esoteric language interpreter!"
+  val pointer: String = "EsoTerp> "
   val helpText: String =
     """|Commands...
-       |  run <language> <file name>
+       |  run <language> <source file name>
+       |  runOp <language> <source file name>
        |  translate <from/to> <language> <source> <optional destination>
-       |  loadBFLangs <optional file name>
+       |  loadBFLangs <file name>
+       |  saveBFLangs <file name>
+       |  defineBFLang
        |  listLangs
        |  syntax <language>
        |  exit
@@ -27,7 +27,7 @@ object EsoTerpConsole {
     val builder = immutable.HashMap.newBuilder[String, BFTranslator]
     builder ++= nativeTrans.map(trans => (trans.name, trans))
     val transMap = builder.result
-    print("Welcome to ExoTerp, the functional esoteric language interpreter!")
+    print(welcomeText)
     consoleLoop(transMap)
   }
   
@@ -36,51 +36,22 @@ object EsoTerpConsole {
     val inp = grabStr(s"\n$pointer").split(" ").toVector
     
     inp match{
-      case "run" +: tail =>
-        val res = tail match{
-          case "BrainFuck" +: fnam +: _ => runProgHandler(bfRun, log)(fnam)
-          case lang +: fnam +: _ => translators.get(lang) match{
-            case Some(t) => runProgHandler(prog => bfRun(t(prog)), log)(fnam)
-            case None => Failure(HandlerException("Language Not Recognized"))
-          }
-        }
-        res match{
-          case Success(str) => if(!log) println(str)
-          case Failure(e) => println(s"Error: $e")
-        }
+      case "run" +: args => bfRunHandler(translators, optimized = false)(args)
         consoleLoop(translators)
-      case "loadBFLangs" +: tail =>
-        val fnam = if(tail.nonEmpty) tail.mkString(" ") else defaultLangFile
-        grabBFLangs(fnam) match{
-          case Success(vec) => println(s"Successfully loaded...\n${vec.map(_.name).mkString("\n")}")
-            consoleLoop(translators ++ vec.map(trans => (trans.name, trans)))
-          case Failure(e) => println(s"Failed to load: $e")
-            consoleLoop(translators)
-        }
-      case "translate" +: dr +: lang +: tail =>
-        translators.get(lang) match{
-          case Some(trans) =>
-            translateHandler(trans, dr)(tail) match{
-              case Success(str) => println(s"Program successfully translated...\n$str")
-              case Failure(e) => println(s"Error: $e")
-            }
-          case None => println(s"$lang is not a recognized translator.")
-        }
+      case "runOp" +: args => bfRunHandler(translators, optimized = true)(args)
         consoleLoop(translators)
-      case "listLangs" +: _ => println(s"Currently loaded languages...\n- BrainFuck\n${translators.keys.map(nam => s"- $nam").mkString("\n")}")
+      case "translate" +: args => translationHandler(translators)(args)
         consoleLoop(translators)
-      case "syntax" +: lang +: _ =>
-        translators.get(lang) match{
-          case Some(t) =>
-            val str = t.syntax.toVector.map(p => s"  ${p._1} => ${p._2}").mkString("\n")
-            println(s"Syntax for $lang:\n$str")
-          case None => println(s"$lang is not a recognized translator.")
-        }
+      case "listLangs" +: _ => println(s"Currently loaded languages...\n${translators.keys.map(s => s"- $s").mkString("\n")}")
         consoleLoop(translators)
-      case "help" +: _ => println(helpText)
+      case "saveBFLangs" +: args => bfLangSaveHandler(translators, nativeTrans)(args)
         consoleLoop(translators)
+      case "syntax" +: args => syntaxHandler(translators)(args)
+        consoleLoop(translators)
+      case "loadBFLangs" +: args => consoleLoop(translators ++ loadLangsHandler(args))
+      case "defineBFLang" +: _ => consoleLoop(translators + langCreationHandler)
       case "exit" +: _ => println("Closing...")
-      case _ => println("Unknown Command")
+      case _ => println("Invalid command.")
         consoleLoop(translators)
     }
   }
