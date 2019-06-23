@@ -19,13 +19,14 @@ Current features:
 * Optimized and unoptimized BrainFuck interpreters
 * Translate to and from supported languages
 * User-defined languages
+* User-configurable runtime parameters (logging, maximum output size, tape size, etc.)
 
 WIP features:
 * Additional languages and interpreters (currently trying to figure out the Whitespace language)
 * Potentially everything
 
 There are two ways to define your own language:
-* Use the console prompt, which will ask you for the language name and syntax and handle the rest.
+* Use the console prompt, which will ask you for the language name and syntax then handle the rest.
 * Make a text file containing your language's information in this form:
 ```
 name=...
