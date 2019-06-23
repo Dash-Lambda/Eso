@@ -5,8 +5,8 @@ import scala.io.StdIn
 import scala.util.{Failure, Success, Try}
 
 object BFFunctional {
-  def bfRun(prog: String): Try[String] = bfRun(prog, log = true)
-  def bfRun(prog: String, log: Boolean): Try[String] = {
+  def bfRun(prog: String): Try[String] = bfRun(prog, 1, -1, log = true)
+  def bfRun(prog: String, initTapeSize: Int, outputMaxLength: Int, log: Boolean): Try[String] = {
     @tailrec
     def bfi(plog: String, psrc: String, dlog: List[Int], dsrc: List[Int], dir: Int, cnt: Int, result: String): Try[String] = dir match{
       case 1 => (psrc.headOption, cnt) match{
@@ -31,13 +31,13 @@ object BFFunctional {
           case '-' => bfi(psrc.head +: plog, psrc.tail, dlog, (dsrc.head - 1) +: dsrc.tail, dir, cnt, result)
           case ']' => if(dsrc.head == 0) bfi(psrc.head +: plog, psrc.tail, dlog, dsrc, dir, cnt, result) else bfi(plog.tail, plog.head +: psrc, dlog, dsrc, -1, 0, result)
           case '[' => if(dsrc.head == 0) bfi(psrc.head +: plog, psrc.tail, dlog, dsrc, 1, 0, result) else bfi(psrc.head +: plog, psrc.tail, dlog, dsrc, dir, cnt, result)
-          case '.' => if(log) print(dsrc.head.toChar); bfi(psrc.head +: plog, psrc.tail, dlog, dsrc, dir, cnt, result :+ dsrc.head.toChar)
+          case '.' => if(log) print(dsrc.head.toChar); if((outputMaxLength == -1) || (result.length + 1 < outputMaxLength)) bfi(psrc.head +: plog, psrc.tail, dlog, dsrc, dir, cnt, result :+ dsrc.head.toChar) else Success(result :+ dsrc.head.toChar)
           case ',' => bfi(psrc.head +: plog, psrc.tail, dlog, StdIn.readInt +: dsrc.tail, dir, cnt, result)
         }
         case _ => Success(result)
       }
     }
     
-    bfi("", prog.filter("<>+-.,[]".contains(_)), List[Int](), List[Int](0), 0, 0, "")
+    bfi("", prog.filter("<>+-.,[]".contains(_)), List[Int](), List.fill(initTapeSize)(0), 0, 0, "")
   }
 }
