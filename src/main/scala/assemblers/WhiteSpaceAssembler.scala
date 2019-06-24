@@ -5,6 +5,12 @@ import scala.collection.immutable
 import scala.util.{Failure, Success, Try}
 
 object WhiteSpaceAssembler extends Assembler {
+  def mkMap[A, B](vec: Vector[(A, B)]): immutable.HashMap[A, B] = {
+    val builder = immutable.HashMap.newBuilder[A, B]
+    builder ++= vec
+    builder.result
+  }
+  
   val syntax: Vector[(String, String)] = Vector[(String, String)](
     ("  ", "push"),
     (" \n ", "dup"),
@@ -28,16 +34,8 @@ object WhiteSpaceAssembler extends Assembler {
     ("\t\n \t", "outNum"),
     ("\t\n\t ", "readChar"),
     ("\t\n\t\t", "readNum"))
-  val synMap: immutable.HashMap[String, String] = {
-    val builder = immutable.HashMap.newBuilder[String, String]
-    builder ++= syntax.map(p => (p._2, p._1))
-    builder.result
-  }
-  val revSynMap: immutable.HashMap[String, String] = {
-    val builder = immutable.HashMap.newBuilder[String, String]
-    builder ++= syntax
-    builder.result
-  }
+  val synMap: immutable.HashMap[String, String] = mkMap(syntax.map(p => (p._2, p._1)))
+  val revSynMap: immutable.HashMap[String, String] = mkMap(syntax)
   val argOps: Vector[String] = Vector[String]("push", "label", "call", "jump", "jumpZero", "jumpNeg")
   val nonArgOps: Vector[String] = Vector[String]("dup", "swap", "discard", "add", "subt", "mult", "intDiv", "mod", "store", "get", "return", "endProg", "outChar", "outNum", "readChar", "readNum")
   val logMap: immutable.HashMap[Char, Char] = immutable.HashMap[Char, Char]((' ', 'S'), ('\t', 'T'), ('\n', 'L'))

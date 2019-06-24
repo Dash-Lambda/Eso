@@ -12,11 +12,5 @@ trait BFTranslator extends Translator {
   final lazy val syntax = buildMap(keys, vals)
   final lazy val revSyntax = buildMap(vals, keys)
   
-  protected final lazy val builder = immutable.HashMap.newBuilder[String, String]
-  protected final def buildMap(ks: Vector[String], vs: Vector[String]): immutable.HashMap[String, String] = {
-    builder ++= ks.zip(vs)
-    val res = builder.result
-    builder.clear
-    res
-  }
+  protected final def buildMap(ks: Vector[String], vs: Vector[String]): immutable.HashMap[String, String] = mkMap(ks.zip(vs))
 }

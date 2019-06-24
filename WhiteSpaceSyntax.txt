@@ -2,7 +2,7 @@ Syntax used for the WhiteSpace disassembler:
 
 Stack Manipulation:
 - push <number> 		= stack push
-- dep 					= duplicate
+- dup 					= duplicate
 - swap 					= swap
 - discard 				= discard
 
