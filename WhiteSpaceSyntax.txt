@@ -1,0 +1,33 @@
+Syntax used for the WhiteSpace disassembler:
+
+Stack Manipulation:
+- push <number> 		= stack push
+- dep 					= duplicate
+- swap 					= swap
+- discard 				= discard
+
+Arithmetic:
+- add 					= addition
+- subt 					= subtraction
+- mult 					= multiplication
+- intDiv 				= integer division
+- mod 					= modulu
+
+Heap Acces:
+- store 				= store
+- get 					= retrieve
+
+Flow Control:
+- label <number> 		= mark location
+- call <number> 		= call subroutine
+- jump <number> 		= unconditional jump
+- jumpZero <number> 	= jump if top of stack is 0
+- jumpNeg <number> 		= jump if top of stack is negative
+- return 				= end subroutine
+- endProg 				= end program
+
+I/O:
+- outChar 				= output char
+- outNum 				= output number
+- readChar 				= read char
+- readNum 				= read number
