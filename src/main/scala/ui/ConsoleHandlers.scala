@@ -15,12 +15,12 @@ import scala.collection.{immutable, mutable}
 case class HandlerException(info: String) extends Throwable
 
 object ConsoleHandlers {
-  def runHandler(BFTranslators: mutable.HashMap[String, BFTranslator], interpreters: immutable.HashMap[String, Interpreter], optimized: Boolean, initTapeSize: Int, outputMaxLength: Int, log: Boolean)(args: Vector[String]): Unit = {
+  def runHandler(BFTranslators: mutable.HashMap[String, BFTranslator], interpreters: immutable.HashMap[String, Interpreter], optimized: Boolean, initTapeSize: Int, outputMaxLength: Int, log: Boolean, debug: Boolean)(args: Vector[String]): Unit = {
     args match{
       case lang +: fnam +: _ if lang == "BrainFuck" || BFTranslators.isDefinedAt(lang) || interpreters.isDefinedAt(lang) =>
         grabProg(fnam) match{
           case Success(prog) =>
-            val interp: String => Try[String] = if(interpreters.isDefinedAt(lang)) interpreters(lang)(log) else BFManager(BFTranslators, initTapeSize, outputMaxLength, optimized, log, lang)
+            val interp: String => Try[String] = if(interpreters.isDefinedAt(lang)) interpreters(lang)(log, debug) else BFManager(BFTranslators, initTapeSize, outputMaxLength, optimized, log, debug, lang)
             print(s"Running $fnam... ")
             if(log) println
             val tStart = System.currentTimeMillis
@@ -166,14 +166,15 @@ object ConsoleHandlers {
           |""".stripMargin)
   }
   
-  def printVarsHandler(initTapeSize: Int, outputMaxLength: Int, BFOpt: Boolean, log: Boolean): Unit = {
-    val maxLen = Vector(initTapeSize, outputMaxLength, BFOpt, log).map(_.toString.length).max
+  def printVarsHandler(initTapeSize: Int, outputMaxLength: Int, BFOpt: Boolean, log: Boolean, debug: Boolean): Unit = {
+    val maxLen = Vector(initTapeSize, outputMaxLength, BFOpt, log, debug).map(_.toString.length).max
     println(
-      s"""|initTapeSize    = %-${maxLen}d (initial tape length for BrainFuck interpreters)
-          |outputMaxLength = %-${maxLen}d (maximum size of output string for BrainFuck interpreters, useful for non-terminating programs)
-          |BFOpt           = %-${maxLen}b (optimize BrainFuck code)
-          |log             = %-${maxLen}b (determines whether output is shown during or after runtime)
-          |""".stripMargin.format(initTapeSize, outputMaxLength, BFOpt, log))
+      s"""|initTapeSize     = %-${maxLen}d  (initial tape length for BrainFuck interpreters)
+          |outputMaxLength  = %-${maxLen}d  (maximum size of output string for BrainFuck interpreters, useful for non-terminating programs)
+          |BFOpt            = %-${maxLen}b  (optimize BrainFuck code)
+          |log              = %-${maxLen}b  (determines whether output is shown during or after runtime)
+          |debug            = %-${maxLen}b  (show runtime information, such as stack and heap states)
+          |""".stripMargin.format(initTapeSize, outputMaxLength, BFOpt, log, debug))
   }
   
   def helpHandler(): Unit = print(
@@ -191,7 +192,8 @@ object ConsoleHandlers {
        |  listVars
        |  help
        |  exit
-       |  """.stripMargin)
+       |
+       |""".stripMargin)
   
   def setBoolHandler(arg: String, default: Boolean): Boolean = arg match{
     case "true" => true

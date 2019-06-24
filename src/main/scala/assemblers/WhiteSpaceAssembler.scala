@@ -30,7 +30,7 @@ object WhiteSpaceAssembler extends Assembler {
     ("\t\n\t\t", "readNum"))
   val synMap: immutable.HashMap[String, String] = mkMap(syntax.map(p => (p._2, p._1)))
   val revSynMap: immutable.HashMap[String, String] = mkMap(syntax)
-  val argOps: Vector[String] = Vector[String]("push", "label", "call", "jump", "jumpZero", "jumpNeg")
+  val argOps: Vector[String] = Vector[String]("push", "label", "call", "jump", "jumpZero", "jumpNeg").sortWith(_.length > _.length)
   val nonArgOps: Vector[String] = Vector[String]("dup", "swap", "discard", "add", "subt", "mult", "intDiv", "mod", "store", "get", "return", "endProg", "outChar", "outNum", "readChar", "readNum")
   val logMap: immutable.HashMap[Char, Char] = immutable.HashMap[Char, Char]((' ', 'S'), ('\t', 'T'), ('\n', 'L'))
   
@@ -46,22 +46,29 @@ object WhiteSpaceAssembler extends Assembler {
   }
   
   def apply(prog: Vector[String], log: Boolean): Try[String] = {
+    def printLog(str: String): Unit = if(log) println(str)
+    
     @tailrec
     def aHelper(ac: String, src: Vector[String]): Try[String] = src match{
       case op +: ops =>
-        if(log) print(s"$op -> ")
+        if(log) print(s"$op")
         op match{
+          case tok if tok.startsWith("//") =>
+            printLog("")
+            aHelper(ac, ops)
           case tok if nonArgOps.contains(tok) =>
-            if(log) println(synMap(tok).map(logMap))
+            printLog(s" -> ${synMap(tok).map(logMap)}")
             aHelper(ac ++ synMap(tok), ops)
-          case tok if argOps.exists(tok.startsWith) =>
-            if(tok.exists(_.isDigit)){
-              val assembled = synMap(tok.takeWhile(c => !c.isDigit)) ++ longToBin(tok.dropWhile(c => !c.isDigit).toLong)
-              if(log) println(assembled.map(logMap))
-              aHelper(ac ++ assembled, ops)
-            }
-            else Failure(AssemblerException("Not Enough Arguments"))
-          case _ => Failure(AssemblerException("Operation Not Recognized"))
+          case tok => argOps.find(tok.startsWith) match{
+            case Some(key) =>
+              if(tok.exists(_.isDigit)){
+                val assembled = synMap(key) ++ longToBin(tok.drop(key.length).toLong)
+                printLog(s" -> ${assembled.map(logMap)}")
+                aHelper(ac ++ assembled, ops)
+              }
+              else Failure(AssemblerException("Not Enough Arguments"))
+            case None => Failure(AssemblerException("Operation Not Recognized"))
+          }
         }
       case _ => Success(ac)
     }
@@ -74,7 +81,7 @@ object WhiteSpaceAssembler extends Assembler {
     val synKeys = syntax.map(_._1).sortWith(_.length > _.length)
     
     def longNum(str: String): Long = str.takeWhile(_ != '\n').reverse.zipWithIndex.map{case (c, i) => if(c == '\t') Math.pow(2, i).toLong else 0L}.sum
-  
+    
     @tailrec
     def uHelper(ac: Vector[String], src: String): Try[String] = synKeys.find(key => src.startsWith(key)) match{
       case Some(key) =>
@@ -87,7 +94,7 @@ object WhiteSpaceAssembler extends Assembler {
         }
       case None => if(src.nonEmpty) uHelper(ac, src.tail) else Success(ac.mkString("\n"))
     }
-  
+    
     val conditioned = prog.replaceAll("(\r\n|\r)", "\n").filter("\t\n ".contains(_))
     uHelper(Vector[String](), conditioned)
   }

@@ -5,18 +5,18 @@ import scala.io.StdIn
 import scala.util.{Failure, Success, Try}
 
 object BFOptimized extends Interpreter{
-  def apply(log: Boolean)(prog: String): Try[String] = apply(1, -1, log)(prog)
-  def apply(initTapeSize: Int, outputMaxLength: Int, log: Boolean)(prog: String): Try[String] = {
-    optimize(prog) match{
-      case Success(optProg) => bfoFunc(optProg, initTapeSize, outputMaxLength, log)
-      case Failure(e) => Failure(e)
-    }
+  def apply(log: Boolean, debug: Boolean)(prog: String): Try[String] = apply(1, -1, log, debug)(prog)
+  def apply(initTapeSize: Int, outputMaxLength: Int, log: Boolean, debug: Boolean)(prog: String): Try[String] = optimize(prog) match{
+    case Success(optProg) => bfoFunc(optProg, initTapeSize, outputMaxLength, log, debug)
+    case Failure(e) => Failure(e)
   }
-  def bfoFunc(prog: Vector[(Char, Int)], initTapeSize: Int, outputMaxLength: Int, log: Boolean): Try[String] = {
+  
+  def bfoFunc(prog: Vector[(Char, Int)], initTapeSize: Int, outputMaxLength: Int, log: Boolean, debug: Boolean): Try[String] = {
     @tailrec
     def bfo(plog: Vector[(Char, Int)], psrc: Vector[(Char, Int)], dlog: Vector[Int], dsrc: Vector[Int], result: String): Try[String] = psrc match{
       case p +: ps =>
         val (c, n) = p
+        if(debug) println(s"BFO: $c [${dsrc.mkString(" | ")} -(${if(dsrc.nonEmpty) dsrc.head.toString else "-"})- ${dsrc.tail.mkString(" | ")}]")
         c match{
           case '>' =>
             if(dsrc.sizeIs > n) bfo(plog :+ p, ps, dlog ++ dsrc.take(n), dsrc.drop(n), result)

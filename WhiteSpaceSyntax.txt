@@ -1,5 +1,7 @@
 Syntax used for the WhiteSpace disassembler:
 
+Comments: //<text>
+
 Stack Manipulation:
 - push <number> 		= stack push
 - dup 					= duplicate

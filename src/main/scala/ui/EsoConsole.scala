@@ -2,8 +2,8 @@ package ui
 
 import ConsoleHandlers._
 import assemblers.{Assembler, WhiteSpaceAssembler}
-import interpreters.{Interpreter, WhiteSpace}
-import translators.{BFTranslator, BrainPuff, Ook}
+import interpreters.{Interpreter, WhiteSpace, WhiteSpaceSL}
+import translators.{BFTranslator, FlufflePuff, Ook}
 
 import scala.collection.{immutable, mutable}
 
@@ -14,15 +14,16 @@ object EsoConsole {
        |Type "help" for a list of commands.
        |""".stripMargin
   
-  val nativeTrans: Vector[BFTranslator] = Vector[BFTranslator](BrainPuff, Ook)
+  val nativeTrans: Vector[BFTranslator] = Vector[BFTranslator](FlufflePuff, Ook)
   val BFTranslators: mutable.HashMap[String, BFTranslator] = mutable.HashMap[String, BFTranslator]()
   val assemVec: Vector[(String, Assembler)] = Vector[(String, Assembler)](("WhiteSpace", WhiteSpaceAssembler))
-  val interpVec: Vector[(String, Interpreter)] = Vector[(String, Interpreter)](("WhiteSpace", WhiteSpace))
+  val interpVec: Vector[(String, Interpreter)] = Vector[(String, Interpreter)](("WhiteSpace", WhiteSpace), ("WhiteSpaceSL", WhiteSpaceSL))
   
   var initTapeSize: Int = 100
   var outputMaxLength: Int = -1
   var BFOpt: Boolean = true
   var log: Boolean = true
+  var debug: Boolean = false
   
   def main(args: Array[String]): Unit = {
     BFTranslators ++= nativeTrans.map(t => (t.name, t))
@@ -36,9 +37,9 @@ object EsoConsole {
     var runChk = true
     while(runChk){
       val inp = grabStr(s"$pointer").split(" ").toVector
-  
+      
       inp match{
-        case "run" +: args => runHandler(BFTranslators, interpreters, BFOpt, initTapeSize, outputMaxLength, log)(args)
+        case "run" +: args => runHandler(BFTranslators, interpreters, BFOpt, initTapeSize, outputMaxLength, log, debug)(args)
         case "assemble" +: args => assembleHandler(assemblers, log, rev = false)(args)
         case "disassemble" +: args => assembleHandler(assemblers, log, rev = true)(args)
         case "translate" +: args => translationHandler(BFTranslators)(args)
@@ -46,10 +47,11 @@ object EsoConsole {
         case "saveBFLangs" +: args => bfLangSaveHandler(BFTranslators, nativeTrans)(args)
         case "syntax" +: args => syntaxHandler(BFTranslators)(args)
         case "help" +: _ => helpHandler()
-        case "listVars" +: _ => printVarsHandler(initTapeSize, outputMaxLength, BFOpt, log)
+        case "listVars" +: _ => printVarsHandler(initTapeSize, outputMaxLength, BFOpt, log, debug)
         case "set" +: args =>
           args match{
             case "log" +: arg +: _ => log = setBoolHandler(arg, log)
+            case "debug" +: arg +: _ => debug = setBoolHandler(arg, debug)
             case "BFOpt" +: arg +: _ => BFOpt = setBoolHandler(arg, BFOpt)
             case "outputMaxLength" +: arg +: _ => outputMaxLength = setIntHandler(arg, outputMaxLength)
             case "initTapeSize" +: arg +: _ => initTapeSize = setIntHandler(arg, initTapeSize)

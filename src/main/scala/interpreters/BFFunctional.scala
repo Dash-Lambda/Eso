@@ -5,8 +5,8 @@ import scala.io.StdIn
 import scala.util.{Failure, Success, Try}
 
 object BFFunctional extends Interpreter {
-  def apply(log: Boolean)(prog: String): Try[String] = apply(1, -1, log)(prog)
-  def apply(initTapeSize: Int, outputMaxLength: Int, log: Boolean)(prog: String): Try[String] = {
+  def apply(log: Boolean, debug: Boolean)(prog: String): Try[String] = apply(1, -1, log, debug)(prog)
+  def apply(initTapeSize: Int, outputMaxLength: Int, log: Boolean, debug: Boolean)(prog: String): Try[String] = {
     @tailrec
     def bfi(plog: String, psrc: String, dlog: List[Int], dsrc: List[Int], dir: Int, cnt: Int, result: String): Try[String] = dir match{
       case 1 => (psrc.headOption, cnt) match{
