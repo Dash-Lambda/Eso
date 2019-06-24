@@ -2,30 +2,29 @@ package ui
 
 import java.io.{File, FileWriter, PrintWriter}
 
+import assemblers.{Assembler, AssemblerException}
 import translators._
 
 import scala.annotation.tailrec
 import scala.io.{Source, StdIn}
 import scala.util.{Failure, Success, Try}
-import interpreters.BFOptimized._
-import interpreters.BFFunctional._
-import interpreters.InterpreterException
+import interpreters.{BFManager, Interpreter, InterpreterException}
 
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 
 case class HandlerException(info: String) extends Throwable
 
 object ConsoleHandlers {
-  def bfRunHandler(translators: mutable.HashMap[String, BFTranslator], optimized: Boolean, initTapeSize: Int, outputMaxLength: Int, log: Boolean)(args: Vector[String]): Unit = {
-    def interp(str: String): Try[String] = if(optimized) bfoRun(str, initTapeSize, outputMaxLength, log) else bfRun(str, initTapeSize, outputMaxLength, log)
+  def runHandler(BFTranslators: mutable.HashMap[String, BFTranslator], interpreters: immutable.HashMap[String, Interpreter], optimized: Boolean, initTapeSize: Int, outputMaxLength: Int, log: Boolean)(args: Vector[String]): Unit = {
     args match{
-      case lang +: fnam +: _ if lang == "BrainFuck" || translators.isDefinedAt(lang) =>
+      case lang +: fnam +: _ if lang == "BrainFuck" || BFTranslators.isDefinedAt(lang) || interpreters.isDefinedAt(lang) =>
         grabProg(fnam) match{
           case Success(prog) =>
+            val interp: String => Try[String] = if(interpreters.isDefinedAt(lang)) interpreters(lang)(log) else BFManager(BFTranslators, initTapeSize, outputMaxLength, optimized, log, lang)
             print(s"Running $fnam... ")
             if(log) println
             val tStart = System.currentTimeMillis
-            val res = if(lang == "BrainFuck") interp(prog) else interp(translators(lang)(prog))
+            val res = interp(prog)
             val tDur = System.currentTimeMillis - tStart
             res match{
               case Success(_) if log => println(s"\nProgram completed in ${tDur}ms.")
@@ -37,6 +36,32 @@ object ConsoleHandlers {
         }
       case _ => println("Language not recognized.")
     }
+  }
+  
+  def assembleHandler(assemblers: immutable.HashMap[String, Assembler], log: Boolean, rev: Boolean)(args: Vector[String]): Unit = args match{
+    case lang +: srcNam +: dstNam +: _ if assemblers.isDefinedAt(lang) =>
+      Try{
+        val iFile = Source.fromFile(srcNam)
+        val prog = iFile.mkString
+        iFile.close
+        prog
+      }match{
+        case Success(prog) =>
+          println(s"Retrieved program from $srcNam.\nAssembling...\n")
+          val res = if(rev) assemblers(lang).unapply(prog, log) else assemblers(lang)(prog.split("\n").toVector, log)
+          res match{
+            case Success(assembled) =>
+              print(s"\nAssembled.\nSaving to $dstNam... ")
+              val oFile = new PrintWriter(new File(dstNam))
+              oFile.print(assembled)
+              oFile.close()
+              println("Done.\n")
+            case Failure(AssemblerException(info)) => println(s"Error: $info")
+            case Failure(e) => println(s"Error: $e")
+          }
+        case Failure(e) => println(s"Error: $e")
+      }
+    case _ => println("Invalid Arguments")
   }
   
   def translationHandler(translators: mutable.HashMap[String, BFTranslator])(args: Vector[String]): Unit = {
@@ -125,6 +150,30 @@ object ConsoleHandlers {
       val synStr = translators(lang).kvPairs.map{case (k, v) => s"$k: $v"}.mkString("\n")
       println(s"Syntax for $lang...\n$synStr\n")
     case _ => println("Not a recognized translator.")
+  }
+  
+  def printLangsHandler(interpreters: immutable.HashMap[String, Interpreter], BFTranslators: mutable.HashMap[String, BFTranslator], assemblers: immutable.HashMap[String, Assembler]): Unit = {
+    println(
+      f"""|Parent Languages...
+          |- BrainFuck
+          |${interpreters.keys.map(nam => s"- $nam").mkString("\n")}
+          |
+          |BrainFuck Translators...
+          |${BFTranslators.keys.map(nam => s"- $nam").mkString("\n")}
+          |
+          |Assemblers...
+          |${assemblers.keys.map(nam => s"- $nam").mkString("\n")}
+          |""".stripMargin)
+  }
+  
+  def printVarsHandler(initTapeSize: Int, outputMaxLength: Int, BFOpt: Boolean, log: Boolean): Unit = {
+    val maxLen = Vector(initTapeSize, outputMaxLength, BFOpt, log).map(_.toString.length).max
+    println(
+      s"""|initTapeSize    = %-${maxLen}d (initial tape length for BrainFuck interpreters)
+          |outputMaxLength = %-${maxLen}d (maximum size of output string for BrainFuck interpreters, useful for non-terminating programs)
+          |BFOpt           = %-${maxLen}b (optimize BrainFuck code)
+          |log             = %-${maxLen}b (determines whether output is shown during or after runtime)
+          |""".stripMargin.format(initTapeSize, outputMaxLength, BFOpt, log))
   }
   
   def setBoolHandler(arg: String, default: Boolean): Boolean = arg match{

@@ -4,8 +4,9 @@ import scala.annotation.tailrec
 import scala.io.StdIn
 import scala.util.{Failure, Success, Try}
 
-object BFOptimized {
-  def bfoRun(prog: String, initTapeSize: Int, outputMaxLength: Int, log: Boolean): Try[String] = {
+object BFOptimized extends Interpreter{
+  def apply(log: Boolean)(prog: String): Try[String] = apply(1, -1, log)(prog)
+  def apply(initTapeSize: Int, outputMaxLength: Int, log: Boolean)(prog: String): Try[String] = {
     optimize(prog) match{
       case Success(optProg) => bfoFunc(optProg, initTapeSize, outputMaxLength, log)
       case Failure(e) => Failure(e)

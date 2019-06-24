@@ -2,7 +2,7 @@ package translators
 
 import scala.collection.immutable
 
-trait BFTranslator {
+trait BFTranslator extends Translator {
   def name: String
   def kvPairs: Vector[(String, String)]
   
@@ -19,7 +19,4 @@ trait BFTranslator {
     builder.clear
     res
   }
-  
-  def apply(prog: String): String
-  def unapply(prog: String): String
 }

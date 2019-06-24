@@ -11,12 +11,10 @@ class GenericBFTranslator(val name: String, val kvPairs: Vector[(String, String)
     val keysOrder = syn.keys.toVector.sortWith(_.length > _.length)
     
     @tailrec
-    def tHelper(log: String, src: String): String = {
-      keysOrder.find(key => key == src.take(key.length)) match{
-        case Some(k) => tHelper(log ++ syn(k), src.drop(k.length))
-        case None if src.nonEmpty => tHelper(log :+ src.head, src.tail)
-        case None if src.isEmpty => log
-      }
+    def tHelper(log: String, src: String): String = keysOrder.find(src.startsWith) match{
+      case Some(k) => tHelper(log ++ syn(k), src.drop(k.length))
+      case None if src.nonEmpty => tHelper(log :+ src.head, src.tail)
+      case None if src.isEmpty => log
     }
     
     tHelper("", prog)

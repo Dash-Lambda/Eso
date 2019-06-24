@@ -1,13 +1,17 @@
 package ui
 
 import ConsoleHandlers._
+import assemblers.{Assembler, WhiteSpaceAssembler}
+import interpreters.{Interpreter, WhiteSpace}
 import translators.{BFTranslator, BrainPuff, Ook}
 
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 
 object EsoTerpConsole {
   val nativeTrans: Vector[BFTranslator] = Vector[BFTranslator](BrainPuff, Ook)
-  val translators: mutable.HashMap[String, BFTranslator] = mutable.HashMap[String, BFTranslator]()
+  val BFTranslators: mutable.HashMap[String, BFTranslator] = mutable.HashMap[String, BFTranslator]()
+  val assemVec: Vector[(String, Assembler)] = Vector[(String, Assembler)](("WhiteSpace", WhiteSpaceAssembler))
+  val interpVec: Vector[(String, Interpreter)] = Vector[(String, Interpreter)](("WhiteSpace", WhiteSpace))
   val pointer: String = "EsoTerp> "
   val welcomeText: String =
     """|Welcome to EsoTerp, the functional esoteric language interpreter!
@@ -15,10 +19,11 @@ object EsoTerpConsole {
        |""".stripMargin
   val helpText: String =
     """|Commands...
-       |  run <language> <source file name>
-       |  translate <source language> <target language> <source> <optional destination>
-       |  loadBFLangs <file name>
-       |  saveBFLangs <file name>
+       |  run <language> <source file>
+       |  assemble <language> <source file> <destination file>
+       |  translate <source language> <target language> <source file> <optional destination file>
+       |  loadBFLangs <file>
+       |  saveBFLangs <file>
        |  defineBFLang
        |  listLangs
        |  syntax <language>
@@ -34,34 +39,36 @@ object EsoTerpConsole {
   var log: Boolean = true
   
   def main(args: Array[String]): Unit = {
-    translators ++= nativeTrans.map(t => (t.name, t))
+    BFTranslators ++= nativeTrans.map(t => (t.name, t))
+    val interpreters = {
+      val builder = immutable.HashMap.newBuilder[String, Interpreter]
+      builder ++= interpVec
+      builder.result
+    }
+    val assemblers = {
+      val builder = immutable.HashMap.newBuilder[String, Assembler]
+      builder ++= assemVec
+      builder.result
+    }
     println(welcomeText)
-    consoleLoop()
+    consoleLoop(interpreters, assemblers)
   }
   
-  def printVars(): Unit = {
-    val maxLen = Vector(initTapeSize, outputMaxLength, BFOpt, log).map(_.toString.length).max
-    println(
-      s"""|initTapeSize    = %-${maxLen}d (initial tape length for BrainFuck interpreters)
-          |outputMaxLength = %-${maxLen}d (maximum size of output string for BrainFuck interpreters, useful for non-terminating programs)
-          |BFOpt           = %-${maxLen}b (optimize BrainFuck code)
-          |log             = %-${maxLen}b (determines whether output is shown during or after runtime)
-          |""".stripMargin.format(initTapeSize, outputMaxLength, BFOpt, log))
-  }
-  
-  def consoleLoop(): Unit = {
+  def consoleLoop(interpreters: immutable.HashMap[String, Interpreter], assemblers: immutable.HashMap[String, Assembler]): Unit = {
     var runChk = true
     while(runChk){
       val inp = grabStr(s"$pointer").split(" ").toVector
   
       inp match{
-        case "run" +: args => bfRunHandler(translators, BFOpt, initTapeSize, outputMaxLength, log)(args)
-        case "translate" +: args => translationHandler(translators)(args)
-        case "listLangs" +: _ => println(s"Currently loaded languages...\n${translators.keys.map(s => s"- $s").mkString("\n")}")
-        case "saveBFLangs" +: args => bfLangSaveHandler(translators, nativeTrans)(args)
-        case "syntax" +: args => syntaxHandler(translators)(args)
+        case "run" +: args => runHandler(BFTranslators, interpreters, BFOpt, initTapeSize, outputMaxLength, log)(args)
+        case "assemble" +: args => assembleHandler(assemblers, log, rev = false)(args)
+        case "disassemble" +: args => assembleHandler(assemblers, log, rev = true)(args)
+        case "translate" +: args => translationHandler(BFTranslators)(args)
+        case "listLangs" +: _ => printLangsHandler(interpreters, BFTranslators, assemblers)
+        case "saveBFLangs" +: args => bfLangSaveHandler(BFTranslators, nativeTrans)(args)
+        case "syntax" +: args => syntaxHandler(BFTranslators)(args)
         case "help" +: _ => println(helpText)
-        case "listVars" +: _ => printVars()
+        case "listVars" +: _ => printVarsHandler(initTapeSize, outputMaxLength, BFOpt, log)
         case "set" +: args =>
           args match{
             case "log" +: arg +: _ => log = setBoolHandler(arg, log)
@@ -70,8 +77,8 @@ object EsoTerpConsole {
             case "initTapeSize" +: arg +: _ => initTapeSize = setIntHandler(arg, initTapeSize)
             case str +: _ => println(s"$str is not a recognized runtime parameter.")
           }
-        case "loadBFLangs" +: args => translators ++= loadBFLangsHandler(args)
-        case "defineBFLang" +: _ => translators += langCreationHandler
+        case "loadBFLangs" +: args => BFTranslators ++= loadBFLangsHandler(args)
+        case "defineBFLang" +: _ => BFTranslators += langCreationHandler
         case "exit" +: _ => println("Closing..."); runChk = false
         case _ => println("Invalid command.")
       }
