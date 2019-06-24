@@ -22,8 +22,11 @@ Current features:
 * User-defined BrainFuck languages
 * User-configurable runtime parameters (logging, maximum output size, tape size, etc.)
 * Convert difficult-to-read code (a la WhiteSpace) to and from readable syntax with assemblers
+* Debug mode to show interpreter state during runtime
 
-WIP features:
+WIP:
+* Streamline WhiteSpace interpreter versions (make it generic)
+* User command binding
 * Additional languages and interpreters
 * Potentially everything
 
