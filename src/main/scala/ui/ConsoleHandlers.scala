@@ -176,6 +176,23 @@ object ConsoleHandlers {
           |""".stripMargin.format(initTapeSize, outputMaxLength, BFOpt, log))
   }
   
+  def helpHandler(): Unit = print(
+    """|Commands...
+       |  run <language> <source file>
+       |  assemble <language> <source file> <destination file>
+       |  disassemble <language> <source file> <destination file>
+       |  translate <source language> <target language> <source file> <optional destination file>
+       |  loadBFLangs <file>
+       |  saveBFLangs <file>
+       |  defineBFLang
+       |  listLangs
+       |  syntax <language>
+       |  set <variable name> <new value>
+       |  listVars
+       |  help
+       |  exit
+       |  """.stripMargin)
+  
   def setBoolHandler(arg: String, default: Boolean): Boolean = arg match{
     case "true" => true
     case "false" => false
@@ -202,5 +219,11 @@ object ConsoleHandlers {
     val str = fin.mkString
     fin.close()
     str
+  }
+  
+  def mkMap[A, B](vec: Vector[(A, B)]): immutable.HashMap[A, B] = {
+    val builder = immutable.HashMap.newBuilder[A, B]
+    builder ++= vec
+    builder.result
   }
 }

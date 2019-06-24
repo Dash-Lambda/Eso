@@ -5,12 +5,6 @@ import scala.collection.immutable
 import scala.util.{Failure, Success, Try}
 
 object WhiteSpaceAssembler extends Assembler {
-  def mkMap[A, B](vec: Vector[(A, B)]): immutable.HashMap[A, B] = {
-    val builder = immutable.HashMap.newBuilder[A, B]
-    builder ++= vec
-    builder.result
-  }
-  
   val syntax: Vector[(String, String)] = Vector[(String, String)](
     ("  ", "push"),
     (" \n ", "dup"),
@@ -79,8 +73,7 @@ object WhiteSpaceAssembler extends Assembler {
   def unapply(prog: String, log: Boolean): Try[String] = {
     val synKeys = syntax.map(_._1).sortWith(_.length > _.length)
     
-    def isNotLF(c: Char): Boolean = (c == ' ') || (c == '\t')
-    def longNum(str: String): Long = str.takeWhile(isNotLF).reverse.zipWithIndex.map{case (c, i) => if(c == '\t') Math.pow(2, i).toLong else 0L}.sum
+    def longNum(str: String): Long = str.takeWhile(_ != '\n').reverse.zipWithIndex.map{case (c, i) => if(c == '\t') Math.pow(2, i).toLong else 0L}.sum
   
     @tailrec
     def uHelper(ac: Vector[String], src: String): Try[String] = synKeys.find(key => src.startsWith(key)) match{
@@ -90,7 +83,7 @@ object WhiteSpaceAssembler extends Assembler {
         else{
           val tail = src.drop(key.length)
           val lNum = longNum(tail)
-          uHelper(ac :+ s"$tag $lNum", tail.dropWhile(isNotLF).tail)
+          uHelper(ac :+ s"$tag $lNum", tail.dropWhile(_ != '\n').tail)
         }
       case None => if(src.nonEmpty) uHelper(ac, src.tail) else Success(ac.mkString("\n"))
     }

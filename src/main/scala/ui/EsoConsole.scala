@@ -8,31 +8,16 @@ import translators.{BFTranslator, BrainPuff, Ook}
 import scala.collection.{immutable, mutable}
 
 object EsoConsole {
-  val nativeTrans: Vector[BFTranslator] = Vector[BFTranslator](BrainPuff, Ook)
-  val BFTranslators: mutable.HashMap[String, BFTranslator] = mutable.HashMap[String, BFTranslator]()
-  val assemVec: Vector[(String, Assembler)] = Vector[(String, Assembler)](("WhiteSpace", WhiteSpaceAssembler))
-  val interpVec: Vector[(String, Interpreter)] = Vector[(String, Interpreter)](("WhiteSpace", WhiteSpace))
   val pointer: String = "Eso> "
   val welcomeText: String =
     """|Welcome to Eso, the functional esoteric language interpreter!
        |Type "help" for a list of commands.
        |""".stripMargin
-  val helpText: String =
-    """|Commands...
-       |  run <language> <source file>
-       |  assemble <language> <source file> <destination file>
-       |  disassemble <language> <source file> <destination file>
-       |  translate <source language> <target language> <source file> <optional destination file>
-       |  loadBFLangs <file>
-       |  saveBFLangs <file>
-       |  defineBFLang
-       |  listLangs
-       |  syntax <language>
-       |  set <variable name> <new value>
-       |  listVars
-       |  help
-       |  exit
-       |  """.stripMargin
+  
+  val nativeTrans: Vector[BFTranslator] = Vector[BFTranslator](BrainPuff, Ook)
+  val BFTranslators: mutable.HashMap[String, BFTranslator] = mutable.HashMap[String, BFTranslator]()
+  val assemVec: Vector[(String, Assembler)] = Vector[(String, Assembler)](("WhiteSpace", WhiteSpaceAssembler))
+  val interpVec: Vector[(String, Interpreter)] = Vector[(String, Interpreter)](("WhiteSpace", WhiteSpace))
   
   var initTapeSize: Int = 100
   var outputMaxLength: Int = -1
@@ -41,16 +26,8 @@ object EsoConsole {
   
   def main(args: Array[String]): Unit = {
     BFTranslators ++= nativeTrans.map(t => (t.name, t))
-    val interpreters = {
-      val builder = immutable.HashMap.newBuilder[String, Interpreter]
-      builder ++= interpVec
-      builder.result
-    }
-    val assemblers = {
-      val builder = immutable.HashMap.newBuilder[String, Assembler]
-      builder ++= assemVec
-      builder.result
-    }
+    val interpreters = mkMap(interpVec)
+    val assemblers = mkMap(assemVec)
     println(welcomeText)
     consoleLoop(interpreters, assemblers)
   }
@@ -68,7 +45,7 @@ object EsoConsole {
         case "listLangs" +: _ => printLangsHandler(interpreters, BFTranslators, assemblers)
         case "saveBFLangs" +: args => bfLangSaveHandler(BFTranslators, nativeTrans)(args)
         case "syntax" +: args => syntaxHandler(BFTranslators)(args)
-        case "help" +: _ => println(helpText)
+        case "help" +: _ => helpHandler()
         case "listVars" +: _ => printVarsHandler(initTapeSize, outputMaxLength, BFOpt, log)
         case "set" +: args =>
           args match{

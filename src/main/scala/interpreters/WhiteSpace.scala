@@ -76,22 +76,19 @@ object WhiteSpace extends Interpreter {
     val synKeys = syntax.map(_._1).sortWith(_.length > _.length)
     val synMap: immutable.HashMap[String, String] = mkMap(syntax)
     
-    def isNotLF(c: Char): Boolean = (c == ' ') || (c == '\t')
-    def longNum(str: String): Long = str.takeWhile(isNotLF).reverse.zipWithIndex.map{case (c, i) => if(c == '\t') Math.pow(2, i).toLong else 0L}.sum
-  
+    def longNum(str: String): Long = str.takeWhile(_ != '\n').reverse.zipWithIndex.map{case (c, i) => if(c == '\t') Math.pow(2, i).toLong else 0L}.sum
+    
     @tailrec
-    def fHelper(ac: Vector[(String, Long)], src: String): Vector[(String, Long)] = {
-      synKeys.find(src.startsWith) match{
-        case Some(key) =>
-          val tag = synMap(key)
-          if(nonArgOps.contains(tag)) fHelper(ac :+ ((tag, 0L)), src.drop(key.length))
-          else{
-            val tail = src.drop (key.length)
-            val lNum = longNum (tail)
-            fHelper (ac :+ ((tag, lNum)), tail.dropWhile (isNotLF).tail)
-          }
-        case None => if(src.nonEmpty) fHelper(ac, src.tail) else ac
-      }
+    def fHelper(ac: Vector[(String, Long)], src: String): Vector[(String, Long)] = synKeys.find(src.startsWith) match{
+      case Some(key) =>
+        val tag = synMap(key)
+        if(nonArgOps.contains(tag)) fHelper(ac :+ ((tag, 0L)), src.drop(key.length))
+        else{
+          val tail = src.drop (key.length)
+          val lNum = longNum (tail)
+          fHelper (ac :+ ((tag, lNum)), tail.dropWhile (_ != '\n').tail)
+        }
+      case None => if(src.nonEmpty) fHelper(ac, src.tail) else ac
     }
     
     val conditioned = prog.replaceAll("(\r\n|\r)", "\n").filter("\t\n ".contains(_))
