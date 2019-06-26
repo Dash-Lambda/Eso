@@ -52,8 +52,7 @@ object BFOptimized extends Interpreter{
             val signum = if(inc == '+') 1 else -1
             if(dsrc.sizeIs > n){
               val update = dsrc(n) + (signum*num*dsrc.head)
-              val newTape = 0 +: (dsrc.take(n).tail ++ (update +: dsrc.drop(n).tail))
-              bfo(plog ++ psrc.take(2), psrc.drop(2), dlog, newTape, result)
+              bfo(plog ++ psrc.take(2), psrc.drop(2), dlog, 0 +: dsrc.updated(n, update).tail, result)
             }else{
               val update = signum*num*dsrc.head
               val newTape = 0 +: dsrc.tail.padTo(n - 1, 0) :+ update
@@ -65,8 +64,7 @@ object BFOptimized extends Interpreter{
               val signum = if(inc == '+') 1 else -1
               val ptr = dlog.length - n
               val update = dlog(ptr) + (signum*num*dsrc.head)
-              val newTape = dlog.take(ptr) ++ (update +: dlog.drop(ptr).tail)
-              bfo(plog ++ psrc.take(2), psrc.drop(2), newTape, 0 +: dsrc.tail, result)
+              bfo(plog ++ psrc.take(2), psrc.drop(2), dlog.updated(ptr, update), 0 +: dsrc.tail, result)
             } else{ bfo(plog ++ psrc.take(2), psrc.drop(2), dlog, dsrc, result)}
           case '_' => bfo(plog :+ p, ps, dlog, 0 +: dsrc.tail, result)
         }
