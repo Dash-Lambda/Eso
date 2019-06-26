@@ -1,7 +1,12 @@
-name := "EsoInterpreter"
+import Dependencies._
 
-version := "0.1"
+ThisBuild / scalaVersion     := "2.13.0"
+ThisBuild / version          := "0.1.0"
+ThisBuild / organization     := "com.github.dashlambda"
+ThisBuild / organizationName := "dashlambda"
 
-scalaVersion := "2.13.0"
-
-libraryDependencies += "org.typelevel" %% "spire" % "0.17.0-M1"
+lazy val root = (project in file("."))
+  .settings(
+    name := "EsoInterpreter",
+    libraryDependencies += "org.typelevel" %% "spire" % "0.17.0-M1"
+  )

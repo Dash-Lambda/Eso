@@ -19,7 +19,7 @@ object EsoConsole {
   val assemVec: Vector[(String, Assembler)] = Vector[(String, Assembler)](("WhiteSpace", WhiteSpaceAssembler))
   val interpVec: Vector[(String, Interpreter)] = Vector[(String, Interpreter)](("WhiteSpace", WhiteSpace), ("WhiteSpaceSL", WhiteSpaceSL))
   
-  var initTapeSize: Int = 100
+  var initTapeSize: Int = 1
   var outputMaxLength: Int = -1
   var BFOpt: Boolean = true
   var log: Boolean = true
@@ -39,6 +39,7 @@ object EsoConsole {
       val inp = grabStr(s"$pointer").split(" ").toVector
       
       inp match{
+        case "test" +: _ => runHandler(BFTranslators, interpreters, BFOpt, initTapeSize, outputMaxLength, log, debug)("BrainFuck bfMandelbrot.txt".split(" ").toVector)
         case "run" +: args => runHandler(BFTranslators, interpreters, BFOpt, initTapeSize, outputMaxLength, log, debug)(args)
         case "assemble" +: args => assembleHandler(assemblers, log, rev = false)(args)
         case "disassemble" +: args => assembleHandler(assemblers, log, rev = true)(args)
