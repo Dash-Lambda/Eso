@@ -15,7 +15,7 @@ Current Native language support:
 * [Ook](https://esolangs.org/wiki/Ook!)
 * [WhiteSpace](https://esolangs.org/wiki/Whitespace) ([as defined here](https://web.archive.org/web/20151108084710/http://compsoc.dur.ac.uk/whitespace/tutorial.html))
 
-Current features:
+#### Current features:
 * Run program from text file
 * Optimized and unoptimized BrainFuck interpreters
 * Translate to and from supported BrainFuck languages
@@ -24,12 +24,23 @@ Current features:
 * Convert difficult-to-read code (a la WhiteSpace) to and from readable syntax with assemblers
 * Debug mode to show interpreter state during runtime
 
-WIP:
+##### WIP:
 * Streamline WhiteSpace interpreter versions (make it generic)
 * User command binding
 * Additional languages and interpreters
 * Potentially everything
 
+### Optimization Strategy
+The first major difference in the optimizing BrainFuck interpreter is its program and data tapes. Instead of keeping two lists for each one and modifying them at each step, it uses a single static program tape and a single data tape, keeping track of its position in each with a counter. Both are stored using Vectors.
+
+The optimizer performs a series of 5 passes over the program:
+1. Contract all repeated operations into pairs specifying the operation and the number of repititions.
+2. Replace all clear loops ([-]) and scan loops ([>], [<], [>>], etc.) with single instructions.
+3. Replace all unbroken sequences of shifts and arithmetic with single bulk operations. A bulk operation specifies a collection of offsets and increments to update cells relative to the point, and a final shift to move the pointer. This eliminates all >, <, +, and - operations, replacing them with a single type of operation tagged 'u' (for "update").
+4. Replace all copy loops with single operations. This is done by searching for sequences of the form [u] where the final shift is 0 and the cumulative increment on the current cell is -1, and replacing the loop with a signle operation tagged 'l' (for "loop"). An l operation refers to the same bulk operation as the u it replaces, but when executed it will multiply all the increments by the value in the current cell.
+5. Find matching brackets and assign their value as the index of their counterpart. This eliminates the need to scrub through the program for the matching bracket at runtime.
+
+### User-Defined Translators
 There are two ways to define your own BF language:
 * Use the console prompt, which will ask you for the language name and syntax then handle the rest.
 * Make a text file containing your language's information in this form:
