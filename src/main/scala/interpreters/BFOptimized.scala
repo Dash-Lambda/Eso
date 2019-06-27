@@ -95,16 +95,21 @@ object BFOptimized extends Interpreter{
       def bHelper(ac: Vector[(Char, Int)], tag: Char, count: Int, src: String): Vector[(Char, Int)] = {
         if(debug) println(
           s"""|Source: $src
+              |Tag: $tag
+              |Count: $count
               |Opt: ${ac.mkString(" | ")}
               |""".stripMargin)
         
         src.headOption match{
-          case Some(c) if tag == ' ' => bHelper(ac, c, 1, src.tail)
-          case Some(c) if c == tag => bHelper(ac, tag, count + 1, src.tail)
-          case Some(c) if ops.contains(c) => bHelper(ac :+ (tag, count), c, 1, src.tail)
-          case Some(c) if nonOps.contains(c) => bHelper(ac :+ (tag, count) :+ (c, 1), ' ', 0, src.tail)
-          case None if tag != ' ' => ac :+ (tag, count)
-          case None => ac
+          case Some(c) =>
+            if((tag == ' ') && ops.contains(c)) bHelper(ac, c, 1, src.tail)
+            else if((tag == ' ') && nonOps.contains(c)) bHelper(ac :+ (c, 1), ' ', 0, src.tail)
+            else if((tag != ' ') && (c == tag)) bHelper(ac, tag, count + 1, src.tail)
+            else if((tag != ' ') && (c != tag) && ops.contains(c)) bHelper(ac :+ (tag, count), c, 1, src.tail)
+            else bHelper(ac :+ (tag, count) :+ (c, 1), ' ', 0, src.tail)
+          case None =>
+            if(tag == 0) ac
+            else ac :+ (tag, count)
         }
       }
       
@@ -219,10 +224,11 @@ object BFOptimized extends Interpreter{
     if(debug) println(
       s"""|
           |Base:  ${progRaw.filter("><+-[],.".contains(_))}
-          |Pass1: ${pass1.mkString(" | ")}
-          |Pass2: ${pass2.mkString(" | ")}
-          |Pass3: ${pass3.mkString(" | ")}
-          |Bracket Sums: [${progRaw.count(_ == '[')}, ${progRaw.count(_ == ']')}] -> ${counts(pass1)} -> ${counts(pass2)} -> ${counts(pass3)}""".stripMargin)
+          |pass0: ${pass0.map(_._1).mkString}
+          |Pass1: ${pass1.map(_._1).mkString}
+          |Pass2: ${pass2.map(_._1).mkString}
+          |Pass3: ${pass3.map(_._1).mkString}
+          |Bracket Sums: [${progRaw.count(_ == '[')}, ${progRaw.count(_ == ']')}] -> ${counts(pass0)} -> ${counts(pass1)} -> ${counts(pass2)} -> ${counts(pass3)}""".stripMargin)
     
     pass4 match{
       case Success(prog) => Success(hmap, prog)
