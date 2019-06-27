@@ -48,13 +48,6 @@ object BFOptimized extends Interpreter{
       else dat
     }
     
-    if(debug) println(
-      s"""|Optimized: ${prog.map(_._1).mkString}
-          |BulkOps: [${bops.mkString("], [")}]
-          |Optimized Detail:
-          |${prog.zipWithIndex.map{case ((c, n), ind) => s"$ind: $c $n\n"}.mkString}
-          |""".stripMargin)
-    
     @tailrec
     def bfv(pc: Int, dc: Int, dat: Vector[Int], result: String): String = {
       if(debug) println(
@@ -82,6 +75,13 @@ object BFOptimized extends Interpreter{
         case Failure(_) => result
       }
     }
+  
+    if(debug) println(
+      s"""|Optimized: ${prog.map(_._1).mkString}
+          |BulkOps: [${bops.mkString("], [")}]
+          |Optimized Detail:
+          |${prog.zipWithIndex.map{case ((c, n), ind) => s"$ind: $c $n\n"}.mkString}
+          |""".stripMargin)
     
     Try{bfv(0, 0, Vector.fill(initTapeSize)(0), "")}
   }

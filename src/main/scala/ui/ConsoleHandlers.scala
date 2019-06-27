@@ -176,11 +176,11 @@ object ConsoleHandlers {
     println(
       s"""|initTapeSize     = %-${maxLen}d  (initial tape length for BF interpreters)
           |outputMaxLength  = %-${maxLen}d  (maximum size of output string for BF interpreters, useful for non-terminating programs)
-          |dynamicTapeSize  = %-${maxLen}d  (resize tape as needed for BF interpreters, eliminates memory limitations but reduces speed)
+          |dynamicTapeSize  = %-${maxLen}b  (resize tape as needed for BF interpreters, eliminates memory limitations but reduces speed)
           |BFOpt            = %-${maxLen}b  (optimize BrainFuck code)
           |log              = %-${maxLen}b  (determines whether output is shown during or after runtime)
           |debug            = %-${maxLen}b  (show runtime information, such as stack and heap states)
-          |""".stripMargin.format(initTapeSize, outputMaxLength, BFOpt, log, debug))
+          |""".stripMargin.format(initTapeSize, outputMaxLength, dynamicTapeSize, BFOpt, log, debug))
   }
   
   def helpHandler(): Unit = print(
