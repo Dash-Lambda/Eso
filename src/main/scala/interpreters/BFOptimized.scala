@@ -1,7 +1,6 @@
 package interpreters
 
 import scala.annotation.tailrec
-import scala.collection.immutable
 import scala.io.StdIn
 import scala.util.{Failure, Success, Try}
 
@@ -16,16 +15,24 @@ object BFOptimized extends Interpreter{
     case Failure(e) => Failure(e)
   }
   
-  def bfFunc(prog: Vector[(Char, Int)], bops: immutable.HashMap[Int, BulkOp], initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, debug: Boolean, log: Boolean): Try[String] = {
+  def bfFunc(prog: Vector[(Char, Int)], bops: Vector[BulkOp], initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, debug: Boolean, log: Boolean): Try[String] = {
     def printLog(str: String): String = {if(log) print(str); str}
-    
-    if(debug) println(
-      s"""|Optimized: ${prog.map(_._1).mkString}
-          |BulkOps: [${bops.mkString("], [")}]
-          |Optimized Detail:
-          |${prog.zipWithIndex.map{case ((c, n), ind) => s"$ind: $c $n\n"}.mkString}
-          |""".stripMargin)
-    
+  
+    def scanRight(dat: Vector[Int], init: Int, stp: Int): Int = {
+      if(stp == 1) dat.indexOf(0, init)
+      else LazyList.from(init, stp).takeWhile(n => (dat.sizeIs > n) && (dat(n) != 0)).lastOption match{
+        case Some(pos) => pos + stp
+        case None => init
+      }
+    }
+    def scanLeft(dat: Vector[Int], init: Int, stp: Int): Int = {
+      if(stp == 1) dat.lastIndexOf(0, init)
+      else LazyList.from(init, -stp).takeWhile(n => (n >= 0) && (dat(n) != 0)).lastOption match{
+        case Some(pos) => pos - stp
+        case None => init
+      }
+    }
+  
     val updateBulk: (Vector[Int], Int, BulkOp) => Vector[Int] = (dat: Vector[Int], dc: Int, bop: BulkOp) => if(dynamicTapeSize){
       if(bop.ops.nonEmpty) bop.ops.foldLeft(dat.padTo(math.max(dc + bop.ops.last._1 + 1, dc + bop.shift + 1), 0)){case (vec, (ind, num)) => vec.updated(dc + ind, vec(dc + ind) + num)}
       else dat.padTo(dc + bop.shift + 1, 0)
@@ -33,7 +40,6 @@ object BFOptimized extends Interpreter{
       if(bop.ops.nonEmpty) bop.ops.foldLeft(dat){case (vec, (ind, num)) => vec.updated(dc + ind, vec(dc + ind) + num)}
       else dat
     }
-  
     val loopBulk: (Vector[Int], Int, BulkOp) => Vector[Int] = (dat: Vector[Int], dc: Int, bop: BulkOp) => if(dynamicTapeSize){
       if(dat(dc) != 0) bop.ops.foldLeft(dat.padTo(math.max(dc + bop.ops.last._1 + 1, dc + bop.shift + 1), 0)){case (vec, (ind, num)) => vec.updated(dc + ind, vec(dc + ind) + dat(dc)*num)}
       else dat.padTo(dc + bop.shift + 1, 0)
@@ -42,19 +48,17 @@ object BFOptimized extends Interpreter{
       else dat
     }
     
-    def scan(dat: Vector[Int], init: Int, stp: Int): Int = LazyList.from(init, stp).takeWhile(n => (dat.sizeIs > n) && (dat(n) != 0)).lastOption match{
-      case Some(pos) => pos + stp
-      case None => init
-    }
-    def scanLeft(dat: Vector[Int], init: Int, stp: Int): Int = LazyList.from(init, -stp).takeWhile(n => (n >= 0) && (dat(n) != 0)).lastOption match{
-      case Some(pos) => pos - stp
-      case None => init
-    }
+    if(debug) println(
+      s"""|Optimized: ${prog.map(_._1).mkString}
+          |BulkOps: [${bops.mkString("], [")}]
+          |Optimized Detail:
+          |${prog.zipWithIndex.map{case ((c, n), ind) => s"$ind: $c $n\n"}.mkString}
+          |""".stripMargin)
     
     @tailrec
     def bfv(pc: Int, dc: Int, dat: Vector[Int], result: String): String = {
       if(debug) println(
-        s"""|Loop: PC($pc)  DC($dc)
+        s"""|State: PC($pc)  DC($dc)
             |${dat.mkString(" | ")}""".stripMargin)
       
       Try{prog(pc)} match{
@@ -71,11 +75,8 @@ object BFOptimized extends Interpreter{
           case '.' =>
             if((outputMaxLength == -1) || (result.sizeIs <= outputMaxLength - num)) bfv(pc + 1, dc, dat, result ++ printLog(dat(dc).toChar.toString * num))
             else result ++ printLog(dat(dc).toChar.toString * num)
-          case '/' => bfv(pc + 1, scan(dat, dc, num), dat, result)
-          case '\\' =>
-            //val len = dat.length
-            //bfv(pc + 1, len - 1 - scan(dat.reverse, len - 1 - dc, num), dat, result)
-            bfv(pc + 1, scanLeft(dat, dc, num), dat, result)
+          case '/' => bfv(pc + 1, scanRight(dat, dc, num), dat, result)
+          case '\\' => bfv(pc + 1, scanLeft(dat, dc, num), dat, result)
           case '_' => bfv(pc + 1, dc, dat.updated(dc, 0), result)
         }
         case Failure(_) => result
@@ -85,7 +86,7 @@ object BFOptimized extends Interpreter{
     Try{bfv(0, 0, Vector.fill(initTapeSize)(0), "")}
   }
   
-  def optimizeBulk(progRaw: String, debug: Boolean): Try[(immutable.HashMap[Int, BulkOp], Vector[(Char, Int)])] = {
+  def optimizeBulk(progRaw: String, debug: Boolean): Try[(Vector[BulkOp], Vector[(Char, Int)])] = {
     def optBase(progSrc: String): Vector[(Char, Int)] = {
       val ops = Vector[Char]('>', '<', '+', '-', '.')
       val nonOps = Vector[Char]('[', ']', ',')
@@ -129,31 +130,33 @@ object BFOptimized extends Interpreter{
       cHelper(Vector[(Char, Int)](), progSrc)
     }
     
-    def optBulk(progSrc: Vector[(Char, Int)]): (immutable.HashMap[Int, BulkOp], Vector[(Char, Int)]) = {
+    def optBulk(progSrc: Vector[(Char, Int)]): (Vector[BulkOp], Vector[(Char, Int)]) = {
       @tailrec
-      def uHelper(ac: Vector[(Char, Int)], mac: Vector[(Int, BulkOp)], vac: Vector[(Int, Int)], shift: Int, cnt: Int, src: Vector[(Char, Int)]): (immutable.HashMap[Int, BulkOp], Vector[(Char, Int)]) = {
+      def uHelper(ac: Vector[(Char, Int)], mac: Vector[BulkOp], vac: Vector[(Int, Int)], shift: Int, ind: Int, src: Vector[(Char, Int)]): (Vector[BulkOp], Vector[(Char, Int)]) = {
         if(debug) println(
           s"""|Source: ${src.mkString(" | ")}
               |BulkOps: ${vac.mkString(" | ")}
               |Shift: $shift
-              |Addr: $cnt
+              |Addr: $ind
               |Opt: ${ac.mkString(" | ")}
               |""".stripMargin)
         
         src match{
-          case ('>', n) +: tail => uHelper(ac, mac, vac, shift + n, cnt, tail)
-          case ('<', n) +: tail => uHelper(ac, mac, vac, shift - n, cnt, tail)
-          case ('+', n) +: tail => uHelper(ac, mac, vac :+ (shift, n), shift, cnt, tail)
-          case ('-', n) +: tail => uHelper(ac, mac, vac :+ (shift, -n), shift, cnt, tail)
-          case p +: ps => if(vac.nonEmpty || (shift != 0)) uHelper(ac :+ ('u', cnt) :+ p, mac :+ ((cnt, BulkOp(vac.sortBy(_._1), shift))), Vector[(Int, Int)](), 0, cnt + 1, ps) else uHelper(ac :+ p, mac, vac, shift, cnt, ps)
-          case _ => (mkMap(mac), ac)
+          case ('>', n) +: tail => uHelper(ac, mac, vac, shift + n, ind, tail)
+          case ('<', n) +: tail => uHelper(ac, mac, vac, shift - n, ind, tail)
+          case ('+', n) +: tail => uHelper(ac, mac, vac :+ (shift, n), shift, ind, tail)
+          case ('-', n) +: tail => uHelper(ac, mac, vac :+ (shift, -n), shift, ind, tail)
+          case p +: ps =>
+            if(vac.nonEmpty || (shift != 0)) uHelper(ac :+ ('u', ind) :+ p, mac :+ BulkOp(vac.sortBy(_._1), shift), Vector[(Int, Int)](), 0, ind + 1, ps)
+            else uHelper(ac :+ p, mac, vac, shift, ind, ps)
+          case _ => (mac, ac)
         }
       }
       
-      uHelper(Vector[(Char, Int)](), Vector[(Int, BulkOp)](), Vector[(Int, Int)](), 0, 0, progSrc)
+      uHelper(Vector[(Char, Int)](), Vector[BulkOp](), Vector[(Int, Int)](), 0, 0, progSrc)
     }
     
-    def optLoop(progSrc: Vector[(Char, Int)], hmap: immutable.HashMap[Int, BulkOp]): Vector[(Char, Int)] = {
+    def optLoop(progSrc: Vector[(Char, Int)], hmap: Vector[BulkOp]): Vector[(Char, Int)] = {
       @tailrec
       def lHelper(ac: Vector[(Char, Int)], src: Vector[(Char, Int)]): Vector[(Char, Int)] = {
         if(debug) println(
