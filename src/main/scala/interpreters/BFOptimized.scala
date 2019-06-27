@@ -108,7 +108,7 @@ object BFOptimized extends Interpreter{
             else if((tag != ' ') && (c != tag) && ops.contains(c)) bHelper(ac :+ (tag, count), c, 1, src.tail)
             else bHelper(ac :+ (tag, count) :+ (c, 1), ' ', 0, src.tail)
           case None =>
-            if(tag == 0) ac
+            if(tag == ' ') ac
             else ac :+ (tag, count)
         }
       }
