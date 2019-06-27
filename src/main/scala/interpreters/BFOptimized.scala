@@ -10,12 +10,13 @@ case class BulkOp(ops: Vector[(Int, Int)], shift: Int){
 }
 
 object BFOptimized extends Interpreter{
-  def apply(log: Boolean, debug: Boolean)(progRaw: String): Try[String] = apply(1, -1, log, debug)(progRaw)
-  def apply(initTapeSize: Int, outputMaxLength: Int, log: Boolean, debug: Boolean)(progRaw: String): Try[String] = optimizeBulk(progRaw, debug) match{
-    case Success((bops, prog)) => bfFunc(prog, bops, initTapeSize, outputMaxLength, debug, log)
+  def apply(log: Boolean, debug: Boolean)(progRaw: String): Try[String] = apply(1, -1, dynamicTapeSize = true, debug, log)(progRaw)
+  def apply(initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean)(progRaw: String): Try[String] = optimizeBulk(progRaw, debug) match{
+    case Success((bops, prog)) => bfFunc(prog, bops, initTapeSize, outputMaxLength, dynamicTapeSize, debug, log)
     case Failure(e) => Failure(e)
   }
-  def bfFunc(prog: Vector[(Char, Int)], bops: immutable.HashMap[Int, BulkOp], initTapeSize: Int, outputMaxLength: Int, debug: Boolean, log: Boolean): Try[String] = {
+  
+  def bfFunc(prog: Vector[(Char, Int)], bops: immutable.HashMap[Int, BulkOp], initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, debug: Boolean, log: Boolean): Try[String] = {
     def printLog(str: String): String = {if(log) print(str); str}
     
     if(debug) println(
@@ -25,16 +26,28 @@ object BFOptimized extends Interpreter{
           |${prog.zipWithIndex.map{case ((c, n), ind) => s"$ind: $c $n\n"}.mkString}
           |""".stripMargin)
     
-    def updateBulk(dat: Vector[Int], dc: Int, bop: BulkOp): Vector[Int] = {
+    val updateBulk: (Vector[Int], Int, BulkOp) => Vector[Int] = (dat: Vector[Int], dc: Int, bop: BulkOp) => if(dynamicTapeSize){
       if(bop.ops.nonEmpty) bop.ops.foldLeft(dat.padTo(math.max(dc + bop.ops.last._1 + 1, dc + bop.shift + 1), 0)){case (vec, (ind, num)) => vec.updated(dc + ind, vec(dc + ind) + num)}
       else dat.padTo(dc + bop.shift + 1, 0)
+    }else{
+      if(bop.ops.nonEmpty) bop.ops.foldLeft(dat){case (vec, (ind, num)) => vec.updated(dc + ind, vec(dc + ind) + num)}
+      else dat
     }
-    def loopBulk(dat: Vector[Int], dc: Int, bop: BulkOp): Vector[Int] = {
+  
+    val loopBulk: (Vector[Int], Int, BulkOp) => Vector[Int] = (dat: Vector[Int], dc: Int, bop: BulkOp) => if(dynamicTapeSize){
       if(dat(dc) != 0) bop.ops.foldLeft(dat.padTo(math.max(dc + bop.ops.last._1 + 1, dc + bop.shift + 1), 0)){case (vec, (ind, num)) => vec.updated(dc + ind, vec(dc + ind) + dat(dc)*num)}
       else dat.padTo(dc + bop.shift + 1, 0)
+    }else{
+      if(dat(dc) != 0) bop.ops.foldLeft(dat){case (vec, (ind, num)) => vec.updated(dc + ind, vec(dc + ind) + dat(dc)*num)}
+      else dat
     }
+    
     def scan(dat: Vector[Int], init: Int, stp: Int): Int = LazyList.from(init, stp).takeWhile(n => (dat.sizeIs > n) && (dat(n) != 0)).lastOption match{
       case Some(pos) => pos + stp
+      case None => init
+    }
+    def scanLeft(dat: Vector[Int], init: Int, stp: Int): Int = LazyList.from(init, -stp).takeWhile(n => (n >= 0) && (dat(n) != 0)).lastOption match{
+      case Some(pos) => pos - stp
       case None => init
     }
     
@@ -43,9 +56,9 @@ object BFOptimized extends Interpreter{
       if(debug) println(
         s"""|Loop: PC($pc)  DC($dc)
             |${dat.mkString(" | ")}""".stripMargin)
-      if(prog.sizeIs > pc){
-        val (op, num) = prog(pc)
-        op match{
+      
+      Try{prog(pc)} match{
+        case Success((op, num)) => op match{
           case 'u' =>
             val bop = bops(num)
             bfv(pc + 1, dc + bop.shift, updateBulk(dat, dc, bop), result)
@@ -60,11 +73,13 @@ object BFOptimized extends Interpreter{
             else result ++ printLog(dat(dc).toChar.toString * num)
           case '/' => bfv(pc + 1, scan(dat, dc, num), dat, result)
           case '\\' =>
-            val len = dat.length
-            bfv(pc + 1, len - 1 - scan(dat.reverse, len - 1 - dc, num), dat, result)
+            //val len = dat.length
+            //bfv(pc + 1, len - 1 - scan(dat.reverse, len - 1 - dc, num), dat, result)
+            bfv(pc + 1, scanLeft(dat, dc, num), dat, result)
           case '_' => bfv(pc + 1, dc, dat.updated(dc, 0), result)
         }
-      } else result
+        case Failure(_) => result
+      }
     }
     
     Try{bfv(0, 0, Vector.fill(initTapeSize)(0), "")}

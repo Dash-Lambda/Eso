@@ -19,11 +19,12 @@ object EsoConsole {
   val assemVec: Vector[(String, Assembler)] = Vector[(String, Assembler)](("WhiteSpace", WhiteSpaceAssembler))
   val interpVec: Vector[(String, Interpreter)] = Vector[(String, Interpreter)](("WhiteSpace", WhiteSpace), ("WhiteSpaceSL", WhiteSpaceSL))
   
-  var initTapeSize: Int = 1
+  var initTapeSize: Int = 40000
   var outputMaxLength: Int = -1
   var BFOpt: Boolean = true
   var log: Boolean = true
   var debug: Boolean = false
+  var dynamicTapeSize: Boolean = false
   
   def main(args: Array[String]): Unit = {
     BFTranslators ++= nativeTrans.map(t => (t.name, t))
@@ -38,31 +39,34 @@ object EsoConsole {
     while(runChk){
       val inp = grabStr(s"$pointer").split(" ").toVector
       
-      inp match{
-        case "test" +: _ => runHandler(BFTranslators, interpreters, BFOpt, initTapeSize, outputMaxLength, log, debug)("BrainFuck bfMandelbrot.txt".split(" ").toVector)
-        case "run" +: args => runHandler(BFTranslators, interpreters, BFOpt, initTapeSize, outputMaxLength, log, debug)(args)
-        case "assemble" +: args => assembleHandler(assemblers, log, rev = false)(args)
-        case "disassemble" +: args => assembleHandler(assemblers, log, rev = true)(args)
-        case "translate" +: args => translationHandler(BFTranslators)(args)
-        case "listLangs" +: _ => printLangsHandler(interpreters, BFTranslators, assemblers)
-        case "saveBFLangs" +: args => bfLangSaveHandler(BFTranslators, nativeTrans)(args)
-        case "syntax" +: args => syntaxHandler(BFTranslators)(args)
-        case "help" +: _ => helpHandler()
-        case "listVars" +: _ => printVarsHandler(initTapeSize, outputMaxLength, BFOpt, log, debug)
-        case "set" +: args =>
-          args match{
-            case "log" +: arg +: _ => log = setBoolHandler(arg, log)
-            case "debug" +: arg +: _ => debug = setBoolHandler(arg, debug)
-            case "BFOpt" +: arg +: _ => BFOpt = setBoolHandler(arg, BFOpt)
-            case "outputMaxLength" +: arg +: _ => outputMaxLength = setIntHandler(arg, outputMaxLength)
-            case "initTapeSize" +: arg +: _ => initTapeSize = setIntHandler(arg, initTapeSize)
-            case str +: _ => println(s"$str is not a recognized runtime parameter.")
-          }
-        case "loadBFLangs" +: args => BFTranslators ++= loadBFLangsHandler(args)
-        case "defineBFLang" +: _ => BFTranslators += langCreationHandler
-        case "exit" +: _ => println("Closing..."); runChk = false
-        case _ => println("Invalid command.")
-      }
+      execCommand(inp)
+    }
+    
+    def execCommand(inp: Vector[String]): Unit = inp match{
+      case "test" +: _ => runHandler(BFTranslators, interpreters, BFOpt, initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)("BrainFuck bfMandelbrot.txt".split(" ").toVector)
+      case "run" +: args => runHandler(BFTranslators, interpreters, BFOpt, initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)(args)
+      case "assemble" +: args => assembleHandler(assemblers, log, rev = false)(args)
+      case "disassemble" +: args => assembleHandler(assemblers, log, rev = true)(args)
+      case "translate" +: args => translationHandler(BFTranslators)(args)
+      case "listLangs" +: _ => printLangsHandler(interpreters, BFTranslators, assemblers)
+      case "saveBFLangs" +: args => bfLangSaveHandler(BFTranslators, nativeTrans)(args)
+      case "syntax" +: args => syntaxHandler(BFTranslators)(args)
+      case "help" +: _ => helpHandler()
+      case "listVars" +: _ => printVarsHandler(initTapeSize, outputMaxLength, BFOpt, dynamicTapeSize, log, debug)
+      case "set" +: args =>
+        args match{
+          case "log" +: arg +: _ => log = setBoolHandler(arg, log)
+          case "debug" +: arg +: _ => debug = setBoolHandler(arg, debug)
+          case "BFOpt" +: arg +: _ => BFOpt = setBoolHandler(arg, BFOpt)
+          case "dynamicTapeSize" +: arg +: _ => dynamicTapeSize = setBoolHandler(arg, dynamicTapeSize)
+          case "outputMaxLength" +: arg +: _ => outputMaxLength = setIntHandler(arg, outputMaxLength)
+          case "initTapeSize" +: arg +: _ => initTapeSize = setIntHandler(arg, initTapeSize)
+          case str +: _ => println(s"$str is not a recognized runtime parameter.")
+        }
+      case "loadBFLangs" +: args => BFTranslators ++= loadBFLangsHandler(args)
+      case "defineBFLang" +: _ => BFTranslators += langCreationHandler
+      case "exit" +: _ => println("Closing..."); runChk = false
+      case _ => println("Invalid command.")
     }
   }
 }

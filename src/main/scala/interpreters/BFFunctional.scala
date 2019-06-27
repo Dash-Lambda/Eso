@@ -5,8 +5,8 @@ import scala.io.StdIn
 import scala.util.{Failure, Success, Try}
 
 object BFFunctional extends Interpreter {
-  def apply(log: Boolean, debug: Boolean)(prog: String): Try[String] = apply(1, -1, log, debug)(prog)
-  def apply(initTapeSize: Int, outputMaxLength: Int, log: Boolean, debug: Boolean)(prog: String): Try[String] = {
+  def apply(log: Boolean, debug: Boolean)(prog: String): Try[String] = apply(100, -1, dynamicTapeSize = true, log, debug)(prog)
+  def apply(initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean)(prog: String): Try[String] = {
     @tailrec
     def bfi(plog: String, psrc: String, dlog: List[Int], dsrc: List[Int], dir: Int, cnt: Int, result: String): Try[String] = dir match{
       case 1 => (psrc.headOption, cnt) match{
@@ -25,7 +25,10 @@ object BFFunctional extends Interpreter {
       }
       case 0 => psrc.headOption match{
         case Some(op) => op match{
-          case '>' => if(dsrc.tail.nonEmpty) bfi(psrc.head +: plog, psrc.tail, dsrc.head +: dlog, dsrc.tail, dir, cnt, result) else bfi(psrc.head +: plog, psrc.tail, dsrc.head +: dlog, List(0), dir, cnt, result)
+          case '>' =>
+            if(dsrc.sizeIs > 1) bfi(psrc.head +: plog, psrc.tail, dsrc.head +: dlog, dsrc.tail, dir, cnt, result)
+            else if(dynamicTapeSize) bfi(psrc.head +: plog, psrc.tail, dsrc.head +: dlog, List(0), dir, cnt, result)
+            else Failure(InterpreterException("End of Tape"))
           case '<' => if(dlog.nonEmpty) bfi(psrc.head +: plog, psrc.tail, dlog.tail, dlog.head +: dsrc, dir, cnt, result) else Failure(InterpreterException("Beginning of Tape Reached"))
           case '+' => bfi(psrc.head +: plog, psrc.tail, dlog, (dsrc.head + 1) +: dsrc.tail, dir, cnt, result)
           case '-' => bfi(psrc.head +: plog, psrc.tail, dlog, (dsrc.head - 1) +: dsrc.tail, dir, cnt, result)
