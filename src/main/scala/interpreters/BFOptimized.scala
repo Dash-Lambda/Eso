@@ -17,22 +17,12 @@ object BFOptimized extends Interpreter{
   
   def bfFunc(prog: Vector[(Char, Int)], bops: Vector[BulkOp], initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, debug: Boolean, log: Boolean): Try[String] = {
     def printLog(str: String): String = {if(log) print(str); str}
-  
-    def scanRight(dat: Vector[Int], init: Int, stp: Int): Int = {
-      if(stp == 1) dat.indexOf(0, init)
-      else LazyList.from(init, stp).takeWhile(n => (dat.sizeIs > n) && (dat(n) != 0)).lastOption match{
-        case Some(pos) => pos + stp
-        case None => init
-      }
-    }
-    def scanLeft(dat: Vector[Int], init: Int, stp: Int): Int = {
-      if(stp == 1) dat.lastIndexOf(0, init)
-      else LazyList.from(init, -stp).takeWhile(n => (n >= 0) && (dat(n) != 0)).lastOption match{
-        case Some(pos) => pos - stp
-        case None => init
-      }
-    }
-  
+    
+    @tailrec
+    def scan(dat: Vector[Int], stp: Int, ind: Int): Int = if(dat(ind) != 0) scan(dat, stp, ind + stp) else ind
+    def scanRight(dat: Vector[Int], stp: Int, init: Int): Int = if(stp == 1) dat.indexOf(0, init) else scan(dat, stp, init)
+    def scanLeft(dat: Vector[Int], stp: Int, init: Int): Int = if(stp == 1) dat.lastIndexOf(0, init) else scan(dat, -stp, init)
+    
     val updateBulk: (Vector[Int], Int, BulkOp) => Vector[Int] = (dat: Vector[Int], dc: Int, bop: BulkOp) => if(dynamicTapeSize){
       if(bop.ops.nonEmpty) bop.ops.foldLeft(dat.padTo(math.max(dc + bop.ops.last._1 + 1, dc + bop.shift + 1), 0)){case (vec, (ind, num)) => vec.updated(dc + ind, vec(dc + ind) + num)}
       else dat.padTo(dc + bop.shift + 1, 0)
@@ -63,19 +53,25 @@ object BFOptimized extends Interpreter{
             val bop = bops(num)
             bfv(pc + 1, dc, loopBulk(dat, dc, bop), result)
           case '[' => bfv(if(dat(dc) == 0) num else pc + 1, dc, dat, result)
-          case ']' => bfv(if(dat(dc) == 0) pc + 1 else num + 1, dc, dat, result)
+          case ']' => bfv(if(dat(dc) == 0) pc + 1 else num, dc, dat, result)
           case ',' => bfv(pc + 1, dc, dat.updated(dc, StdIn.readInt), result)
           case '.' =>
             if((outputMaxLength == -1) || (result.sizeIs <= outputMaxLength - num)) bfv(pc + 1, dc, dat, result ++ printLog(dat(dc).toChar.toString * num))
             else result ++ printLog(dat(dc).toChar.toString * num)
-          case '/' => bfv(pc + 1, scanRight(dat, dc, num), dat, result)
-          case '\\' => bfv(pc + 1, scanLeft(dat, dc, num), dat, result)
+          case '/' if dynamicTapeSize =>
+            val newdc = scanRight(dat, num, dc)
+            bfv(pc + 1, newdc, dat.padTo(newdc + 1, 0), result)
+          case '\\' if dynamicTapeSize =>
+            val newdc = scanLeft(dat, num, dc)
+            bfv(pc + 1, newdc, dat.padTo(newdc + 1, 0), result)
+          case '/' => bfv(pc + 1, scan(dat, num, dc), dat, result)
+          case '\\' => bfv(pc + 1, scan(dat, -num, dc), dat, result)
           case '_' => bfv(pc + 1, dc, dat.updated(dc, 0), result)
         }
         case Failure(_) => result
       }
     }
-  
+    
     if(debug) println(
       s"""|Optimized: ${prog.map(_._1).mkString}
           |BulkOps: [${bops.mkString("], [")}]
@@ -199,7 +195,7 @@ object BFOptimized extends Interpreter{
           scrub(pos + 1, 0) match{
             case Success(ind) =>
               if(debug) println(s"Skip: $pos -> $ind")
-              sHelper(ac :+ ('[', ind), src.updated(ind - pos - 1, (']', pos)).tail)
+              sHelper(ac :+ ('[', ind), src.updated(ind - pos - 1, (']', pos + 1)).tail)
             case Failure(e) => Failure(e)
           }
         case p +: ps => sHelper(ac :+ p, ps)
