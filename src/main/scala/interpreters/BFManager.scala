@@ -6,10 +6,14 @@ import scala.collection.mutable
 import scala.util.{Failure, Try}
 
 object BFManager {
-  def apply(translators: mutable.HashMap[String, BFTranslator], initTapeSize: Int, outputMaxLength: Int, optimized: Boolean, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean, lang: String)(prog: String): Try[String] = {
-    val baseInterp: String => Try[String] = {
-      if(optimized) BFOptimized(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)
-      else BFFunctional(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)
+  def apply(translators: mutable.HashMap[String, BFTranslator],
+            initTapeSize: Int, outputMaxLength: Int,
+            optimizing: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean,
+            lang: String)(prog: String): Try[String] = {
+    val baseInterp: String => Try[String] = optimizing match{
+      case 0 => BFFunctional(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)
+      case 1 => BFOptimized(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)
+      case 2 => BFCompiled(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)
     }
     
     lang match{

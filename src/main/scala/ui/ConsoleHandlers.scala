@@ -2,13 +2,14 @@ package ui
 
 import java.io.{File, FileWriter, PrintWriter}
 
+import Compilers.BFCompiler
 import assemblers.{Assembler, AssemblerException}
 import translators._
 
 import scala.annotation.tailrec
 import scala.io.{Source, StdIn}
 import scala.util.{Failure, Success, Try}
-import interpreters.{BFManager, Interpreter, InterpreterException}
+import interpreters.{BFManager, BFOptimizer, Interpreter, InterpreterException}
 
 import scala.collection.{immutable, mutable}
 
@@ -17,14 +18,14 @@ case class HandlerException(info: String) extends Throwable
 object ConsoleHandlers {
   def runHandler(BFTranslators: mutable.HashMap[String, BFTranslator],
                  interpreters: immutable.HashMap[String, Interpreter],
-                 optimized: Boolean, initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean,
+                 optimizing: Int, initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean,
                  log: Boolean, debug: Boolean)(args: Vector[String]): Unit = {
     args match{
       case lang +: fnam +: _ if lang == "BrainFuck" || BFTranslators.isDefinedAt(lang) || interpreters.isDefinedAt(lang) =>
         grabProg(fnam) match{
           case Success(prog) =>
             val interp: String => Try[String] = if(interpreters.isDefinedAt(lang)) interpreters(lang)(log, debug)
-            else BFManager(BFTranslators, initTapeSize, outputMaxLength, optimized, dynamicTapeSize, log, debug, lang)
+            else BFManager(BFTranslators, initTapeSize, outputMaxLength, optimizing, dynamicTapeSize, log, debug, lang)
             
             print(s"Running $fnam... ")
             if(log) println
@@ -41,6 +42,26 @@ object ConsoleHandlers {
         }
       case _ => println("Language not recognized.")
     }
+  }
+  
+  def compileHandler(initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean)(args: Vector[String]): Unit = args match{
+    case inam +: onam +: _ =>
+      print(s"Retrieving from $inam... ")
+      Try{ Source.fromFile(inam).mkString } match{
+        case Success(progRaw) =>
+          print("Done.\nCompiling... ")
+          BFCompiler(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)(progRaw) match{
+            case Success(prog) =>
+              print(s"Done.\nSaving to $onam... ")
+              val oFile = new PrintWriter(new File(onam))
+              oFile.print(prog)
+              oFile.close()
+              println("Done.")
+            case Failure(e) => println(s"Error: $e")
+          }
+        case Failure(e) => println(s"Error: $e")
+      }
+    case _ => println("Not enough arguments.")
   }
   
   def assembleHandler(assemblers: immutable.HashMap[String, Assembler], log: Boolean, rev: Boolean)(args: Vector[String]): Unit = args match{
@@ -67,6 +88,57 @@ object ConsoleHandlers {
         case Failure(e) => println(s"Error: $e")
       }
     case _ => println("Invalid Arguments")
+  }
+  
+  def optimizeHandler(args: Vector[String], debug: Boolean): Unit = args match {
+    case inam +: onam +: _ =>
+      print(s"Retrieving from $inam... ")
+      Try {
+        val iFile = Source.fromFile(inam)
+        val progRaw = iFile.mkString
+        iFile.close()
+        progRaw
+      } match {
+        case Success(progRaw) =>
+          print("Done.\nOptimizing... ")
+          BFOptimizer(progRaw, debug) match {
+            case Success((bops, prog)) =>
+              print(s"Done.\nSaving to $onam... ")
+              val oFile = new PrintWriter(new File(onam))
+              oFile.print(
+                s"""|Optimized: ${prog.map(_._1).mkString}
+                    |BulkOps: ${bops.zipWithIndex.map { case (bop, i) => s"[$i, ${bop.shift}, ${bop.ops.map { case (ind, inc) => s"{$ind->$inc}" }.mkString(", ")}]" }.mkString(", ")}
+                    |Optimized Detail:${prog.zipWithIndex.map { case ((c, n), ind) => s"\n$ind: $c $n" }.mkString}""".stripMargin)
+              oFile.close()
+              println("Done.")
+            case Failure(e) => println(s"Error: $e")
+          }
+        case Failure(e) => println(s"Error: $e")
+      }
+    case inam +: _ =>
+      print(s"Retrieving from $inam... ")
+      Try {
+        val iFile = Source.fromFile(inam)
+        val progRaw = iFile.mkString
+        iFile.close()
+        progRaw
+      } match {
+        case Success(progRaw) =>
+          print("Done.\nOptimizing... ")
+          BFOptimizer(progRaw, debug) match {
+            case Success((bops, prog)) =>
+              println(
+                s"""|Done.
+                    |
+                    |Optimized: ${prog.map(_._1).mkString}
+                    |BulkOps: ${bops.zipWithIndex.map { case (bop, i) => s"[$i, ${bop.shift}, ${bop.ops.map { case (ind, inc) => s"{$ind->$inc}" }.mkString(", ")}]" }.mkString(", ")}
+                    |Optimized Detail:${prog.zipWithIndex.map { case ((c, n), ind) => s"\n$ind: $c $n" }.mkString}
+                    |""".stripMargin)
+            case Failure(e) => println(s"Error: $e")
+          }
+        case Failure(e) => println(s"Error: $e")
+      }
+    case _ => println("Invalid Arguments.")
   }
   
   def translationHandler(translators: mutable.HashMap[String, BFTranslator])(args: Vector[String]): Unit = {
@@ -100,6 +172,33 @@ object ConsoleHandlers {
         }
       case _ => println("Arguments not recognized.")
     }
+  }
+  
+  def loadBindingsHandler(fnam: String): Vector[(String, Vector[String])] = Try{
+    val iFile = Source.fromFile(fnam)
+    val dats = iFile.getLines.toVector
+    iFile.close()
+    dats.map{str => val vec = str.split(" ").toVector; (vec.head, vec.tail)}
+  } match{
+    case Success(vec) =>
+      println("Successfully loaded bindings")
+      vec
+    case Failure(e) =>
+      println(s"Load Bindings Error: $e")
+      Vector[(String, Vector[String])]()
+  }
+  
+  def saveBindingsHandler(bindings: mutable.HashMap[String, Vector[String]])(fnam: String): Unit = {
+    val oFile = new PrintWriter(new File(fnam))
+    oFile.print(bindings.map{case (k: String, v: Vector[String]) => s"$k ${v.mkString(" ")}"}.mkString("\n"))
+    oFile.close()
+  }
+  
+  def listBindingsHandler(bindings: mutable.HashMap[String, Vector[String]]): Unit = {
+    println(
+      s"""|User bindings...
+          |${bindings.toVector.map{case (k, v) => s"- $k => ${v.mkString(" ")}"}.mkString("\n")}
+          |""".stripMargin)
   }
   
   def loadBFLangsHandler(args: Vector[String]): Vector[(String, BFTranslator)] = {
@@ -171,33 +270,50 @@ object ConsoleHandlers {
           |""".stripMargin)
   }
   
-  def printVarsHandler(initTapeSize: Int, outputMaxLength: Int, BFOpt: Boolean, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean): Unit = {
+  def printVarsHandler(initTapeSize: Int, outputMaxLength: Int, BFOpt: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean): Unit = {
     val maxLen = Vector(initTapeSize, outputMaxLength, BFOpt, dynamicTapeSize, log, debug).map(_.toString.length).max
     println(
-      s"""|initTapeSize     = %-${maxLen}d  (initial tape length for BF interpreters)
-          |outputMaxLength  = %-${maxLen}d  (maximum size of output string for BF interpreters, useful for non-terminating programs)
-          |dynamicTapeSize  = %-${maxLen}b  (resize tape as needed for BF interpreters, eliminates memory limitations but reduces speed)
-          |BFOpt            = %-${maxLen}b  (optimize BrainFuck code)
-          |log              = %-${maxLen}b  (determines whether output is shown during or after runtime)
-          |debug            = %-${maxLen}b  (show runtime information, such as stack and heap states)
+      s"""|Runtime parameters...
+          |- initTapeSize     = %-${maxLen}d  (initial tape length for BF interpreters)
+          |- outputMaxLength  = %-${maxLen}d  (maximum size of output string for BF interpreters, useful for non-terminating programs, -1 = infinite)
+          |- dynamicTapeSize  = %-${maxLen}b  (resize tape as needed for BF interpreters, eliminates memory limitations but reduces speed)
+          |- BFOpt            = %-${maxLen}d  (BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled)
+          |- log              = %-${maxLen}b  (determines whether output is shown during or after runtime)
+          |- debug            = %-${maxLen}b  (show runtime information, such as stack and heap states)
           |""".stripMargin.format(initTapeSize, outputMaxLength, dynamicTapeSize, BFOpt, log, debug))
   }
   
   def helpHandler(): Unit = print(
     """|Commands...
-       |  run <language> <source file>
-       |  assemble <language> <source file> <destination file>
-       |  disassemble <language> <source file> <destination file>
-       |  translate <source language> <target language> <source file> <optional destination file>
-       |  loadBFLangs <file>
-       |  saveBFLangs <file>
-       |  defineBFLang
-       |  listLangs
-       |  syntax <language>
-       |  set <variable name> <new value>
-       |  listVars
-       |  help
-       |  exit
+       |- run <language> <source file>
+       |
+       |- compile <source file> <destination file>
+       |
+       |- assemble <language> <source file> <destination file>
+       |- disassemble <language> <source file> <destination file>
+       |
+       |- optimize <source file> <optional destination file>
+       |
+       |- translate <source language> <target language> <source file> <optional destination file>
+       |- defineBFLang
+       |- loadBFLangs <file>
+       |- saveBFLangs <file>
+       |- syntax <BF language>
+       |
+       |- bind <token> <binding>
+       |- unbind <token>
+       |- clrBindings
+       |- loadBindings <binding file>
+       |- saveBindings <destination file>
+       |- listBindings
+       |
+       |- set <variable name> <new value>
+       |
+       |- listLangs
+       |- listVars
+       |- help
+       |
+       |- exit
        |
        |""".stripMargin)
   
