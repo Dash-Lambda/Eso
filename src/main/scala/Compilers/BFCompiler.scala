@@ -13,7 +13,7 @@ case class CompOp(ops: Vector[(Int, String)], shift: Int){
       else 0
   }.foldLeft(0){case (ac, n) => if(n == 0) 0 else ac + n}
   
-  def canLoop: Boolean = (sumat(0) == -1) && ops.map(_._2).forall(str => str.startsWith("+") || str.startsWith("-"))
+  def canLoop: Boolean = (sumat(0) == -1) && ops.map(_._2).forall(str => str.startsWith("+") || str.startsWith("-")) && shift == 0
   def maxShift: Int = ops.map(_._1).max
 }
 
