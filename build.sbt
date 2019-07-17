@@ -8,5 +8,7 @@ ThisBuild / organizationName := "dashlambda"
 lazy val root = (project in file("."))
   .settings(
     name := "EsoInterpreter",
-    libraryDependencies += "org.typelevel" %% "spire" % "0.17.0-M1"
+    libraryDependencies ++= Seq(
+      "org.scala-lang" % "scala-compiler" % "2.13.0",
+      "org.typelevel" %% "spire" % "0.17.0-M1")
   )
