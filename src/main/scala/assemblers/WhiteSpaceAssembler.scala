@@ -5,6 +5,7 @@ import scala.collection.immutable
 import scala.util.{Failure, Success, Try}
 
 object WhiteSpaceAssembler extends Assembler {
+  val name = "WhiteSpace"
   val syntax: Vector[(String, String)] = Vector[(String, String)](
     ("  ", "push"),
     (" \n ", "dup"),

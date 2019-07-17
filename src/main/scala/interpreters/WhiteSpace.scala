@@ -6,12 +6,13 @@ import scala.io.StdIn
 import scala.util.{Failure, Success, Try}
 
 object WhiteSpace extends Interpreter {
-  def apply(log: Boolean, debug: Boolean)(progRaw: String): Try[String] = Try{formatProg(progRaw)} match{
-    case Success(prog) => apply(prog, getCalls(prog), log, debug)
+  val name = "WhiteSpace"
+  def apply(log: Boolean, debug: Boolean, outputMaxLength: Int)(progRaw: String): Try[String] = Try{formatProg(progRaw)} match{
+    case Success(prog) => apply(prog, getCalls(prog), log, debug, outputMaxLength)
     case Failure(e) => Failure(e)
   }
   
-  def apply(prog: Vector[(String, Long)], callAddrs: immutable.HashMap[Long, Int], log: Boolean, debug: Boolean): Try[String] = {
+  def apply(prog: Vector[(String, Long)], callAddrs: immutable.HashMap[Long, Int], log: Boolean, debug: Boolean, outputMaxLength: Int): Try[String] = {
     def binOp(func: (Long, Long) => Long)(stack: List[Long]): List[Long] = stack match{case n1 +: n2 +: ns => func(n1, n2) +: ns}
     def printWrap(tok: String): String = {if(log) print(tok); tok}
     
@@ -38,10 +39,24 @@ object WhiteSpace extends Interpreter {
         case "jumpNeg" => if(stack.head < 0) wsi(callAddrs(num), stack.tail, heap, callStack, result) else wsi(pc + 1, stack.tail, heap, callStack, result)
         case "return" => callStack match{case a +: as => wsi(a, stack, heap, as, result)}
         case "endProg" => result
-        case "outChar" => stack match{case n +: ns => wsi(pc + 1, ns, heap, callStack, result ++ printWrap(n.toChar.toString))}
-        case "outNum" => stack match{case n +: ns => wsi(pc + 1, ns, heap, callStack, result ++ printWrap(n.toString))}
         case "readChar" => wsi(pc + 1, StdIn.readChar.toLong +: stack, heap, callStack, result)
         case "readNum" => wsi(pc + 1, StdIn.readLong +: stack, heap, callStack, result)
+        case "outChar" => stack match{case n +: ns =>
+          if(outputMaxLength == -1) wsi(pc + 1, ns, heap, callStack, result ++ printWrap(n.toChar.toString))
+          else{
+            val nxt = result ++ printWrap(n.toChar.toString)
+            if(nxt.sizeIs < outputMaxLength) wsi(pc + 1, ns, heap, callStack, nxt)
+            else nxt
+          }
+        }
+        case "outNum" => stack match{case n +: ns =>
+          if(outputMaxLength == -1) wsi(pc + 1, ns, heap, callStack, result ++ printWrap(n.toString))
+          else{
+            val nxt = result ++ printWrap(n.toString)
+            if(nxt.sizeIs < outputMaxLength) wsi(pc + 1, ns, heap, callStack, nxt)
+            else nxt
+          }
+        }
       }
     }
     

@@ -5,7 +5,8 @@ import Compilers.BFCompiler
 import scala.util.{Failure, Success, Try}
 
 object BFCompiled extends Interpreter{
-  def apply(log: Boolean, debug: Boolean)(progRaw: String): Try[String] = apply(40000, -1, dynamicTapeSize = false, log = true, debug = false)(progRaw)
+  val name = "BFCompiled"
+  def apply(log: Boolean, debug: Boolean, outputMaxLength: Int)(progRaw: String): Try[String] = apply(40000, outputMaxLength, dynamicTapeSize = false, log = true, debug = false)(progRaw)
   def apply(initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean)(progRaw: String): Try[String] = {
     BFCompiler(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)(progRaw) match {
       case Success(prog) => Try{

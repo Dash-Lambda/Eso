@@ -17,8 +17,9 @@ case class CompOp(ops: Vector[(Int, String)], shift: Int){
   def maxShift: Int = ops.map(_._1).max
 }
 
-object BFCompiler {
-  def apply(log: Boolean)(progRaw: String): Try[String] = apply(40000, -1, dynamicTapeSize = false, log = false, debug = false)(progRaw)
+object BFCompiler extends Compiler{
+  val name = "BrainFuck"
+  def apply(debug: Boolean)(progRaw: String): Try[String] = apply(40000, -1, dynamicTapeSize = false, log = false, debug)(progRaw)
   def apply(initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean)(progRaw: String): Try[String] = {
     compOpt(progRaw, debug) match{
       case Success((bops, prog)) => Success(compile(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)(bops, prog))

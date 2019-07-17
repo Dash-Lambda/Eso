@@ -2,7 +2,7 @@ package ui
 
 import ConsoleHandlers._
 import assemblers.{Assembler, WhiteSpaceAssembler}
-import interpreters.{Interpreter, ScalaRun, WhiteSpace, WhiteSpaceSL}
+import interpreters.{FracTran, Interpreter, ScalaRun, WhiteSpace, WhiteSpaceSL}
 import translators.{BFTranslator, FlufflePuff, Ook}
 
 import scala.collection.{immutable, mutable}
@@ -15,11 +15,12 @@ object EsoConsole {
        |""".stripMargin
   val defaultBindingFile: String = "userBindings.txt"
   val nativeTrans: Vector[BFTranslator] = Vector[BFTranslator](FlufflePuff, Ook)
-  val assemVec: Vector[(String, Assembler)] = Vector[(String, Assembler)](("WhiteSpace", WhiteSpaceAssembler))
-  val interpVec: Vector[(String, Interpreter)] = Vector[(String, Interpreter)](("WhiteSpace", WhiteSpace), ("WhiteSpaceSL", WhiteSpaceSL), ("Scala", ScalaRun))
+  val assemVec: Vector[Assembler] = Vector[Assembler](WhiteSpaceAssembler)
+  val interpVec: Vector[Interpreter] = Vector[Interpreter](FracTran, ScalaRun, WhiteSpace, WhiteSpaceSL)
   
   val BFTranslators: mutable.HashMap[String, BFTranslator] = mutable.HashMap[String, BFTranslator]()
   val userBindings: mutable.HashMap[String, Vector[String]] = mutable.HashMap[String, Vector[String]]()
+  
   var initTapeSize: Int = 40000
   var outputMaxLength: Int = -1
   var BFOpt: Int = 2
@@ -30,8 +31,8 @@ object EsoConsole {
   def main(args: Array[String]): Unit = {
     BFTranslators ++= nativeTrans.map(t => (t.name, t))
     userBindings ++= loadBindingsHandler(defaultBindingFile)
-    val interpreters = mkMap(interpVec)
-    val assemblers = mkMap(assemVec)
+    val interpreters = mkMap(interpVec.map(i => (i.name, i)))
+    val assemblers = mkMap(assemVec.map(a => (a.name, a)))
     println(welcomeText)
     consoleLoop(interpreters, assemblers)
   }

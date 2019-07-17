@@ -5,7 +5,8 @@ import scala.io.StdIn
 import scala.util.{Failure, Success, Try}
 
 object BFOptimized extends Interpreter{
-  def apply(log: Boolean, debug: Boolean)(progRaw: String): Try[String] = apply(1, -1, dynamicTapeSize = true, debug, log)(progRaw)
+  val name = "BFOptimized"
+  def apply(log: Boolean, debug: Boolean, outputMaxLength: Int)(progRaw: String): Try[String] = apply(1, outputMaxLength, dynamicTapeSize = true, debug, log)(progRaw)
   def apply(initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean)(progRaw: String): Try[String] = BFOptimizer(progRaw, debug) match{
     case Success((bops, prog)) =>
       if(debug) println(

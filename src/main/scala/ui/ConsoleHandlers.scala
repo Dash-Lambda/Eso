@@ -24,7 +24,7 @@ object ConsoleHandlers {
       case lang +: fnam +: _ if lang == "BrainFuck" || BFTranslators.isDefinedAt(lang) || interpreters.isDefinedAt(lang) =>
         grabProg(fnam) match{
           case Success(prog) =>
-            val interp: String => Try[String] = if(interpreters.isDefinedAt(lang)) interpreters(lang)(log, debug)
+            val interp: String => Try[String] = if(interpreters.isDefinedAt(lang)) interpreters(lang)(log, debug, outputMaxLength)
             else BFManager(BFTranslators, initTapeSize, outputMaxLength, optimizing, dynamicTapeSize, log, debug, lang)
             
             print(s"Running $fnam... ")

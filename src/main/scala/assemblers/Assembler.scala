@@ -4,6 +4,7 @@ import scala.collection.immutable
 import scala.util.Try
 
 trait Assembler {
+  def name: String
   def apply(prog: Vector[String], log: Boolean): Try[String]
   def unapply(prog: String, log: Boolean): Try[String]
   
