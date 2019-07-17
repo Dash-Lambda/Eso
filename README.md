@@ -1,7 +1,4 @@
 # Functional Esoteric Interpreter
-
-This is a purely (or mostly purely) functional interpreter for esoteric programming languages written in Scala.
-
 ### Meaning of functional
 Functional programming is a paradigm characterized by zero side-effects. The idea is to build your program around evaluating functions, where the functions take an input and return an output without modifying anything else. The biggest benefits of functional programming are safety and modularity, and in many cases concision.
 
