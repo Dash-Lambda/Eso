@@ -1,0 +1,15 @@
+unopt set BFOpt 0
+opt set BFOpt 1
+comp set BFOpt 2
+
+log set log true
+nolog set log false
+
+debug set debug true
+nodebug set debug false
+
+dyn set dynamicTapeSize true
+nodyn set dynamicTapeSize false
+
+init set initTapeSize
+olen set outputMaxLength
