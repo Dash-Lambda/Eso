@@ -68,7 +68,7 @@ object EsoConsole {
       case "unbind" +: tok +: _ => userBindings -= tok
       case "clrBindings" +: _ => userBindings.clear
       case "loadBindings" +: fnam +: _ => userBindings ++= loadBindingsHandler(fnam)
-      case "saveBindings" +: fnam +: _ => saveBindingsHandler(userBindings)(fnam)
+      case "saveBindings" +: args => saveBindingsHandler(userBindings)(args)
       case "listBindings" +: _ => listBindingsHandler(userBindings)
       
       case "set" +: args =>

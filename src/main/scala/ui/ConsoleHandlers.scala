@@ -188,7 +188,11 @@ object ConsoleHandlers {
       Vector[(String, Vector[String])]()
   }
   
-  def saveBindingsHandler(bindings: mutable.HashMap[String, Vector[String]])(fnam: String): Unit = {
+  def saveBindingsHandler(bindings: mutable.HashMap[String, Vector[String]])(args: Vector[String]): Unit = {
+    val fnam = args.headOption match{
+      case Some(str) => str
+      case None => "userBindings.txt"
+    }
     val oFile = new PrintWriter(new File(fnam))
     oFile.print(bindings.map{case (k: String, v: Vector[String]) => s"$k ${v.mkString(" ")}"}.mkString("\n"))
     oFile.close()
