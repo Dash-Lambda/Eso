@@ -6,7 +6,7 @@ This is a purely (or mostly purely) functional interpreter for esoteric programm
 Functional programming is a paradigm characterized by zero side-effects. The idea is to build your program around evaluating functions, where the functions take an input and return an output without modifying anything else. The biggest benefits of functional programming are safety and modularity, and in many cases concision.
 
 ### Usage of funtional programming in this project
-The interpreters and translators are purely functional, the UI is not. Functional programming is great for backend/core code, but it's not ideal for interactive elements.
+The interpreters and translators are -mostly- purely functional, the UI is not. Functional programming is great for backend/core code, but it's not ideal for interactive elements. The only deviation from functional style is the optional console logging during runtime, which is for interactive programs.
 
 ### State of the project
 Current Native language support:
@@ -14,20 +14,25 @@ Current Native language support:
 * [Fluffle Puff](https://github.com/juju2143/flufflepuff)
 * [Ook](https://esolangs.org/wiki/Ook!)
 * [WhiteSpace](https://esolangs.org/wiki/Whitespace) ([as defined here](https://web.archive.org/web/20151108084710/http://compsoc.dur.ac.uk/whitespace/tutorial.html))
+* Scala
 
 #### Current features:
 * Run program from text file
-* Optimized and unoptimized BrainFuck interpreters
+* Unoptimized, optimized, and compiled BrainFuck interpreters
 * Translate to and from supported BrainFuck languages
-* User-defined BrainFuck languages
+* Compile BrainFuck programs to Scala source files
+* Compile and run Scala source files
+* Create and use user-defined BrainFuck languages
 * User-configurable runtime parameters (logging, maximum output size, tape size, etc.)
 * Convert difficult-to-read code (a la WhiteSpace) to and from readable syntax with assemblers
 * Debug mode to show interpreter state during runtime
 
 ##### WIP:
+* Dynamic tape size for compiled BrainFuck interpreter
+* Unispace interpreter
 * Streamline WhiteSpace interpreter versions (make it generic)
-* User command binding
 * Additional languages and interpreters
+* Modularization
 * Potentially everything
 
 ### Optimization Strategy
