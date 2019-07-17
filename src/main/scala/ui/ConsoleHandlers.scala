@@ -49,10 +49,10 @@ object ConsoleHandlers {
       print(s"Retrieving from $inam... ")
       Try{ Source.fromFile(inam).mkString } match{
         case Success(progRaw) =>
-          print("Done.\nCompiling... ")
+          println("Done.")
           BFCompiler(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)(progRaw) match{
             case Success(prog) =>
-              print(s"Done.\nSaving to $onam... ")
+              print(s"Saving to $onam... ")
               val oFile = new PrintWriter(new File(onam))
               oFile.print(prog)
               oFile.close()

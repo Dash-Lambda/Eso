@@ -2,7 +2,7 @@ package ui
 
 import ConsoleHandlers._
 import assemblers.{Assembler, WhiteSpaceAssembler}
-import interpreters.{Interpreter, WhiteSpace, WhiteSpaceSL}
+import interpreters.{Interpreter, ScalaRun, WhiteSpace, WhiteSpaceSL}
 import translators.{BFTranslator, FlufflePuff, Ook}
 
 import scala.collection.{immutable, mutable}
@@ -16,13 +16,13 @@ object EsoConsole {
   val defaultBindingFile: String = "userBindings.txt"
   val nativeTrans: Vector[BFTranslator] = Vector[BFTranslator](FlufflePuff, Ook)
   val assemVec: Vector[(String, Assembler)] = Vector[(String, Assembler)](("WhiteSpace", WhiteSpaceAssembler))
-  val interpVec: Vector[(String, Interpreter)] = Vector[(String, Interpreter)](("WhiteSpace", WhiteSpace), ("WhiteSpaceSL", WhiteSpaceSL))
+  val interpVec: Vector[(String, Interpreter)] = Vector[(String, Interpreter)](("WhiteSpace", WhiteSpace), ("WhiteSpaceSL", WhiteSpaceSL), ("Scala", ScalaRun))
   
   val BFTranslators: mutable.HashMap[String, BFTranslator] = mutable.HashMap[String, BFTranslator]()
   val userBindings: mutable.HashMap[String, Vector[String]] = mutable.HashMap[String, Vector[String]]()
   var initTapeSize: Int = 40000
   var outputMaxLength: Int = -1
-  var BFOpt: Int = 1
+  var BFOpt: Int = 2
   var log: Boolean = true
   var debug: Boolean = false
   var dynamicTapeSize: Boolean = false
