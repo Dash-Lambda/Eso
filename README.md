@@ -12,6 +12,7 @@ Current Native language support:
 * [Ook](https://esolangs.org/wiki/Ook!)
 * [WhiteSpace](https://esolangs.org/wiki/Whitespace) ([as defined here](https://web.archive.org/web/20151108084710/http://compsoc.dur.ac.uk/whitespace/tutorial.html))
 * [FracTran](https://esolangs.org/wiki/Fractran)
+* [FracTran++](https://esolangs.org/wiki/Fractran%2B%2B)
 * Scala
 
 #### Current features:
@@ -28,7 +29,7 @@ Current Native language support:
 ##### WIP:
 * Dynamic tape size for compiled BrainFuck interpreter
 * Unispace interpreter
-* FracTran++ interpreter
+* FracTran++ Bifurcation
 * Streamline WhiteSpace interpreter versions (make it generic)
 * Additional languages and interpreters
 * Modularization
@@ -82,5 +83,8 @@ The FracTran interpreter reads programs as an initial value followed by a list o
 1/7
 55/1
 ```
+
+### FracTran++ Program Format
+FracTran++ has identical structure to (and it fully compatible with) FracTran, but with additional syntax detailed in FracTranpp_Syntax.txt.
 
 This is very much a work in progress.
