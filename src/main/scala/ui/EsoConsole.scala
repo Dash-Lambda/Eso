@@ -2,7 +2,7 @@ package ui
 
 import ConsoleHandlers._
 import assemblers.{Assembler, WhiteSpaceAssembler}
-import interpreters.{FracTran, Interpreter, ScalaRun, WhiteSpace, WhiteSpaceSL}
+import interpreters.{FracTran, FracTranpp, Interpreter, ScalaRun, WhiteSpace, WhiteSpaceSL}
 import translators.{BFTranslator, FlufflePuff, Ook}
 
 import scala.collection.{immutable, mutable}
@@ -16,7 +16,7 @@ object EsoConsole {
   val defaultBindingFile: String = "userBindings.txt"
   val nativeTrans: Vector[BFTranslator] = Vector[BFTranslator](FlufflePuff, Ook)
   val assemVec: Vector[Assembler] = Vector[Assembler](WhiteSpaceAssembler)
-  val interpVec: Vector[Interpreter] = Vector[Interpreter](FracTran, ScalaRun, WhiteSpace, WhiteSpaceSL)
+  val interpVec: Vector[Interpreter] = Vector[Interpreter](FracTran, FracTranpp, ScalaRun, WhiteSpace, WhiteSpaceSL)
   
   val BFTranslators: mutable.HashMap[String, BFTranslator] = mutable.HashMap[String, BFTranslator]()
   val userBindings: mutable.HashMap[String, Vector[String]] = mutable.HashMap[String, Vector[String]]()
