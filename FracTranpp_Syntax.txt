@@ -1,0 +1,25 @@
+N: Accumulator
+
+n/d if irreducible and n,d != 0: Normal command
+0/d: Input
+	0/1: Value of N
+	0/2: Sequence of exponents for N
+	0/3: Char for value of N
+	0/4: String with chars representing exponents
+n/0: Output
+	1/0: Value of N
+	2/0: Sequence of exponents for N
+	3/0: Char value of N
+	4/0: String of chars for exponents of N
+	219/0: Debug
+0/0: Flow separator
+n/d if reducible: Extension, id by exponent of common factor and apply to corresponding factor/exponent in N
+	1: Input integer for new exponent
+	2: Output exponent as integer
+	3: Input char as new exponent
+	4: Output exponent as char
+	5: Function call, id by exponent
+	6: Swap main and called fraction lists
+	7: Bifurcation, one thread executes fraction and the other continues without doing so (Not yet implemented)
+	8: Combination of 6 and 7, new thread swaps fraction lists (Not yet implemented)
+-n/d: Conditional jump
