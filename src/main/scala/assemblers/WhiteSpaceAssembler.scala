@@ -81,7 +81,17 @@ object WhiteSpaceAssembler extends Assembler {
   def unapply(prog: String, log: Boolean): Try[String] = {
     val synKeys = syntax.map(_._1).sortWith(_.length > _.length)
     
-    def longNum(str: String): Long = str.takeWhile(_ != '\n').reverse.zipWithIndex.map{case (c, i) => if(c == '\t') Math.pow(2, i).toLong else 0L}.sum
+    def longNum(str: String): Long = {
+      val cond = str.takeWhile(_ != '\n')
+      val num = cond
+        .tail
+        .reverse
+        .zipWithIndex
+        .map{case (c, i) => if(c == '\t') Math.pow(2, i).toLong else 0L}
+        .sum
+      if(cond.head == ' ') num
+      else -num
+    }
     
     @tailrec
     def uHelper(ac: Vector[String], src: String): Try[String] = synKeys.find(key => src.startsWith(key)) match{
