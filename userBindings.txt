@@ -13,3 +13,4 @@ nodyn set dynamicTapeSize false
 
 init set initTapeSize
 olen set outputMaxLength
+dbt set dbTim
