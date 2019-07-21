@@ -9,17 +9,27 @@ import scala.util.{Failure, Success, Try}
 
 case class FOP(n: SafeLong, d: SafeLong, exp: Vector[Int], ext: Int, j: Boolean, i: Boolean, o: Boolean){
   val isBreak: Boolean = n == 0 && d == 0
+  lazy val pat: Int = if(exp.isDefinedAt(ext)) exp(ext) else 0
   def canDo(num: SafeLong): Boolean = num%d == 0
-  def pat: Int = if(exp.isDefinedAt(ext)) exp(ext) else 0
   def *(num: SafeLong): SafeLong = n*num/d
   
+  def fstr: String = s"${if(j) "-" else ""}$n/$d"
   override def toString: String = {
-    val frac = s"$n/$d {${exp.mkString(", ")}} ($ext)"
+    val frac = s"$n/$d <${exp.mkString(", ")}> ($ext)"
     if(j) "Jump: " + frac
     else if(i) "Input: " + frac
     else if(o) "Output: " + frac
     else if(n == 0 && d == 0) "Break: " + frac
-    else if(ext != -1) "Extension: " + frac
+    else if(ext != -1) {pat match{
+      case 1 => "InputExp: "
+      case 2 => "OutputExp: "
+      case 3 => "InputChar: "
+      case 4 => "OutputChar: "
+      case 5 => "Call: "
+      case 6 => "JumpExp: "
+      case 7 => "Bifurcation: "
+      case 8 => "CallBif: "
+    }} + frac
     else "Normal: " + frac
   }
 }
@@ -35,7 +45,7 @@ object FOP{
     else if(d == 0 && 1 <= n && 4 >= n) Some(new FOP(n, d, Vector[Int](), n.toInt, false, false, true))
     else if(n == 0 && d == 0) Some(new FOP(n, d, Vector[Int](), -1, false, false, false))
     else if(n == 0 || d == 0) None
-    else if(n < 0 || d < 0) Some(new FOP(n.abs, d.abs, Vector[Int](), n.abs.toInt, true, false, false))
+    else if(n < 0 || d < 0) Some(new FOP(n.abs, d.abs, facs, n.abs.toInt, true, false, false))
     else if(gcd == 1) Some(new FOP(n, d, facs, -1, false, false, false))
     else if(1 <= facs(ind) && 8 >= facs(ind)) Some(new FOP(n/gcd, d/gcd, facs, getInd(gcd), false, false, false))
     else None
@@ -63,27 +73,37 @@ object FOP{
 
 object FracTranpp extends Interpreter{
   val name: String = "FracTran++"
-  val primes: LazyList[Int] = FOP.primes
   
-  def apply(log: Boolean, debug: Boolean, outputMaxLength: Int)(progRaw: String): Try[String] = condition(progRaw) match{
-    case Some((init, prog)) => Try{
-      if(debug) println(s"$init\n${prog.map(_.mkString("\n")).mkString("\nBREAK\n")}")
-      val (num, str) = eval(log, debug, outputMaxLength)(init, prog)
-      s"$num\n$str"
+  import FOP.primes
+  
+  def apply(flags: Vector[Boolean], nums: Vector[Int])(progRaw: String): Try[String] = (flags, nums) match{
+    case (log +: debug +: _, outputMaxLength +: _ +: _ +: dbTim +: _) => condition(progRaw) match{
+      case Some((init, prog)) => Try{
+        if(debug) println(s"\n$init\n${prog.map(_.mkString("\n")).mkString("\nBREAK\n")}\n\nProgram Start...")
+        val (num, str) = eval(log, debug, outputMaxLength, dbTim)(init, prog)
+        s"$num\n$str"
+      }
+      case None => Failure(InterpreterException("Program Format Error"))
     }
-    case None => Failure(InterpreterException("Program Format Error"))
+    case _ => Failure(InterpreterException("Missing Config Values"))
   }
   
-  def eval(log: Boolean, debug: Boolean, outputMaxLength: Int)(init: SafeLong, blk: Vector[Vector[FOP]], initID: Int = 0): (SafeLong, String) = {
+  def eval(log: Boolean, debug: Boolean, outputMaxLength: Int, dbTim: Int)(init: SafeLong, blk: Vector[Vector[FOP]], initID: Int = 0, initProg: Vector[FOP] = Vector[FOP]()): (SafeLong, String) = {
+    def pwrap(str: String): String = {if(log && !debug) print(str); str}
     def vecNum(vec: Vector[Int]): SafeLong = vec
       .zip(primes.map(SafeLong(_)))
       .map{case (e, p) => p**e}
       .reduce(_*_)
+    
     @tailrec
     def opdo(num: SafeLong, src: Vector[FOP], bid: Int, res: String): (SafeLong, String) = {
-      src match{
+      if(outputMaxLength != -1 && res.sizeIs >= outputMaxLength) (num, res.take(outputMaxLength))
+      else src match{
         case op +: ops =>
-          if(debug) println(s"$op: $num")
+          if(debug){
+            println(s"Res: ${res.replaceAll("\n", "\\n")}\nNum: <${FOP.factor(num).mkString(" ")}> ($num)\nOp: $op\n${if(op.canDo(num)) "Hit" else "Pass"}\n")
+            Thread.sleep(dbTim)
+          }
           if(op.i) op.ext match{
             case 1 => opdo(SafeLong(BigInt(StdIn.readLine)), blk(bid), bid, res)
             case 2 => opdo(StdIn.readLine.split(" ").map(_.toInt).zip(primes).map{case (e, p) => SafeLong(p)**e}.reduce(_+_), blk(bid), bid, res)
@@ -97,25 +117,26 @@ object FracTranpp extends Interpreter{
               case 3 => num.toChar.toString
               case 4 => FOP.factor(num).map(_.toChar).mkString
             }
-            if (log) println(str)
-            if ((outputMaxLength == -1) || ((res ++ str).sizeIs < outputMaxLength)) opdo(num, ops, bid, res ++ str)
-            else (num, (res ++ str).take(outputMaxLength))
+            opdo(num, ops, bid, res ++ pwrap(str))
           }
           else if(op.canDo(num)) {
             if(op.j) opdo(num, blk(op.ext), op.ext, res)
             else if(op.ext == -1) opdo(op*num, blk(bid), bid, res)
             else{
-              val numf = FOP.factor(num).padTo(op.ext + 1, 0)
+              lazy val nxnum = op*num
+              lazy val numf = FOP.factor(num).padTo(op.ext + 1, 0)
               lazy val nump = numf(op.ext)
               op.pat match{
                 case 1 => opdo(vecNum(numf.updated(op.ext, StdIn.readInt)), blk(bid), bid, res)
-                case 2 => opdo(num, ops, bid, res ++ numf(op.ext).toString)
+                case 2 => opdo(nxnum, ops, bid, res ++ pwrap(numf(op.ext).toString))
                 case 3 => opdo(vecNum(numf.updated(op.ext, StdIn.readLine.head.toInt)), blk(bid), bid, res)
-                case 4 => opdo(num, ops, bid, res + nump.toChar)
+                case 4 => opdo(nxnum, ops, bid, res ++ pwrap(nump.toChar.toString))
                 case 5 =>
-                  val (nxt, nrs) = eval(log, debug, outputMaxLength)(num, blk, nump)
+                  val (nxt, nrs) = eval(log, debug, outputMaxLength, dbTim)(nxnum, blk, nump)
                   opdo(nxt, blk(nump), bid, res ++ nrs)
                 case 6 => opdo(num, blk(nump), nump, res)
+                case 7 => opdo(num, ops, bid, res ++ eval(log, debug, outputMaxLength, dbTim)(nxnum, blk, bid, ops)._2)
+                case 8 => opdo(num, ops, bid, res ++ eval(log, debug, outputMaxLength, dbTim)(nxnum, blk, nump)._2)
               }
             }
           }
@@ -124,7 +145,8 @@ object FracTranpp extends Interpreter{
       }
     }
     
-    opdo(init, blk.head, 0, "")
+    if(initProg.nonEmpty) opdo(init, initProg, initID, "")
+    else opdo(init, blk(initID), initID, "")
   }
   
   def condition(progRaw: String): Option[(SafeLong, Vector[Vector[FOP]])] = {
@@ -152,8 +174,8 @@ object FracTranpp extends Interpreter{
       .filter(_.nonEmpty)
       .toVector
     lazy val progFop = progNum
-        .collect{case n +: d +: _ => FOP.make(n, d)}
-        .collect{case Some(fop) => fop}
+      .collect{case n +: d +: _ => FOP.make(n, d)}
+      .collect{case Some(fop) => fop}
     lazy val prog = {
       @tailrec
       def pdo(ac: Vector[Vector[FOP]] = Vector[Vector[FOP]](), tmp: Vector[FOP] = Vector[FOP](), src: Vector[FOP] = progFop): Vector[Vector[FOP]] = src match{

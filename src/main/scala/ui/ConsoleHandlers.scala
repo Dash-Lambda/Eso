@@ -17,15 +17,14 @@ case class HandlerException(info: String) extends Throwable
 
 object ConsoleHandlers {
   def runHandler(BFTranslators: mutable.HashMap[String, BFTranslator],
-                 interpreters: immutable.HashMap[String, Interpreter],
-                 optimizing: Int, initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean,
-                 log: Boolean, debug: Boolean)(args: Vector[String]): Unit = {
-    args match{
-      case lang +: fnam +: _ if lang == "BrainFuck" || BFTranslators.isDefinedAt(lang) || interpreters.isDefinedAt(lang) =>
+                 interpreters: immutable.HashMap[String, Interpreter])
+                (flags: Boolean*)(nums: Int*)(args: Vector[String]): Unit = {
+    (flags, args) match{
+      case (log +: _, lang +: fnam +: _) if lang == "BrainFuck" || BFTranslators.isDefinedAt(lang) || interpreters.isDefinedAt(lang) =>
         grabProg(fnam) match{
           case Success(prog) =>
-            val interp: String => Try[String] = if(interpreters.isDefinedAt(lang)) interpreters(lang)(log, debug, outputMaxLength)
-            else BFManager(BFTranslators, initTapeSize, outputMaxLength, optimizing, dynamicTapeSize, log, debug, lang)
+            val interp: String => Try[String] = if(interpreters.isDefinedAt(lang)) interpreters(lang)(flags.toVector, nums.toVector)
+            else BFManager(BFTranslators, lang, flags.toVector, nums.toVector)
             
             print(s"Running $fnam... ")
             if(log) println
@@ -274,17 +273,18 @@ object ConsoleHandlers {
           |""".stripMargin)
   }
   
-  def printVarsHandler(initTapeSize: Int, outputMaxLength: Int, BFOpt: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean): Unit = {
-    val maxLen = Vector(initTapeSize, outputMaxLength, BFOpt, dynamicTapeSize, log, debug).map(_.toString.length).max
+  def printVarsHandler(initTapeSize: Int, outputMaxLength: Int, BFOpt: Int, dbTim: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean): Unit = {
+    val maxLen = Vector(initTapeSize, outputMaxLength, BFOpt, dynamicTapeSize, log, debug, dbTim).map(_.toString.length).max
     println(
       s"""|Runtime parameters...
           |- initTapeSize     = %-${maxLen}d  (initial tape length for BF interpreters)
           |- outputMaxLength  = %-${maxLen}d  (maximum size of output string for BF interpreters, useful for non-terminating programs, -1 = infinite)
-          |- dynamicTapeSize  = %-${maxLen}b  (resize tape as needed for BF interpreters, eliminates memory limitations but reduces speed)
           |- BFOpt            = %-${maxLen}d  (BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled)
+          |- dbTim            = %-${maxLen}d  (Debug sleep time, slows down execution when debug is on. Currently supported by FracTran++, WhiteSpace, and WhiteSpaceSL)
+          |- dynamicTapeSize  = %-${maxLen}b  (resize tape as needed for BF interpreters, eliminates memory limitations but reduces speed)
           |- log              = %-${maxLen}b  (determines whether output is shown during or after runtime)
           |- debug            = %-${maxLen}b  (show runtime information, such as stack and heap states)
-          |""".stripMargin.format(initTapeSize, outputMaxLength, dynamicTapeSize, BFOpt, log, debug))
+          |""".stripMargin.format(initTapeSize, outputMaxLength, BFOpt, dbTim, dynamicTapeSize, log, debug))
   }
   
   def helpHandler(): Unit = print(

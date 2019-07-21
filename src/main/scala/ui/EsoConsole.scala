@@ -24,6 +24,7 @@ object EsoConsole {
   var initTapeSize: Int = 40000
   var outputMaxLength: Int = -1
   var BFOpt: Int = 2
+  var dbTim: Int = 0
   var log: Boolean = true
   var debug: Boolean = false
   var dynamicTapeSize: Boolean = false
@@ -50,7 +51,7 @@ object EsoConsole {
     }
     
     def execCommand(inp: Vector[String]): Unit = inp match{
-      case "run" +: args => runHandler(BFTranslators, interpreters, BFOpt, initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)(args)
+      case "run" +: args => runHandler(BFTranslators, interpreters)(log, debug, dynamicTapeSize)(outputMaxLength, initTapeSize, BFOpt, dbTim)(args)
 
       case "compile" +: args => compileHandler(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)(args)
       
@@ -80,11 +81,12 @@ object EsoConsole {
           case "BFOpt" +: arg +: _ => BFOpt = setIntHandler(arg, BFOpt)
           case "outputMaxLength" +: arg +: _ => outputMaxLength = setIntHandler(arg, outputMaxLength)
           case "initTapeSize" +: arg +: _ => initTapeSize = setIntHandler(arg, initTapeSize)
+          case "dbTim" +: arg +: _ => dbTim = setIntHandler(arg, dbTim)
           case str +: _ => println(s"$str is not a recognized runtime parameter.")
         }
         
       case "listLangs" +: _ => printLangsHandler(interpreters, BFTranslators, assemblers)
-      case "listVars" +: _ => printVarsHandler(initTapeSize, outputMaxLength, BFOpt, dynamicTapeSize, log, debug)
+      case "listVars" +: _ => printVarsHandler(initTapeSize, outputMaxLength, BFOpt, dbTim, dynamicTapeSize, log, debug)
       case "help" +: _ => helpHandler()
       
       case "exit" +: _ => println("Closing..."); runChk = false

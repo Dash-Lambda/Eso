@@ -6,7 +6,10 @@ import scala.util.{Failure, Success, Try}
 
 object BFFunctional extends Interpreter {
   val name = "BFBase"
-  def apply(log: Boolean, debug: Boolean, outputMaxLength: Int)(prog: String): Try[String] = apply(100, outputMaxLength, dynamicTapeSize = true, log, debug)(prog)
+  def apply(flags: Vector[Boolean], nums: Vector[Int])(progRaw: String): Try[String] = (flags, nums) match{
+    case (log +: debug +: dynamicTapeSize +: _, outputMaxLength +: initTapeSize +: _) => apply(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)(progRaw)
+    case _ => Failure(InterpreterException("Missing Configuration Values"))
+  }
   def apply(initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean)(prog: String): Try[String] = {
     @tailrec
     def bfi(plog: String, psrc: String, dlog: List[Int], dsrc: List[Int], dir: Int, cnt: Int, result: String): Try[String] = dir match{

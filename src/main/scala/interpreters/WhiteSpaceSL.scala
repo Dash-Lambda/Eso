@@ -10,19 +10,26 @@ import scala.util.{Failure, Success, Try}
 
 object WhiteSpaceSL extends Interpreter {
   val name = "WhiteSpaceSL"
-  def apply(log: Boolean, debug: Boolean, outputMaxLength: Int)(progRaw: String): Try[String] = Try{formatProg(progRaw)} match{
-    case Success(prog) => apply(prog, getCalls(prog), log, debug, outputMaxLength)
-    case Failure(e) => Failure(e)
+  
+  def apply(flags: Vector[Boolean], nums: Vector[Int])(progRaw: String): Try[String] = (flags, nums) match{
+    case (log +: debug +: _, outputMaxLength +: _ +: _ +: dbTim +: _) => Try{formatProg(progRaw)} match{
+      case Success(prog) => apply(prog, getCalls(prog), log, debug, outputMaxLength, dbTim)
+      case Failure(e) => Failure(e)
+    }
+    case _ => Failure(InterpreterException("Missing Config Values"))
   }
   
-  def apply(prog: Vector[(String, SafeLong)], callAddrs: immutable.HashMap[SafeLong, Int], log: Boolean, debug: Boolean, outputMaxLength: Int): Try[String] = {
+  def apply(prog: Vector[(String, SafeLong)], callAddrs: immutable.HashMap[SafeLong, Int], log: Boolean, debug: Boolean, outputMaxLength: Int, dbTim: Int): Try[String] = {
     def binOp(func: (SafeLong, SafeLong) => SafeLong)(stack: List[SafeLong]): List[SafeLong] = stack match{case n1 +: n2 +: ns => func(n1, n2) +: ns}
-    def printWrap(tok: String): String = {if(log) print(tok); tok}
+    def printWrap(tok: String): String = {if(log && !debug) print(tok); tok}
     
     @tailrec
     def wsi(pc: Int, stack: List[SafeLong], heap: immutable.HashMap[SafeLong, SafeLong], callStack: List[Int], result: String): String = {
       val (op, num) = prog(pc)
-      if(debug) println(s"WS: $op $num (${stack.mkString(" | ")}) [${heap.mkString(" | ")}]")
+      if(debug){
+        println(s"WS: $op $num (${stack.mkString(" | ")}) [${heap.mkString(" | ")}]")
+        Thread.sleep(dbTim)
+      }
       op match{
         case "push" => wsi(pc + 1, num +: stack, heap, callStack, result)
         case "dup" => stack match{case n +: ns => wsi(pc + 1, n +: n +: ns, heap, callStack, result)}

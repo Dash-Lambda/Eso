@@ -6,12 +6,15 @@ import scala.util.{Failure, Success, Try}
 
 object FracTran extends Interpreter{
   val name = "FracTran"
-  def apply(log: Boolean, debug: Boolean, outputMaxLength: Int)(progRaw: String): Try[String] = Try{condition(progRaw)} match{
-    case Success((init, prog)) =>
-      def lst: LazyList[SafeLong] = evalLaz(prog)(init)
-      def tran: LazyList[SafeLong] = if(outputMaxLength == -1) lst else lst.take(outputMaxLength)
-      Success(tran.map{n => if(log) println(n); n}.last.toString)
-    case Failure(e) => Failure(e)
+  def apply(flags: Vector[Boolean], nums: Vector[Int])(progRaw: String): Try[String] = (flags, nums) match{
+    case (log +: _, outputMaxLength +: _) => Try{condition(progRaw)} match{
+      case Success((init, prog)) =>
+        def lst: LazyList[SafeLong] = evalLaz(prog)(init)
+        def tran: LazyList[SafeLong] = if(outputMaxLength == -1) lst else lst.take(outputMaxLength)
+        Success(tran.map{n => if(log) println(n); n}.last.toString)
+      case Failure(e) => Failure(e)
+    }
+    case _ => Failure(InterpreterException("Missing Config Values"))
   }
   
   def evalLaz(prog: Vector[(SafeLong, SafeLong)])(init: SafeLong): LazyList[SafeLong] = init #:: LazyList
@@ -33,6 +36,11 @@ object FracTran extends Interpreter{
         .map(n => SafeLong(BigInt(n)))}
       .toVector
     
-    (vec.filter(_.sizeIs == 1).head.head, vec.filter(_.sizeIs == 2).map(v => (v(0), v(1))))
+    def mkFrac(a: SafeLong, b: SafeLong): (SafeLong, SafeLong) = {
+      val gcd = a.gcd(b)
+      (a/gcd, b/gcd)
+    }
+    
+    (vec.filter(_.sizeIs == 1).head.head, vec.filter(_.sizeIs == 2).map(v => mkFrac(v(0), v(1))))
   }
 }
