@@ -25,11 +25,11 @@ Current Native language support:
 * User-configurable runtime parameters (logging, maximum output size, tape size, etc.)
 * Convert difficult-to-read code (a la WhiteSpace) to and from readable syntax with assemblers
 * Debug mode to show interpreter state during runtime
+* Optionally slow down execution in debug mode
 
 ##### WIP:
 * Dynamic tape size for compiled BrainFuck interpreter
 * Unispace interpreter
-* FracTran++ Bifurcation
 * Streamline WhiteSpace interpreter versions (make it generic)
 * Additional languages and interpreters
 * Modularization
