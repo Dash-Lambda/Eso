@@ -1,5 +1,7 @@
 N: Accumulator
 
+<p1 p2 p3 p4 ...>: Exponent list
+
 n/d if irreducible and n,d != 0: Normal command
 0/d: Input
 	0/1: Value of N
@@ -20,6 +22,6 @@ n/d if reducible: Extension, id by exponent of common factor and apply to corres
 	4: Output exponent as char
 	5: Function call, id by exponent
 	6: Swap main and called fraction lists
-	7: Bifurcation, one thread executes fraction and the other continues without doing so (Not yet implemented)
-	8: Combination of 6 and 7, new thread swaps fraction lists (Not yet implemented)
+	7: Bifurcation, one thread executes fraction and the other continues without doing so
+	8: Combination of 6 and 7, new thread swaps fraction lists
 -n/d: Conditional jump
