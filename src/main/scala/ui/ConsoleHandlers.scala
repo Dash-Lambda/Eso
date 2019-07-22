@@ -2,29 +2,63 @@ package ui
 
 import java.io.{File, FileWriter, PrintWriter}
 
-import Compilers.BFCompiler
+import Compilers.Compiler
 import assemblers.{Assembler, AssemblerException}
 import translators._
 
 import scala.annotation.tailrec
 import scala.io.{Source, StdIn}
 import scala.util.{Failure, Success, Try}
-import interpreters.{BFManager, BFOptimizer, Interpreter, InterpreterException}
+import interpreters.{BFOptimizer, Interpreter, InterpreterException}
 
 import scala.collection.{immutable, mutable}
 
 case class HandlerException(info: String) extends Throwable
 
 object ConsoleHandlers {
-  def runHandler(BFTranslators: mutable.HashMap[String, BFTranslator],
-                 interpreters: immutable.HashMap[String, Interpreter])
-                (flags: Boolean*)(nums: Int*)(args: Vector[String]): Unit = {
-    (flags, args) match{
-      case (log +: _, lang +: fnam +: _) if lang == "BrainFuck" || BFTranslators.isDefinedAt(lang) || interpreters.isDefinedAt(lang) =>
+  val helpText: String =
+    """|Commands...
+       |- run <language> <source file>
+       |
+       |- compile <compiler name> <source file> <destination file>
+       |
+       |- assemble <language> <source file> <destination file>
+       |- disassemble <language> <source file> <destination file>
+       |
+       |- optimize <source file> <optional destination file>
+       |
+       |- translate <source language> <target language> <source file> <optional destination file>
+       |- defineBFLang
+       |- loadBFLangs <file>
+       |- saveBFLangs <file>
+       |- syntax <BF language>
+       |
+       |- bind <token> <binding>
+       |- unbind <token>
+       |- clrBindings
+       |- loadBindings <optional binding file>
+       |- saveBindings <optional destination file>
+       |- listBindings
+       |
+       |- set <variable name> <new value>
+       |- defaults
+       |
+       |- listLangs
+       |- listVars
+       |- help
+       |
+       |- exit
+       |
+       |""".stripMargin
+  
+  def runHandler(interpreters: mutable.HashMap[String, Interpreter],
+                  bools: mutable.HashMap[String, (Boolean, String)],
+                  nums: mutable.HashMap[String, (Int, String)])(args: Vector[String]): Unit = {
+    (bools.get("log"), args) match{
+      case (Some((log, _)), lang +: fnam +: _) if interpreters.isDefinedAt(lang) =>
         grabProg(fnam) match{
           case Success(prog) =>
-            val interp: String => Try[String] = if(interpreters.isDefinedAt(lang)) interpreters(lang)(flags.toVector, nums.toVector)
-            else BFManager(BFTranslators, lang, flags.toVector, nums.toVector)
+            val interp: String => Try[String] = interpreters(lang)(bools, nums)
             
             print(s"Running $fnam... ")
             if(log) println
@@ -39,31 +73,35 @@ object ConsoleHandlers {
             }
           case Failure(e) => println(s"Error: $e")
         }
-      case _ => println("Language not recognized.")
+      case _ => println("Invalid Arguments")
     }
   }
   
-  def compileHandler(initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean)(args: Vector[String]): Unit = args match{
-    case inam +: onam +: _ =>
-      print(s"Retrieving from $inam... ")
-      Try{ Source.fromFile(inam).mkString } match{
-        case Success(progRaw) =>
-          println("Done.")
-          BFCompiler(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)(progRaw) match{
-            case Success(prog) =>
-              print(s"Saving to $onam... ")
-              val oFile = new PrintWriter(new File(onam))
-              oFile.print(prog)
-              oFile.close()
-              println("Done.")
-            case Failure(e) => println(s"Error: $e")
-          }
-        case Failure(e) => println(s"Error: $e")
-      }
+  def compileHandler(compilers: mutable.HashMap[String, Compiler], bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(args: Vector[String]): Unit = args match{
+    case lang +: inam +: onam +: _ => compilers.get(lang) match{
+      case Some(comp) =>
+        print(s"Retrieving from $inam... ")
+        Try{ Source.fromFile(inam).mkString } match{
+          case Success(progRaw) =>
+            println("Done.")
+            comp(bools, nums)(progRaw) match{
+              case Success(prog) =>
+                print(s"Saving to $onam... ")
+                val oFile = new PrintWriter(new File(onam))
+                oFile.print(prog)
+                oFile.close()
+                println("Done.")
+              case Failure(e) => println(s"Error: $e")
+            }
+          case Failure(e) => println(s"Error: $e")
+        }
+      case None => println("Compiler Not Recognized")
+    }
+    
     case _ => println("Not enough arguments.")
   }
   
-  def assembleHandler(assemblers: immutable.HashMap[String, Assembler], log: Boolean, rev: Boolean)(args: Vector[String]): Unit = args match{
+  def assembleHandler(assemblers: mutable.HashMap[String, Assembler], log: Boolean, rev: Boolean)(args: Vector[String]): Unit = args match{
     case lang +: srcNam +: dstNam +: _ if assemblers.isDefinedAt(lang) =>
       Try{
         val iFile = Source.fromFile(srcNam)
@@ -173,9 +211,13 @@ object ConsoleHandlers {
     }
   }
   
-  def loadBindingsHandler(fnam: String): Vector[(String, Vector[String])] = Try{
+  def loadBindingsHandler(dfile: String)(implicit args: Vector[String] = Vector[String]()): Vector[(String, Vector[String])] = Try{
+    val fnam = args match{
+      case nam +: _ => nam
+      case _ => dfile
+    }
     val iFile = Source.fromFile(fnam)
-    val dats = iFile.getLines.toVector
+    val dats = iFile.getLines.toVector.filter(_.nonEmpty)
     iFile.close()
     dats.map{str => val vec = str.split(" ").toVector; (vec.head, vec.tail)}
   } match{
@@ -187,10 +229,10 @@ object ConsoleHandlers {
       Vector[(String, Vector[String])]()
   }
   
-  def saveBindingsHandler(bindings: mutable.HashMap[String, Vector[String]])(args: Vector[String]): Unit = {
+  def saveBindingsHandler(bindings: mutable.HashMap[String, Vector[String]], dfile: String)(args: Vector[String]): Unit = {
     val fnam = args.headOption match{
       case Some(str) => str
-      case None => "userBindings.txt"
+      case None => dfile
     }
     val oFile = new PrintWriter(new File(fnam))
     oFile.print(bindings.map{case (k: String, v: Vector[String]) => s"$k ${v.mkString(" ")}"}.mkString("\n"))
@@ -259,80 +301,50 @@ object ConsoleHandlers {
     case _ => println("Not a recognized translator.")
   }
   
-  def printLangsHandler(interpreters: immutable.HashMap[String, Interpreter], BFTranslators: mutable.HashMap[String, BFTranslator], assemblers: immutable.HashMap[String, Assembler]): Unit = {
+  def listLangsHandler(interpreters: mutable.HashMap[String, Interpreter],
+                       BFTranslators: mutable.HashMap[String, BFTranslator],
+                       assemblers: mutable.HashMap[String, Assembler],
+                       compilers: mutable.HashMap[String, Compiler]): Unit = {
     println(
       f"""|Parent Languages...
-          |- BrainFuck
-          |${interpreters.keys.map(nam => s"- $nam").mkString("\n")}
+          |${interpreters.keys.map(nam => s"- $nam").toVector.sorted.mkString("\n")}
           |
           |BrainFuck Translators...
-          |${BFTranslators.keys.map(nam => s"- $nam").mkString("\n")}
+          |${BFTranslators.keys.map(nam => s"- $nam").toVector.sorted.mkString("\n")}
           |
           |Assemblers...
-          |${assemblers.keys.map(nam => s"- $nam").mkString("\n")}
+          |${assemblers.keys.map(nam => s"- $nam").toVector.sorted.mkString("\n")}
+          |
+          |Compilers...
+          |${compilers.keys.map(nam => s"- $nam").toVector.sorted.mkString("\n")}
           |""".stripMargin)
   }
   
-  def printVarsHandler(initTapeSize: Int, outputMaxLength: Int, BFOpt: Int, dbTim: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean): Unit = {
-    val maxLen = Vector(initTapeSize, outputMaxLength, BFOpt, dynamicTapeSize, log, debug, dbTim).map(_.toString.length).max
-    println(
-      s"""|Runtime parameters...
-          |- initTapeSize     = %-${maxLen}d  (initial tape length for BF interpreters)
-          |- outputMaxLength  = %-${maxLen}d  (maximum size of output string for BF interpreters, useful for non-terminating programs, -1 = infinite)
-          |- BFOpt            = %-${maxLen}d  (BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled)
-          |- dbTim            = %-${maxLen}d  (Debug sleep time, slows down execution when debug is on. Currently supported by FracTran++, WhiteSpace, and WhiteSpaceSL)
-          |- dynamicTapeSize  = %-${maxLen}b  (resize tape as needed for BF interpreters, eliminates memory limitations but reduces speed)
-          |- log              = %-${maxLen}b  (determines whether output is shown during or after runtime)
-          |- debug            = %-${maxLen}b  (show runtime information, such as stack and heap states)
-          |""".stripMargin.format(initTapeSize, outputMaxLength, BFOpt, dbTim, dynamicTapeSize, log, debug))
+  def printVarsHandler(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)]): String = {
+    val maxLen = (bools.toVector ++ nums.toVector).map(_._2._1.toString.length).max
+    val maxNam = (bools.toVector ++ nums.toVector).map(_._1.toString.length).max
+    val numstr = nums.toVector.sortBy(_._1).map{case (tag, (num, dsc)) => s"- %-${maxNam}s\t= %-${maxLen}d\t($dsc)".format(tag, num)}.mkString("\n")
+    val boostr = bools.toVector.sortBy(_._1).map{case (tag, (boo, dsc)) => s"- %-${maxNam}s\t= %-${maxLen}b\t($dsc)".format(tag, boo)}.mkString("\n")
+    s"""|Runtime Parameters...
+        |$numstr
+        |$boostr
+        |""".stripMargin
   }
   
-  def helpHandler(): Unit = print(
-    """|Commands...
-       |- run <language> <source file>
-       |
-       |- compile <source file> <destination file>
-       |
-       |- assemble <language> <source file> <destination file>
-       |- disassemble <language> <source file> <destination file>
-       |
-       |- optimize <source file> <optional destination file>
-       |
-       |- translate <source language> <target language> <source file> <optional destination file>
-       |- defineBFLang
-       |- loadBFLangs <file>
-       |- saveBFLangs <file>
-       |- syntax <BF language>
-       |
-       |- bind <token> <binding>
-       |- unbind <token>
-       |- clrBindings
-       |- loadBindings <binding file>
-       |- saveBindings <destination file>
-       |- listBindings
-       |
-       |- set <variable name> <new value>
-       |
-       |- listLangs
-       |- listVars
-       |- help
-       |
-       |- exit
-       |
-       |""".stripMargin)
-  
-  def setBoolHandler(arg: String, default: Boolean): Boolean = arg match{
-    case "true" => true
-    case "false" => false
-    case _ =>
-      println("Error: Invalid Argument")
-      default
-  }
-  def setIntHandler(arg: String, default: Int): Int = Try{arg.toInt} match{
-    case Success(n) => n
-    case Failure(_) =>
-      println("Error: Invalid Argument")
-      default
+  def setVarHandler(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(args: Vector[String]): String = args match{
+    case nam +: arg +: _ => (bools.get(nam), nums.get(nam)) match{
+      case (Some((boo, dsc)), None) if arg == "true" || arg == "false" =>
+        bools += nam -> (arg == "true", dsc)
+        s"$nam changed from $boo to $arg"
+      case (None, Some((num, dsc))) => Try{arg.toInt} match{
+        case Success(n) =>
+          nums += nam -> (n, dsc)
+          s"$nam changed from $num to $n"
+        case Failure(_) => "Error: Invalid Argument"
+      }
+      case (Some(_), Some(_)) => "Error: Variable is Defined Twice"
+      case _ => "Error: Variable Not Recognized"
+    }
   }
   
   def grabStr(prompt: String): String = {print(prompt); StdIn.readLine}

@@ -1,27 +1,30 @@
 package interpreters
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.io.StdIn
 import scala.util.{Failure, Success, Try}
 
 object BFOptimized extends Interpreter{
   val name = "BFOptimized"
-  def apply(flags: Vector[Boolean], nums: Vector[Int])(progRaw: String): Try[String] = (flags, nums) match{
-    case (log +: debug +: dynamicTapeSize +: _, outputMaxLength +: initTapeSize +: _) => apply(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)(progRaw)
-    case _ => Failure(InterpreterException("Missing Configuration Values"))
-  }
-  def apply(initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean)(progRaw: String): Try[String] = BFOptimizer(progRaw, debug) match{
-    case Success((bops, prog)) =>
-      if(debug) println(
-        s"""|Optimized: ${prog.map(_._1).mkString}
-            |BulkOps: [${bops.zipWithIndex.map{case (bop, i) => s"[$i, ${bop.shift}, ${bop.ops.mkString(", ")}]"}.mkString(", ")}]
-            |Optimized Detail:
-            |${prog.zipWithIndex.map{case ((c, n), ind) => s"$ind: $c $n\n"}.mkString}
-            |""".stripMargin)
-      
-      if(dynamicTapeSize) bfDyn(prog, bops, initTapeSize, outputMaxLength, debug, log)
-      else bfStat(prog, bops, initTapeSize, outputMaxLength, debug, log)
-    case Failure(e) => Failure(e)
+  
+  def apply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(progRaw: String): Try[String] = {
+    getParms(bools, nums)("log", "debug", "dynamicTapeSize")("outputMaxLength", "initTapeSize") match{
+      case Some((log +: debug +: dynamicTapeSize +: _, outputMaxLength +: initTapeSize +: _)) =>BFOptimizer(progRaw, debug) match{
+        case Success((bops, prog)) =>
+          if(debug) println(
+            s"""|Optimized: ${prog.map(_._1).mkString}
+                |BulkOps: [${bops.zipWithIndex.map{case (bop, i) => s"[$i, ${bop.shift}, ${bop.ops.mkString(", ")}]"}.mkString(", ")}]
+                |Optimized Detail:
+                |${prog.zipWithIndex.map{case ((c, n), ind) => s"$ind: $c $n\n"}.mkString}
+                |""".stripMargin)
+    
+          if(dynamicTapeSize) bfDyn(prog, bops, initTapeSize, outputMaxLength, debug, log)
+          else bfStat(prog, bops, initTapeSize, outputMaxLength, debug, log)
+        case Failure(e) => Failure(e)
+      }
+      case None => Failure(InterpreterException("Unspecified Runtime Parameters"))
+    }
   }
   
   def bfStat(prog: Vector[(Char, Int)], bops: Vector[BulkOp], initTapeSize: Int, outputMaxLength: Int, debug: Boolean, log: Boolean): Try[String] = {

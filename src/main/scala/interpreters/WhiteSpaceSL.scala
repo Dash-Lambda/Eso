@@ -4,22 +4,24 @@ import spire.math.SafeLong
 import spire.implicits._
 
 import scala.annotation.tailrec
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 import scala.io.StdIn
 import scala.util.{Failure, Success, Try}
 
 object WhiteSpaceSL extends Interpreter {
   val name = "WhiteSpaceSL"
   
-  def apply(flags: Vector[Boolean], nums: Vector[Int])(progRaw: String): Try[String] = (flags, nums) match{
-    case (log +: debug +: _, outputMaxLength +: _ +: _ +: dbTim +: _) => Try{formatProg(progRaw)} match{
-      case Success(prog) => apply(prog, getCalls(prog), log, debug, outputMaxLength, dbTim)
-      case Failure(e) => Failure(e)
+  def apply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(progRaw: String): Try[String] = {
+    getParms(bools, nums)("log", "debug")("outputMaxLength", "dbTim") match{
+      case Some((log +: debug +: _, outputMaxLength +: dbTim +: _)) => Try{formatProg(progRaw)} match{
+        case Success(prog) => wsFunc(prog, getCalls(prog), log, debug, outputMaxLength, dbTim)
+        case Failure(e) => Failure(e)
+      }
+      case None => Failure(InterpreterException("Unspecified Runtime Parameters"))
     }
-    case _ => Failure(InterpreterException("Missing Config Values"))
   }
   
-  def apply(prog: Vector[(String, SafeLong)], callAddrs: immutable.HashMap[SafeLong, Int], log: Boolean, debug: Boolean, outputMaxLength: Int, dbTim: Int): Try[String] = {
+  def wsFunc(prog: Vector[(String, SafeLong)], callAddrs: immutable.HashMap[SafeLong, Int], log: Boolean, debug: Boolean, outputMaxLength: Int, dbTim: Int): Try[String] = {
     def binOp(func: (SafeLong, SafeLong) => SafeLong)(stack: List[SafeLong]): List[SafeLong] = stack match{case n1 +: n2 +: ns => func(n1, n2) +: ns}
     def printWrap(tok: String): String = {if(log && !debug) print(tok); tok}
     

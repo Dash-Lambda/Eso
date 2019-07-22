@@ -1,16 +1,21 @@
 package interpreters
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.io.StdIn
 import scala.util.{Failure, Success, Try}
 
 object BFFunctional extends Interpreter {
   val name = "BFBase"
-  def apply(flags: Vector[Boolean], nums: Vector[Int])(progRaw: String): Try[String] = (flags, nums) match{
-    case (log +: debug +: dynamicTapeSize +: _, outputMaxLength +: initTapeSize +: _) => apply(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)(progRaw)
-    case _ => Failure(InterpreterException("Missing Configuration Values"))
+  
+  def apply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(progRaw: String): Try[String] = {
+    getParms(bools, nums)("log", "debug", "dynamicTapeSize")("outputMaxLength", "initTapeSize") match{
+      case Some((log +: debug +: dynamicTapeSize +: _, outputMaxLength +: initTapeSize +: _)) => bfFunc(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)(progRaw)
+      case None => Failure(InterpreterException("Unspecified Runtime Parameters"))
+    }
   }
-  def apply(initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean)(prog: String): Try[String] = {
+  
+  def bfFunc(initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean)(prog: String): Try[String] = {
     @tailrec
     def bfi(plog: String, psrc: String, dlog: List[Int], dsrc: List[Int], dir: Int, cnt: Int, result: String): Try[String] = dir match{
       case 1 => (psrc.headOption, cnt) match{

@@ -3,7 +3,6 @@ package translators
 import scala.collection.immutable
 
 trait BFTranslator extends Translator {
-  def name: String
   def kvPairs: Vector[(String, String)]
   
   final lazy val keys = kvPairs.map(_._1)

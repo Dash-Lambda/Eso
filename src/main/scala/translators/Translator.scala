@@ -3,6 +3,8 @@ package translators
 import scala.collection.immutable
 
 trait Translator {
+  def name: String
+  
   def apply(prog: String): String
   def unapply(prog: String): String
   

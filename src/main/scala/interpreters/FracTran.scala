@@ -2,19 +2,27 @@ package interpreters
 
 import spire.math.SafeLong
 
+import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 object FracTran extends Interpreter{
   val name = "FracTran"
-  def apply(flags: Vector[Boolean], nums: Vector[Int])(progRaw: String): Try[String] = (flags, nums) match{
-    case (log +: _, outputMaxLength +: _) => Try{condition(progRaw)} match{
-      case Success((init, prog)) =>
-        def lst: LazyList[SafeLong] = evalLaz(prog)(init)
-        def tran: LazyList[SafeLong] = if(outputMaxLength == -1) lst else lst.take(outputMaxLength)
-        Success(tran.map{n => if(log) println(n); n}.last.toString)
-      case Failure(e) => Failure(e)
+  
+  def apply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(progRaw: String): Try[String] = {
+    getParms(bools, nums)("log", "powExp")("outputMaxLength") match{
+      case Some((log +: powExp +: _, outputMaxLength +: _)) => Try{condition(progRaw)} match{
+        case Success((init, prog)) =>
+          def lst: LazyList[SafeLong] = evalLaz(prog)(init)
+          def tran: LazyList[SafeLong] = if(outputMaxLength == -1) lst else lst.take(outputMaxLength)
+          def res: LazyList[String] = tran.map{n =>
+            if(powExp) s"<${FOP.factor(n).mkString(" ")}>"
+            else n.toString
+          }
+          Success(res.map{str => if(log) println(str); str}.last)
+        case Failure(e) => Failure(e)
+      }
+      case None => Failure(InterpreterException("Unspecified Runtime Parameters"))
     }
-    case _ => Failure(InterpreterException("Missing Config Values"))
   }
   
   def evalLaz(prog: Vector[(SafeLong, SafeLong)])(init: SafeLong): LazyList[SafeLong] = init #:: LazyList

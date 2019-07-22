@@ -3,6 +3,7 @@ package Compilers
 import interpreters.InterpreterException
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 case class CompOp(ops: Vector[(Int, String)], shift: Int){
@@ -18,12 +19,17 @@ case class CompOp(ops: Vector[(Int, String)], shift: Int){
 }
 
 object BFCompiler extends Compiler{
-  val name = "BrainFuck"
-  def apply(debug: Boolean)(progRaw: String): Try[String] = apply(40000, -1, dynamicTapeSize = false, log = false, debug)(progRaw)
-  def apply(initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean)(progRaw: String): Try[String] = {
-    compOpt(progRaw, debug) match{
-      case Success((bops, prog)) => Success(compile(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)(bops, prog))
-      case Failure(e) => Failure(e)
+  val src: String = "BrainFuck"
+  val dst: String = "Scala"
+  
+  def apply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(progRaw: String): Try[String] = {
+    getParms(bools, nums)("log", "debug", "dynamicTapeSize")("outputMaxLength", "initTapeSize") match{
+      case Some((log +: debug +: dynamicTapeSize +: _, outputMaxLength +: initTapeSize +: _)) =>
+        compOpt(progRaw, debug) match{
+          case Success((bops, prog)) => Success(compile(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)(bops, prog))
+          case Failure(e) => Failure(e)
+        }
+      case None => Failure(InterpreterException("Unspecified Runtime Parameters"))
     }
   }
   

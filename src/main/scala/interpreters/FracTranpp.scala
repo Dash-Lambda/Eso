@@ -4,12 +4,13 @@ import spire.math.SafeLong
 import spire.implicits._
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.io.StdIn
 import scala.util.{Failure, Success, Try}
 
 case class FOP(n: SafeLong, d: SafeLong, exp: Vector[Int], ext: Int, j: Boolean, i: Boolean, o: Boolean){
   val isBreak: Boolean = n == 0 && d == 0
-  lazy val pat: Int = if(exp.isDefinedAt(ext)) exp(ext) else 0
+  lazy val pat: Int = exp(ext)
   def canDo(num: SafeLong): Boolean = num%d == 0
   def *(num: SafeLong): SafeLong = n*num/d
   
@@ -47,17 +48,17 @@ object FOP{
     else if(n == 0 || d == 0) None
     else if(n < 0 || d < 0) Some(new FOP(n.abs, d.abs, facs, n.abs.toInt, true, false, false))
     else if(gcd == 1) Some(new FOP(n, d, facs, -1, false, false, false))
-    else if(1 <= facs(ind) && 8 >= facs(ind)) Some(new FOP(n/gcd, d/gcd, facs, getInd(gcd), false, false, false))
+    else if(1 <= facs(ind) && 8 >= facs(ind)) Some(new FOP(n/gcd, d/gcd, facs.padTo(ind + 1, 0), ind, false, false, false))
     else None
   }
   
   def getInd(gcd: SafeLong): Int = factor(gcd).zipWithIndex.collect{case (p, i) if p != 0 => i}.head
   def factor(n: SafeLong, d: SafeLong): Vector[Int] = factor(n).zipAll(factor(d), 0, 0).map{case (a, b) => a - b}
   def factor(num: SafeLong): Vector[Int] = {
-    def fdo(init: SafeLong, f: Int): (SafeLong, Int) = {
-      val lst = LazyList.unfold(init){n => if(n%f == 0) Some((n/f, n/f)) else None}
-      if(lst.nonEmpty) (lst.last, lst.length)
-      else (init, 0)
+    @tailrec
+    def fdo(init: SafeLong, f: Int, c: Int = 0): (SafeLong, Int) = {
+      if(init%f == 0) fdo(init/f, f, c + 1)
+      else (init, c)
     }
     @tailrec
     def fgo(n: SafeLong, ac: Vector[Int] = Vector[Int](), src: LazyList[Int] = primes): Vector[Int] = fdo(n, src.head) match{
@@ -76,16 +77,18 @@ object FracTranpp extends Interpreter{
   
   import FOP.primes
   
-  def apply(flags: Vector[Boolean], nums: Vector[Int])(progRaw: String): Try[String] = (flags, nums) match{
-    case (log +: debug +: _, outputMaxLength +: _ +: _ +: dbTim +: _) => condition(progRaw) match{
-      case Some((init, prog)) => Try{
-        if(debug) println(s"\n$init\n${prog.map(_.mkString("\n")).mkString("\nBREAK\n")}\n\nProgram Start...")
-        val (num, str) = eval(log, debug, outputMaxLength, dbTim)(init, prog)
-        s"$num\n$str"
+  def apply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(progRaw: String): Try[String] = {
+    getParms(bools, nums)("log", "debug")("outputMaxLength", "dbTim") match{
+      case Some((log +: debug +: _, outputMaxLength +: dbTim +: _)) => condition(progRaw) match{
+        case Some((init, prog)) => Try{
+          if(debug) println(s"\n$init\n${prog.map(_.mkString("\n")).mkString("\nBREAK\n")}\n\nProgram Start...")
+          val (num, str) = eval(log, debug, outputMaxLength, dbTim)(init, prog)
+          s"$num\n$str"
+        }
+        case None => Failure(InterpreterException("Program Format Error"))
       }
-      case None => Failure(InterpreterException("Program Format Error"))
+      case None => Failure(InterpreterException("Unspecified Runtime Parameters"))
     }
-    case _ => Failure(InterpreterException("Missing Config Values"))
   }
   
   def eval(log: Boolean, debug: Boolean, outputMaxLength: Int, dbTim: Int)(init: SafeLong, blk: Vector[Vector[FOP]], initID: Int = 0, initProg: Vector[FOP] = Vector[FOP]()): (SafeLong, String) = {
