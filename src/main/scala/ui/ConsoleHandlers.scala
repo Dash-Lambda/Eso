@@ -20,7 +20,7 @@ object ConsoleHandlers {
     """|Commands...
        |- run <language> <source file>
        |
-       |- compile <compiler name> <source file> <destination file>
+       |- compile <source language> <destination language> <source file> <destination file>
        |
        |- assemble <language> <source file> <destination file>
        |- disassemble <language> <source file> <destination file>
@@ -48,7 +48,6 @@ object ConsoleHandlers {
        |- help
        |
        |- exit
-       |
        |""".stripMargin
   
   def runHandler(interpreters: mutable.HashMap[String, Interpreter],
@@ -77,8 +76,8 @@ object ConsoleHandlers {
     }
   }
   
-  def compileHandler(compilers: mutable.HashMap[String, Compiler], bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(args: Vector[String]): Unit = args match{
-    case lang +: inam +: onam +: _ => compilers.get(lang) match{
+  def compileHandler(compilers: mutable.HashMap[(String, String), Compiler], bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(args: Vector[String]): Unit = args match{
+    case slang +: dlang +: inam +: onam +: _ => compilers.get((slang, dlang)) match{
       case Some(comp) =>
         print(s"Retrieving from $inam... ")
         Try{ Source.fromFile(inam).mkString } match{
@@ -304,7 +303,7 @@ object ConsoleHandlers {
   def listLangsHandler(interpreters: mutable.HashMap[String, Interpreter],
                        BFTranslators: mutable.HashMap[String, BFTranslator],
                        assemblers: mutable.HashMap[String, Assembler],
-                       compilers: mutable.HashMap[String, Compiler]): Unit = {
+                       compilers: mutable.HashMap[(String, String), Compiler]): Unit = {
     println(
       f"""|Parent Languages...
           |${interpreters.keys.map(nam => s"- $nam").toVector.sorted.mkString("\n")}
@@ -316,7 +315,7 @@ object ConsoleHandlers {
           |${assemblers.keys.map(nam => s"- $nam").toVector.sorted.mkString("\n")}
           |
           |Compilers...
-          |${compilers.keys.map(nam => s"- $nam").toVector.sorted.mkString("\n")}
+          |${compilers.keys.map{case (snam, dnam) => s"- $snam -> $dnam"}.toVector.sorted.mkString("\n")}
           |""".stripMargin)
   }
   

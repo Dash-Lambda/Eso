@@ -23,19 +23,43 @@ object BFCompiler extends Compiler{
   val dst: String = "Scala"
   
   def apply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(progRaw: String): Try[String] = {
-    getParms(bools, nums)("log", "debug", "dynamicTapeSize")("outputMaxLength", "initTapeSize") match{
-      case Some((log +: debug +: dynamicTapeSize +: _, outputMaxLength +: initTapeSize +: _)) =>
+    getParms(bools, nums)("log", "debug", "dynamicTapeSize")("outputMaxLength", "initTapeSize", "methodSize") match{
+      case Some((log +: debug +: dynamicTapeSize +: _, outputMaxLength +: initTapeSize +: methodSize +: _)) =>
         compOpt(progRaw, debug) match{
-          case Success((bops, prog)) => Success(compile(initTapeSize, outputMaxLength, dynamicTapeSize, log, debug)(bops, prog))
+          case Success((bops, prog)) => Success(compile(initTapeSize, outputMaxLength, methodSize, dynamicTapeSize, log, debug)(bops, prog))
           case Failure(e) => Failure(e)
         }
       case None => Failure(InterpreterException("Unspecified Runtime Parameters"))
     }
   }
   
-  def compile(initTapeSize: Int, outputMaxLength: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean)(bops: Vector[CompOp], prog: Vector[(Char, Int)]): String = {
+  def compile(initTapeSize: Int, outputMaxLength: Int, methodSize: Int, dynamicTapeSize: Boolean, log: Boolean, debug: Boolean)(bops: Vector[CompOp], prog: Vector[(Char, Int)]): String = {
+    def seg(block: Vector[String]): Vector[String] = {
+      if(block.sizeIs > methodSize - 2){
+        val fnam = block.head.drop(4).takeWhile(_ != '(')
+        val lines = block.tail.init
+        val groups = lines.grouped(methodSize).to(LazyList)
+        val funcs = groups
+          .zipWithIndex
+          .map{
+            case (vec, i) =>
+              s"""|def ${fnam}s$i(): Unit = {
+                  |${vec.mkString}
+                  |}""".stripMargin}
+        val calls = (0 until groups.length).map{i => s"${fnam}s$i()${if(outputMaxLength != -1) "\nif(end) return" else ""}"}
+        val mf =
+          s"""|${block.head.init}
+              |${calls.mkString("\n")}
+              |}""".stripMargin
+        
+        mf +: funcs.toVector
+      }else{
+        Vector(block.mkString)
+      }
+    }
+    
     @tailrec
-    def cgo(funcs: List[String], ac: String, tmp: List[String], src: Vector[(Char, Int)], fnum: Int): List[String] = {
+    def cgo(funcs: List[String], ac: Vector[String], tmp: List[Vector[String]], src: Vector[(Char, Int)], fnum: Int): List[String] = {
       if(debug){
         val per = 100 - (src.length*100)/prog.length
         val dots = "."*((per - 1)/10)
@@ -47,9 +71,9 @@ object BFCompiler extends Compiler{
             case '[' =>
               val call = s"f$fnum()\n${if(outputMaxLength != -1) "if(end) return\n" else ""}"
               val sig = s"def f$fnum(): Unit = while(tape(p) != 0){\n"
-              cgo(funcs, sig, (ac + call) +: tmp, ops, fnum + 1)
-            case ']' => cgo((ac + "}\n") +: funcs, tmp.head, tmp.tail, ops, fnum)
-            case 'e' => cgo((ac + "}\n") +: funcs, "", tmp, ops, fnum)
+              cgo(funcs, Vector(sig), (ac :+ call) +: tmp, ops, fnum + 1)
+            case ']' => cgo(seg(ac :+ "}").mkString("\n") +: funcs, tmp.head, tmp.tail, ops, fnum)
+            case 'e' => cgo(seg(ac :+ "}").mkString("\n") +: funcs, Vector[String](), tmp, ops, fnum)
           }
           case _ =>
             val block = op match {
@@ -76,26 +100,38 @@ object BFCompiler extends Compiler{
               case '[' => "while(tape(p) != 0){"
               case ']' => "}"
               case '_' => "tape(p) = 0"
-              case ',' => "tape(p) = scala.io.StdIn.readInt"
+              case ',' => "tape(p) = getInp"
               case '.' => s"""res += tape(p).toChar${if(log) "\nprint(tape(p).toChar)" else ""}${if(outputMaxLength != -1) s"\nif(res.sizeIs >= $outputMaxLength){end = true; return}" else ""}""".stripMargin
             }
             val nxt =
               s"""|$block
                   |""".stripMargin
-            cgo(funcs, ac ++ nxt, tmp, ops, fnum)
+            cgo(funcs, ac :+ nxt, tmp, ops, fnum)
         }
         case _ => funcs
       }
     }
     
     if(debug) println("Composing:")
-    val funcs = cgo(List[String](), "def f0(): Unit = {\n", List[String](), prog, 1).mkString("\n")
+    val funcs = cgo(List[String](), Vector("def f0(): Unit = {\n"), List[Vector[String]](), prog, 1).mkString("\n")
     if(debug) println
     s"""|new Function0[String]{
         |private val tape = Array.fill($initTapeSize)(0)
         |private var p = 0
         |val res = new StringBuilder()
-        |${if(outputMaxLength != -1) "var end = false" else ""}
+        |var inLog = Vector[Int]()${if(outputMaxLength != -1) "\nvar end = false" else ""}
+        |
+        |def getInp: Int = {
+        |if(inLog.nonEmpty){
+        |val ret = inLog.head
+        |inLog = inLog.tail
+        |ret
+        |}else{
+        |val inp = scala.io.StdIn.readLine.toVector.map(_.toInt) :+ 10
+        |inLog = inp.tail
+        |inp.head
+        |}}
+        |
         |def apply: String = {
         |f0()
         |res.result
@@ -129,7 +165,7 @@ object BFCompiler extends Compiler{
             else ac :+ (tag, count)
         }
       }
-  
+      
       if(debug) println("Base optimization:")
       val res = bHelper(Vector[(Char, Int)](), ' ', 0, conditioned) :+ ('e', 0)
       if(debug) println
@@ -157,7 +193,7 @@ object BFCompiler extends Compiler{
           case _ => (mac, ac)
         }
       }
-  
+      
       if(debug) println("Bulk Optimization:")
       val res = uHelper(Vector[(Char, Int)](), Vector[CompOp](), Vector[(Int, String)](), 0, 0, progSrc)
       if(debug) println

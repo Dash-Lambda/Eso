@@ -37,32 +37,34 @@ object BFOptimized extends Interpreter{
     def updateBulk(dat: Vector[Int], dc: Int, bop: BulkOp): Vector[Int] = bop.ops.foldLeft(dat) { case (vec, (ind, num)) => vec.updated(dc + ind, vec(dc + ind) + num) }
     
     @tailrec
-    def bfv(pc: Int, dc: Int, dat: Vector[Int], result: String): String = {
+    def bfv(pc: Int, dc: Int, dat: Vector[Int], inp: Vector[Char], result: String): String = {
       val (op, num) = prog(pc)
       op match{
         case 'a' =>
           val bop = bops(num)
           val (ind, inc) = bop.ops.head
-          bfv(pc + 1, dc + bop.shift, dat.updated(dc + ind, dat(dc + ind) + inc), result)
+          bfv(pc + 1, dc + bop.shift, dat.updated(dc + ind, dat(dc + ind) + inc), inp, result)
         case 'u' =>
           val bop = bops(num)
-          bfv(pc + 1, dc + bop.shift, updateBulk(dat, dc, bop), result)
+          bfv(pc + 1, dc + bop.shift, updateBulk(dat, dc, bop), inp, result)
         case 'l' =>
-          if(dat(dc) == 0) bfv(pc + 1, dc, dat, result)
-          else bfv(pc + 1, dc, loopBulk(dat, dc, bops(num)), result)
-        case 'm' => bfv(pc + 1, dc + num, dat, result)
-        case '/' => bfv(pc + 1, scan(dat, num, dc), dat, result)
-        case '[' => bfv(if(dat(dc) == 0) num else pc + 1, dc, dat, result)
-        case ']' => bfv(if(dat(dc) == 0) pc + 1 else num, dc, dat, result)
-        case ',' => bfv(pc + 1, dc, dat.updated(dc, StdIn.readInt), result)
+          if(dat(dc) == 0) bfv(pc + 1, dc, dat, inp, result)
+          else bfv(pc + 1, dc, loopBulk(dat, dc, bops(num)), inp, result)
+        case 'm' => bfv(pc + 1, dc + num, dat, inp, result)
+        case '/' => bfv(pc + 1, scan(dat, num, dc), dat, inp, result)
+        case '[' => bfv(if(dat(dc) == 0) num else pc + 1, dc, dat, inp, result)
+        case ']' => bfv(if(dat(dc) == 0) pc + 1 else num, dc, dat, inp, result)
+        case ',' =>
+          if(inp.nonEmpty) bfv(pc + 1, dc, dat.updated(dc, inp.head.toInt), inp.tail, result)
+          else bfv(pc, dc, dat, StdIn.readLine.toVector :+ '\n', result)
         case '.' =>
-          if((outputMaxLength == -1) || (result.sizeIs <= outputMaxLength - num)) bfv(pc + 1, dc, dat, result ++ printLog(dat(dc).toChar.toString * num))
+          if((outputMaxLength == -1) || (result.sizeIs <= outputMaxLength - num)) bfv(pc + 1, dc, dat, inp, result ++ printLog(dat(dc).toChar.toString * num))
           else result ++ printLog(dat(dc).toChar.toString * num)
         case 'e' => result
       }
     }
   
-    Try{bfv(0, 0, Vector.fill(initTapeSize)(0), "")}
+    Try{bfv(0, 0, Vector.fill(initTapeSize)(0), Vector[Char](), "")}
   }
   
   def bfDyn(prog: Vector[(Char, Int)], bops: Vector[BulkOp], initTapeSize: Int, outputMaxLength: Int, debug: Boolean, log: Boolean): Try[String] = {
@@ -96,7 +98,7 @@ object BFOptimized extends Interpreter{
           bfvDyn(pc + 1, newdc, dat.padTo(newdc + 1, 0), result)
         case '[' => bfvDyn(if(dat(dc) == 0) num else pc + 1, dc, dat, result)
         case ']' => bfvDyn(if(dat(dc) == 0) pc + 1 else num, dc, dat, result)
-        case ',' => bfvDyn(pc + 1, dc, dat.updated(dc, StdIn.readInt), result)
+        case ',' => bfvDyn(pc + 1, dc, dat.updated(dc, StdIn.readChar.toInt), result)
         case '.' =>
           if((outputMaxLength == -1) || (result.sizeIs <= outputMaxLength - num)) bfvDyn(pc + 1, dc, dat, result ++ printLog(dat(dc).toChar.toString * num))
           else result ++ printLog(dat(dc).toChar.toString * num)
