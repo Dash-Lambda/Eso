@@ -28,7 +28,7 @@ Current Native language support:
 * Optionally slow down execution in debug mode
 
 ##### WIP:
-* Streamlining lang/translator/assembler/compiler heirarchy
+* Streamlining lang/translator/assembler/compiler heirarchy (including properly differentiating compiling from code generation)
 * Compiler memory (to avoid unnecessary recompiling)
 * Dynamic tape size for compiled BrainFuck interpreter
 * Unispace interpreter
