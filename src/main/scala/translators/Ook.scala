@@ -1,6 +1,7 @@
 package translators
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 
 /** Syntax:
   *
@@ -33,7 +34,7 @@ object Ook extends BFTranslator{
     ("[", "Ook! Ook?"),
     ("]", "Ook? Ook!"))
   
-  def apply(prog: String): String = {
+  def apply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(prog: String): String = {
     @tailrec
     def tHelper(log: String, src: String): String = vals.find(_ == src.take(9)) match{
       case Some(tok) => tHelper(log ++ revSyntax(tok), src.drop(9))
@@ -43,5 +44,5 @@ object Ook extends BFTranslator{
     
     tHelper("", prog)
   }
-  def unapply(prog: String): String = keys.foldLeft(prog){case (str, key) => str.replaceAllLiterally(key, syntax(key))}
+  def unapply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(prog: String): String = keys.foldLeft(prog){case (str, key) => str.replaceAllLiterally(key, syntax(key))}
 }

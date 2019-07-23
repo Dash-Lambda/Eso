@@ -89,12 +89,12 @@ object EsoConsole {
       
       case "compile" +: args => compileHandler(compilers, bools, nums)(args)
       
-      case "assemble" +: args => assembleHandler(assemblers, bools("log")._1, rev = false)(args)
-      case "disassemble" +: args => assembleHandler(assemblers, bools("log")._1, rev = true)(args)
+      case "assemble" +: args => assembleHandler(bools, nums, rev = false)(assemblers)(args)
+      case "disassemble" +: args => assembleHandler(bools, nums, rev = true)(assemblers)(args)
       
       case "optimize" +: args => optimizeHandler(args, bools("debug")._1)
       
-      case "translate" +: args => translationHandler(BFTranslators)(args)
+      case "translate" +: args => translationHandler(bools, nums, BFTranslators)(args)
       case "defineBFLang" +: _ => addTrans(langCreationHandler)
       case "loadBFLangs" +: args => for(p <- loadBFLangsHandler(args)) addTrans(p)
       case "saveBFLangs" +: args => bfLangSaveHandler(BFTranslators, nativeTrans)(args)

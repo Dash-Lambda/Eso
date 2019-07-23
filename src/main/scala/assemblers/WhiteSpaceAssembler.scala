@@ -1,7 +1,7 @@
 package assemblers
 
 import scala.annotation.tailrec
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 import scala.util.{Failure, Success, Try}
 
 object WhiteSpaceAssembler extends Assembler {
@@ -46,7 +46,20 @@ object WhiteSpaceAssembler extends Assembler {
     (if(num < 0) '\t' else ' ') +: numStr :+ '\n'
   }
   
-  def apply(prog: Vector[String], log: Boolean): Try[String] = {
+  def apply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(prog: String): Try[String] = {
+    getParms(bools, nums)("debug")() match{
+      case Some((debug +: _, _)) => assemble(prog.split("\n").toVector, debug)
+      case None => Failure(AssemblerException("Missing Configuration Values"))
+    }
+  }
+  def unapply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(prog: String): Try[String] = {
+    getParms(bools, nums)("debug")() match{
+      case Some((debug +: _, _)) => disassemble(prog, debug)
+      case None => Failure(AssemblerException("Missing Configuration Values"))
+    }
+  }
+  
+  def assemble(prog: Vector[String], log: Boolean): Try[String] = {
     def printLog(str: String): Unit = if(log) println(str)
     
     @tailrec
@@ -78,7 +91,7 @@ object WhiteSpaceAssembler extends Assembler {
     aHelper("", conditioned)
   }
   
-  def unapply(prog: String, log: Boolean): Try[String] = {
+  def disassemble(prog: String, log: Boolean): Try[String] = {
     val synKeys = syntax.map(_._1).sortWith(_.length > _.length)
     
     def longNum(str: String): Long = {

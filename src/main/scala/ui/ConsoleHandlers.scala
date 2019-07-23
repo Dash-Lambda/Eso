@@ -100,7 +100,8 @@ object ConsoleHandlers {
     case _ => println("Not enough arguments.")
   }
   
-  def assembleHandler(assemblers: mutable.HashMap[String, Assembler], log: Boolean, rev: Boolean)(args: Vector[String]): Unit = args match{
+  def assembleHandler(bools: mutable.HashMap[String, (Boolean, String)],
+                      nums: mutable.HashMap[String, (Int, String)], rev: Boolean)(assemblers: mutable.HashMap[String, Assembler])(args: Vector[String]): Unit = args match{
     case lang +: srcNam +: dstNam +: _ if assemblers.isDefinedAt(lang) =>
       Try{
         val iFile = Source.fromFile(srcNam)
@@ -110,7 +111,7 @@ object ConsoleHandlers {
       }match{
         case Success(prog) =>
           println(s"Retrieved program from $srcNam.\nAssembling...\n")
-          val res = if(rev) assemblers(lang).unapply(prog, log) else assemblers(lang)(prog.split("\n").toVector, log)
+          val res = if(rev) assemblers(lang).unapply(bools, nums)(prog) else assemblers(lang)(bools, nums)(prog)
           res match{
             case Success(assembled) =>
               print(s"\nAssembled.\nSaving to $dstNam... ")
@@ -177,10 +178,12 @@ object ConsoleHandlers {
     case _ => println("Invalid Arguments.")
   }
   
-  def translationHandler(translators: mutable.HashMap[String, BFTranslator])(args: Vector[String]): Unit = {
+  def translationHandler(bools: mutable.HashMap[String, (Boolean, String)],
+                         nums: mutable.HashMap[String, (Int, String)],
+                         translators: mutable.HashMap[String, BFTranslator])(args: Vector[String]): Unit = {
     def chkLang(lang: String): Boolean = (lang == "BrainFuck") || translators.isDefinedAt(lang)
-    def transToBF(prog: String, srcLang: String): String = if(srcLang == "BrainFuck") prog else translators(srcLang)(prog)
-    def transFromBF(prog: String, dstLang: String): String = if(dstLang == "BrainFuck") prog else translators(dstLang).unapply(prog)
+    def transToBF(prog: String, srcLang: String): String = if(srcLang == "BrainFuck") prog else translators(srcLang)(bools, nums)(prog)
+    def transFromBF(prog: String, dstLang: String): String = if(dstLang == "BrainFuck") prog else translators(dstLang).unapply(bools, nums)(prog)
     def translate(prog: String, slang: String, dlang: String): String = transFromBF(transToBF(prog, slang), dlang)
     
     args match{

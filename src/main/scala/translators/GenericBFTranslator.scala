@@ -1,11 +1,11 @@
 package translators
 
 import scala.annotation.tailrec
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 
 class GenericBFTranslator(val name: String, val kvPairs: Vector[(String, String)]) extends BFTranslator{
-  def apply(prog: String): String = translate(prog, revSyntax)
-  def unapply(prog: String): String = translate(prog, syntax)
+  def apply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(prog: String): String = translate(prog, revSyntax)
+  def unapply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(prog: String): String = translate(prog, syntax)
   
   private def translate(prog: String, syn: immutable.HashMap[String, String]): String = {
     val keysOrder = syn.keys.toVector.sortWith(_.length > _.length)
