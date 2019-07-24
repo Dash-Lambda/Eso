@@ -2,15 +2,12 @@ package ui
 
 import java.io.{File, FileWriter, PrintWriter}
 
-import Compilers.Compiler
-import assemblers.{Assembler, AssemblerException}
-import translators._
+import brainfuck.{BFOptimizer, BFTranslator, GenericBFTranslator}
+import common.{Generator, Interpreter, InterpreterException, Translator}
 
 import scala.annotation.tailrec
 import scala.io.{Source, StdIn}
 import scala.util.{Failure, Success, Try}
-import interpreters.{BFOptimizer, Interpreter, InterpreterException}
-
 import scala.collection.{immutable, mutable}
 
 case class HandlerException(info: String) extends Throwable
@@ -20,14 +17,10 @@ object ConsoleHandlers {
     """|Commands...
        |- run <language> <source file>
        |
-       |- compile <source language> <destination language> <source file> <destination file>
-       |
-       |- assemble <language> <source file> <destination file>
-       |- disassemble <language> <source file> <destination file>
-       |
+       |- generate <source language> <destination language> <source file> <destination file>
+       |- translate <source language> <target language> <source file> <optional destination file>
        |- optimize <source file> <optional destination file>
        |
-       |- translate <source language> <target language> <source file> <optional destination file>
        |- defineBFLang
        |- loadBFLangs <file>
        |- saveBFLangs <file>
@@ -51,8 +44,8 @@ object ConsoleHandlers {
        |""".stripMargin
   
   def runHandler(interpreters: mutable.HashMap[String, Interpreter],
-                  bools: mutable.HashMap[String, (Boolean, String)],
-                  nums: mutable.HashMap[String, (Int, String)])(args: Vector[String]): Unit = {
+                 bools: mutable.HashMap[String, (Boolean, String)],
+                 nums: mutable.HashMap[String, (Int, String)])(args: Vector[String]): Unit = {
     (bools.get("log"), args) match{
       case (Some((log, _)), lang +: fnam +: _) if interpreters.isDefinedAt(lang) =>
         grabProg(fnam) match{
@@ -76,7 +69,7 @@ object ConsoleHandlers {
     }
   }
   
-  def compileHandler(compilers: mutable.HashMap[(String, String), Compiler], bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(args: Vector[String]): Unit = args match{
+  def compileHandler(compilers: mutable.HashMap[(String, String), Generator], bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(args: Vector[String]): Unit = args match{
     case slang +: dlang +: inam +: onam +: _ => compilers.get((slang, dlang)) match{
       case Some(comp) =>
         print(s"Retrieving from $inam... ")
@@ -98,33 +91,6 @@ object ConsoleHandlers {
     }
     
     case _ => println("Not enough arguments.")
-  }
-  
-  def assembleHandler(bools: mutable.HashMap[String, (Boolean, String)],
-                      nums: mutable.HashMap[String, (Int, String)], rev: Boolean)(assemblers: mutable.HashMap[String, Assembler])(args: Vector[String]): Unit = args match{
-    case lang +: srcNam +: dstNam +: _ if assemblers.isDefinedAt(lang) =>
-      Try{
-        val iFile = Source.fromFile(srcNam)
-        val prog = iFile.mkString
-        iFile.close
-        prog
-      }match{
-        case Success(prog) =>
-          println(s"Retrieved program from $srcNam.\nAssembling...\n")
-          val res = if(rev) assemblers(lang).unapply(bools, nums)(prog) else assemblers(lang)(bools, nums)(prog)
-          res match{
-            case Success(assembled) =>
-              print(s"\nAssembled.\nSaving to $dstNam... ")
-              val oFile = new PrintWriter(new File(dstNam))
-              oFile.print(assembled)
-              oFile.close()
-              println("Done.\n")
-            case Failure(AssemblerException(info)) => println(s"Error: $info")
-            case Failure(e) => println(s"Error: $e")
-          }
-        case Failure(e) => println(s"Error: $e")
-      }
-    case _ => println("Invalid Arguments")
   }
   
   def optimizeHandler(args: Vector[String], debug: Boolean): Unit = args match {
@@ -178,38 +144,77 @@ object ConsoleHandlers {
     case _ => println("Invalid Arguments.")
   }
   
+  def mkTrans(bools: mutable.HashMap[String, (Boolean, String)],
+              nums: mutable.HashMap[String, (Int, String)],
+              translators: mutable.HashMap[(String, String), Translator])
+             (ilang: String)(olangs: String*): Option[String => Try[String]] = {
+    def buildChain(l1: String, l2: String): Option[String => Try[String]] = {
+      val links = translators.keys.flatMap{case (a, b) => Seq((a, b), (b, a))}.toVector
+      
+      def transGet(tl1: String, tl2: String): String => Try[String] = translators.get((tl1, tl2)) match{
+        case Some(t) => t(bools, nums)
+        case None => translators((tl2, tl1)).unapply(bools, nums)
+      }
+    
+      def cLink(link: String => Try[String]): Try[String] => Try[String] = {
+        case Success(str) => link(str)
+        case f: Failure[String] => f
+      }
+    
+      def cdo(src: Vector[String]): String => Try[String] = src
+        .sliding(2)
+        .map{case a +: b +: _ => (a, b)}
+        .foldLeft((inp: String) => Success(inp): Try[String]){
+          case (ac, p) => (inp: String) => cLink(transGet(p._1, p._2))(ac(inp))}
+    
+      Iterator
+        .iterate(Vector(Vector(l1))){_
+          .flatMap(vec => links.filter(_._1 == vec.last).map(p => vec :+ p._2))
+          .filter(vec => vec.sizeIs == vec.distinct.length)}
+        .takeWhile(_.nonEmpty)
+        .map(_.collectFirst{case vec if vec.last == l2 => vec})
+        .collectFirst{case Some(vec) => cdo(vec)}
+    }
+    def trans(l1: String, l2: String): Option[String => Try[String]] = (translators.get((l1, l2)), translators.get((l2, l1))) match{
+      case (Some(t), _) => Some(t(bools, nums))
+      case (_, Some(t)) => Some(t.unapply(bools, nums))
+      case (_, _) => buildChain(l1, l2)
+    }
+    
+    olangs.iterator.map(trans(ilang, _)).collectFirst{case Some(func) => func}
+  }
+  
   def translationHandler(bools: mutable.HashMap[String, (Boolean, String)],
                          nums: mutable.HashMap[String, (Int, String)],
-                         translators: mutable.HashMap[String, BFTranslator])(args: Vector[String]): Unit = {
-    def chkLang(lang: String): Boolean = (lang == "BrainFuck") || translators.isDefinedAt(lang)
-    def transToBF(prog: String, srcLang: String): String = if(srcLang == "BrainFuck") prog else translators(srcLang)(bools, nums)(prog)
-    def transFromBF(prog: String, dstLang: String): String = if(dstLang == "BrainFuck") prog else translators(dstLang).unapply(bools, nums)(prog)
-    def translate(prog: String, slang: String, dlang: String): String = transFromBF(transToBF(prog, slang), dlang)
+                         translators: mutable.HashMap[(String, String), Translator])(args: Vector[String]): Unit = {
+    val debug = bools.get("debug") match{
+      case Some(p) => p._1
+      case None => false
+    }
     
     args match{
-      case lang1 +: lang2 +: src +: tail if chkLang(lang1) && chkLang(lang2) =>
-        grabProg(src) match{
-          case Success(prog) =>
-            println(s"Program successfully retrieved from $src.")
-            tail match{
-              case dest +: _ =>
-                print(s"Saving to $dest... ")
-                val oFile = new PrintWriter(new File(dest))
-                oFile.print(translate(prog, lang1, lang2))
-                oFile.close()
-                println("Done.")
-              case _ =>
-                println(
-                  s"""|Source:
-                      |$prog
-                      |
-                      |Translated:
-                      |${translate(prog, lang1, lang2)}
-                      |""".stripMargin)
-            }
-          case Failure(e) => println(s"Error: $e")
-        }
-      case _ => println("Arguments not recognized.")
+      case lang1 +: lang2 +: src +: tail => mkTrans(bools, nums, translators)(lang1)(lang2) match{
+        case Some(t) =>
+          if(debug) print(s"Retrieving program from $src... ")
+          grabProg(src) match{
+            case Success(prog) =>
+              if(debug) println("Done.\nTranslating... ")
+              t(prog) match{
+                case Success(prog2) => tail match{
+                  case dest +: _ =>
+                    if(debug) print(s"\nSaving to $dest... ")
+                    writeFile(dest)(prog2)
+                    if(debug) println("Done.")
+                    else println(s"Program saved to $dest")
+                  case _ => println(s"Source:\n$prog\n\nTranslated:\n$prog2\n")
+                }
+                case Failure(e) => println(s"Error: $e")
+              }
+            case Failure(e) => println(s"Error: $e")
+          }
+        case None => println("Error: Translator Not Found")
+      }
+      case _ => println("Error: Invalid Arguments")
     }
   }
   
@@ -248,14 +253,14 @@ object ConsoleHandlers {
           |""".stripMargin)
   }
   
-  def loadBFLangsHandler(args: Vector[String]): Vector[(String, BFTranslator)] = {
+  def loadBFLangsHandler(args: Vector[String]): Vector[BFTranslator] = {
     @tailrec
-    def scrub(langs: Vector[String], ac: Vector[(String, BFTranslator)]): Vector[(String, BFTranslator)] = langs match{
+    def scrub(langs: Vector[String], ac: Vector[BFTranslator]): Vector[BFTranslator] = langs match{
       case tok +: tail if tok.startsWith("name=") =>
         val nam = tok.drop(5)
         val syn = tail.take(8)
         val kvs = syn.map(str => (str.head.toString, str.drop(2)))
-        scrub(tail.dropWhile(str => !str.startsWith("name=")), ac :+ (nam, GenericBFTranslator(nam, kvs)))
+        scrub(tail.dropWhile(str => !str.startsWith("name=")), ac :+ GenericBFTranslator(nam, kvs))
       case _ +: tail => scrub(tail.dropWhile(str => !str.startsWith("name=")), ac)
       case _ => ac
     }
@@ -263,30 +268,31 @@ object ConsoleHandlers {
     args match{
       case fnam +: _ =>
         grabLines(fnam) match{
-          case Success(langs) => val transVec = scrub(langs, Vector[(String, BFTranslator)]())
-            println(s"Successfully loaded:\n${transVec.map(p => s"- ${p._1}").mkString("\n")}\n")
+          case Success(langs) => val transVec = scrub(langs, Vector[BFTranslator]())
+            println(s"Successfully loaded:\n${transVec.map(p => s"- ${p.name}").mkString("\n")}\n")
             transVec
           case Failure(e) => println(s"Error: $e")
-            Vector[(String, BFTranslator)]()
+            Vector[BFTranslator]()
         }
       case _ => println("Invalid file name.")
-        Vector[(String, BFTranslator)]()
+        Vector[BFTranslator]()
     }
   }
   
-  def langCreationHandler: (String, BFTranslator) = {
+  def langCreationHandler: BFTranslator = {
     val keys = Vector("<", ">", "+", "-", "[", "]", ",", ".")
     val nam = grabStr("Language Name: ")
     val kvs = keys.map(k => (k, grabStr(s"$k: ")))
     println
-    (nam, GenericBFTranslator(nam, kvs))
+    GenericBFTranslator(nam, kvs)
   }
   
-  def bfLangSaveHandler(translators: mutable.HashMap[String, BFTranslator], defaults: Vector[BFTranslator])(args: Vector[String]): Unit = args match{
+  def bfLangSaveHandler(translators: mutable.HashMap[(String, String), Translator], defaults: Vector[Translator])(args: Vector[String]): Unit = args match{
     case fnam +: _ =>
+      val bftrans = translators.toVector.collect{case (_, t: BFTranslator) => t}
       val oFile = new FileWriter(new File(fnam), true)
-      val natLangs = defaults.map(t => (t.name, t))
-      for(lang <- translators.filterNot(natLangs.contains(_)).values){
+      val natLangs = defaults.map(t => t.name)
+      for(lang <- bftrans.filterNot(t => natLangs.contains(t.name))){
         oFile.write(
           s"""|name=${lang.name}
               |${lang.kvPairs.map(p => s"${p._1}=${p._2}").mkString("\n")}
@@ -296,28 +302,28 @@ object ConsoleHandlers {
     case _ => println("Invalid arguments.")
   }
   
-  def syntaxHandler(translators: mutable.HashMap[String, BFTranslator])(args: Vector[String]): Unit = args match{
-    case lang +: _ if translators.contains(lang) =>
-      val synStr = translators(lang).kvPairs.map{case (k, v) => s"$k: $v"}.mkString("\n")
-      println(s"Syntax for $lang...\n$synStr\n")
-    case _ => println("Not a recognized translator.")
+  def syntaxHandler(translators: mutable.HashMap[(String, String), Translator])(args: Vector[String]): Unit = {
+    val bftrans = translators.toVector.collect{case (_, t: BFTranslator) => t}
+    args match{
+      case lang +: _ => bftrans.find(_.name == lang) match{
+        case Some(t) => println(s"Syntax for $lang...\n${t.kvPairs.map{case (k, v) => s"$k: $v"}.mkString("\n")}\n")
+        case None => println("Language Not Recognized")
+      }
+      case _ => println("Not Enough Arguments")
+    }
   }
   
   def listLangsHandler(interpreters: mutable.HashMap[String, Interpreter],
-                       BFTranslators: mutable.HashMap[String, BFTranslator],
-                       assemblers: mutable.HashMap[String, Assembler],
-                       compilers: mutable.HashMap[(String, String), Compiler]): Unit = {
+                       Translators: mutable.HashMap[(String, String), Translator],
+                       compilers: mutable.HashMap[(String, String), Generator]): Unit = {
     println(
-      f"""|Parent Languages...
-          |${interpreters.keys.map(nam => s"- $nam").toVector.sorted.mkString("\n")}
+      f"""|Languages...
+          |${interpreters.values.map(i => s"- $i").toVector.sorted.mkString("\n")}
           |
-          |BrainFuck Translators...
-          |${BFTranslators.keys.map(nam => s"- $nam").toVector.sorted.mkString("\n")}
+          |Translators...
+          |${Translators.values.map(t => s"- $t").toVector.sorted.mkString("\n")}
           |
-          |Assemblers...
-          |${assemblers.keys.map(nam => s"- $nam").toVector.sorted.mkString("\n")}
-          |
-          |Compilers...
+          |Generators...
           |${compilers.keys.map{case (snam, dnam) => s"- $snam -> $dnam"}.toVector.sorted.mkString("\n")}
           |""".stripMargin)
   }
@@ -347,6 +353,12 @@ object ConsoleHandlers {
       case (Some(_), Some(_)) => "Error: Variable is Defined Twice"
       case _ => "Error: Variable Not Recognized"
     }
+  }
+  
+  def writeFile(fnam: String)(str: String): Unit = {
+    val oFile = new PrintWriter(new File(fnam))
+    oFile.print(str)
+    oFile.close()
   }
   
   def grabStr(prompt: String): String = {print(prompt); StdIn.readLine}

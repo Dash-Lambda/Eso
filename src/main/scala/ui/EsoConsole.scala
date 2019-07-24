@@ -1,10 +1,11 @@
 package ui
 
-import Compilers.{Compiler, BFCompiler}
 import ConsoleHandlers._
-import assemblers.{Assembler, WhiteSpaceAssembler}
-import interpreters.{BFManaged, FracTran, FracTranpp, Interpreter, ScalaRun, TransInterp, WhiteSpace, WhiteSpaceSL}
-import translators.{BFTranslator, FlufflePuff, Ook}
+import brainfuck.{BFGenerator$, BFManaged, FlufflePuff, Ook}
+import common.{Generator, Interpreter, TransInterp, Translator}
+import fractran.{FracTran, FracTranpp}
+import scalarun.ScalaRun
+import whitespace.{WSManaged, WSAssembly}
 
 import scala.collection.mutable
 
@@ -15,16 +16,17 @@ object EsoConsole {
        |Type "help" for a list of commands.
        |""".stripMargin
   val defaultBindingFile: String = "userBindings.txt"
-  val assemVec: Vector[Assembler] = Vector[Assembler](WhiteSpaceAssembler)
-  val nativeTrans: Vector[BFTranslator] = Vector[BFTranslator](FlufflePuff, Ook)
-  val interpVec: Vector[Interpreter] = Vector[Interpreter](FracTran, FracTranpp, ScalaRun, WhiteSpace, WhiteSpaceSL, BFManaged)
-  val compVec: Vector[Compiler] = Vector[Compiler](BFCompiler)
+  val nativeTrans: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
+  val interpVec: Vector[Interpreter] = Vector[Interpreter](FracTran, FracTranpp, ScalaRun, WSManaged, BFManaged)
+  val interpName: Vector[String] = interpVec.map(_.name)
+  val genVec: Vector[Generator] = Vector[Generator](BFGenerator$)
   
   val defBools: Vector[(String, (Boolean, String))] = Vector[(String, (Boolean, String))](
     "log" -> (true, "determines whether output is shown during or after runtime"),
     "debug" -> (false, "show runtime information, such as stack and heap states"),
     "dynamicTapeSize" -> (false, "resize tape as needed for BF interpreters, eliminates memory limitations but reduces speed"),
-    "powExp" -> (false, "toggle raw value vs. factor expansion representation of FracTran output"))
+    "powExp" -> (false, "toggle raw value vs. factor expansion representation of FracTran output"),
+    "WSL" -> (true, "toggle the use of SafeLongs with the WhiteSpace interpreter"))
   val defNums: Vector[(String, (Int, String))] = Vector[(String, (Int, String))](
     "BFOpt" -> (2, "BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled"),
     "initTapeSize" -> (40000, "initial tape length for BF interpreters"),
@@ -35,10 +37,9 @@ object EsoConsole {
   private val userBindings: mutable.HashMap[String, Vector[String]] = mutable.HashMap[String, Vector[String]]()
   private val bools: mutable.HashMap[String, (Boolean, String)] = mutable.HashMap[String, (Boolean, String)]()
   private val nums: mutable.HashMap[String, (Int, String)] = mutable.HashMap[String, (Int, String)]()
-  private val BFTranslators: mutable.HashMap[String, BFTranslator] = mutable.HashMap[String, BFTranslator]()
+  private val Translators: mutable.HashMap[(String, String), Translator] = mutable.HashMap[(String, String), Translator]()
   private val interpreters: mutable.HashMap[String, Interpreter] = mutable.HashMap[String, Interpreter]()
-  private val assemblers: mutable.HashMap[String, Assembler] = mutable.HashMap[String, Assembler]()
-  private val compilers: mutable.HashMap[(String, String), Compiler] = mutable.HashMap[(String, String), Compiler]()
+  private val generators: mutable.HashMap[(String, String), Generator] = mutable.HashMap[(String, String), Generator]()
   
   def main(args: Array[String]): Unit = {
     setDefaults()
@@ -47,26 +48,25 @@ object EsoConsole {
   }
   
   def setDefaults(): Unit = {
-    BFTranslators.clear()
+    Translators.clear()
     interpreters.clear()
-    assemblers.clear()
-    compilers.clear()
+    generators.clear()
     userBindings.clear()
     bools.clear()
     nums.clear()
     
-    BFTranslators ++= nativeTrans.map(t => (t.name, t))
-    interpreters ++= (interpVec ++ nativeTrans.map(trans => TransInterp(trans, BFManaged))).map(interp => (interp.name, interp))
-    assemblers ++= assemVec.map(asm => (asm.name, asm))
-    compilers ++= compVec.map(comp => (comp.name, comp))
+    Translators ++= nativeTrans.map(t => ((t.name, t.baseLang), t))
+    interpreters ++= interpVec.map(interp => (interp.name, interp))
+    interpreters ++= nativeTrans.map(t => (t, interpreters.get(t.baseLang))).collect{case (t, Some(i)) => (t.name, TransInterp(t, i))}
+    generators ++= genVec.map(comp => (comp.name, comp))
     userBindings ++= loadBindingsHandler(defaultBindingFile)
     bools ++= defBools
     nums ++= defNums
   }
   
-  def addTrans(pair: (String, BFTranslator)): Unit = {
-    BFTranslators += pair
-    interpreters += ((pair._1, TransInterp(pair._2, BFManaged)))
+  def addTrans(trans: Translator): Unit = {
+    Translators += ((trans.name, trans.baseLang) -> trans)
+    if(interpreters.isDefinedAt(trans.baseLang)) interpreters += (trans.name -> TransInterp(trans, interpreters(trans.baseLang)))
   }
   
   def consoleLoop(): Unit = {
@@ -82,23 +82,17 @@ object EsoConsole {
     }
     
     def execCommand(inp: Vector[String]): Unit = inp match{
-      //case "listv" +: _ => println(defNums.mkString("\n"))
-      //case "listm" +: _ => println(nums.mkString("\n"))
-      
       case "run" +: args => runHandler(interpreters, bools, nums)(args)
       
-      case "compile" +: args => compileHandler(compilers, bools, nums)(args)
-      
-      case "assemble" +: args => assembleHandler(bools, nums, rev = false)(assemblers)(args)
-      case "disassemble" +: args => assembleHandler(bools, nums, rev = true)(assemblers)(args)
+      case "generate" +: args => compileHandler(generators, bools, nums)(args)
       
       case "optimize" +: args => optimizeHandler(args, bools("debug")._1)
       
-      case "translate" +: args => translationHandler(bools, nums, BFTranslators)(args)
+      case "translate" +: args => translationHandler(bools, nums, Translators)(args)
       case "defineBFLang" +: _ => addTrans(langCreationHandler)
       case "loadBFLangs" +: args => for(p <- loadBFLangsHandler(args)) addTrans(p)
-      case "saveBFLangs" +: args => bfLangSaveHandler(BFTranslators, nativeTrans)(args)
-      case "syntax" +: args => syntaxHandler(BFTranslators)(args)
+      case "saveBFLangs" +: args => bfLangSaveHandler(Translators, nativeTrans)(args)
+      case "syntax" +: args => syntaxHandler(Translators)(args)
       
       case "bind" +: tok +: args => userBindings += ((tok, args))
       case "unbind" +: tok +: _ => userBindings -= tok
@@ -110,7 +104,7 @@ object EsoConsole {
       case "set" +: args => println(setVarHandler(bools, nums)(args))
       case "defaults" +: _ => setDefaults()
       
-      case "listLangs" +: _ => listLangsHandler(interpreters, BFTranslators, assemblers, compilers)
+      case "listLangs" +: _ => listLangsHandler(interpreters, Translators, generators)
       case "listVars" +: _ => println(printVarsHandler(bools, nums))
       case "help" +: _ => println(helpText)
       

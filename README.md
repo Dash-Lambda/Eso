@@ -11,6 +11,7 @@ Current Native language support:
 * [Fluffle Puff](https://github.com/juju2143/flufflepuff)
 * [Ook](https://esolangs.org/wiki/Ook!)
 * [WhiteSpace](https://esolangs.org/wiki/Whitespace) ([as defined here](https://web.archive.org/web/20151108084710/http://compsoc.dur.ac.uk/whitespace/tutorial.html))
+* [WhiteSpace Assembly](https://github.com/Dash-Lambda/Eso/blob/master/WhiteSpaceSyntax.txt)
 * [FracTran](https://esolangs.org/wiki/Fractran)
 * [FracTran++](https://esolangs.org/wiki/Fractran%2B%2B)
 * Scala
@@ -18,21 +19,20 @@ Current Native language support:
 #### Current features:
 * Run program from text file
 * Unoptimized, optimized, and compiled BrainFuck interpreters
-* Translate to and from supported BrainFuck languages
-* Compile BrainFuck programs to Scala source files
+* Long and SafeLong based WhiteSpace interpreters
+* Translate to and from compatible languages
+* Write WhiteSpace programs with a readable assembly language
+* Generate Scala code from BrainFuck programs
 * Compile and run Scala source files
 * Create and use user-defined BrainFuck languages
 * User-configurable runtime parameters (logging, maximum output size, tape size, etc.)
-* Convert difficult-to-read code (a la WhiteSpace) to and from readable syntax with assemblers
-* Debug mode to show interpreter state during runtime
-* Optionally slow down execution in debug mode
+* Debug mode
+* Optionally slow down execution in debug mode in some interpreters
 
 ##### WIP:
-* Streamlining lang/translator/assembler/compiler heirarchy (including properly differentiating compiling from code generation)
 * Compiler memory (to avoid unnecessary recompiling)
 * Dynamic tape size for compiled BrainFuck interpreter
 * Unispace interpreter
-* Streamline WhiteSpace interpreter versions (make it generic)
 * Additional languages and interpreters
 * Modularization
 * Potentially everything
@@ -47,7 +47,7 @@ The optimizer performs a series of passes over the program:
 4. Replace all copy/multiplication loops with a single instruction. This amounts to finding all blocks of the form "[u]" where u does not shift the pointer and decrements the current value by 1, and replacing them with a single 'l' which performs the bulk operation once while multiplying all the increments/decrements by the current value.
 5. Pair every bracket with the index of its corresponding bracket. This eliminates the need to scrub through the program looking for the next bracket on every jump or skip.
 
-### User-Defined Translators
+### User-Defined BrainFuck Translators
 There are two ways to define your own BF language:
 * Use the console prompt, which will ask you for the language name and syntax then handle the rest.
 * Make a text file containing your language's information in this form:
@@ -87,6 +87,6 @@ The FracTran interpreter reads programs as an initial value followed by a list o
 ```
 
 ### FracTran++ Program Format
-FracTran++ has identical structure to (and it fully compatible with) FracTran, but with additional syntax detailed in FracTranpp_Syntax.txt.
+FracTran++ has identical structure to (and it fully compatible with) FracTran, but with additional syntax detailed [here](https://github.com/Dash-Lambda/Eso/blob/master/FracTranpp_Syntax.txt).
 
 This is very much a work in progress.
