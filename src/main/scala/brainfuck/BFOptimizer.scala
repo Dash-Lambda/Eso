@@ -1,144 +1,150 @@
 package brainfuck
 
-import common.InterpreterException
-
 import scala.annotation.tailrec
-import scala.util.{Failure, Success, Try}
 
-case class BulkOp(ops: Vector[(Int, Int)], shift: Int){
-  override def toString: String = s"BulkOp($shift, ${ops.mkString(" | ")})"
+case class BlkOP(ops: Vector[(Int, Option[Int])], shift: Int){
+  lazy val maxShift: Int = math.max(shift, ops.map(_._1).max)
+  
+  lazy val (ind, inc) = ops.head
+  def doOne(p: Int, dat: Vector[Int]): (Int, Vector[Int]) = inc match{
+    case Some(n) => (p + shift, dat.updated(p + ind, dat(p + ind) + n))
+    case None => (p + shift, dat.updated(p + ind, 0))
+  }
+  
+  lazy val lops: Vector[(Int, (Int, Int) => Int)] = ops.map{
+    case (i, Some(n)) => (i, (x: Int, y: Int) => x + n*y)
+    case (i, None) => (i, (_, _) => 0)
+  }
+  def doLoop(p: Int, dat: Vector[Int]): Vector[Int] = {
+    val num = dat(p)
+    if(dat(p) == 0) dat
+    else lops.foldLeft(dat){case (vec, (i, op)) => vec.updated(p + i, op(vec(p + i), num))}
+  }
+  
+  lazy val oops: Vector[(Int, Int => Int)] = ops.map{
+    case (i, Some(n)) => (i, (x: Int) => x + n)
+    case (i, None) => (i, _ => 0)
+  }
+  def doOp(p: Int, dat: Vector[Int]): (Int, Vector[Int]) = {
+    val opd = oops.foldLeft(dat){case (vec, (i, op)) => vec.updated(p + i, op(vec(p + i)))}
+    (p + shift, opd)
+  }
+  
+  def isLoop: Boolean = (shift == 0) && !ops.contains((0, None)) && (ops.collect{case (0, Some(n)) => n}.sum == -1)
+  
+  override def toString: String = {
+    val incs = ops
+      .map{
+        case (i, Some(n)) => s"$i += $n"
+        case (i, None) => s"$i = 0"}
+    s"($shift; ${incs.mkString(", ")})"
+  }
+  
+  def opStr: String = {
+    val opstr = ops.map{
+      case (0, Some(n)) if n > 0 => s"tape(p) += $n"
+      case (0, Some(n)) if n < 0 => s"tape(p) -= ${n.abs}"
+      case (i, Some(n)) if n > 0 => s"tape(p + $i) += $n"
+      case (i, Some(n)) if n < 0 => s"tape(p + $i) -= ${n.abs}"
+      case (i, None) => s"tape(p + $i) = 0"
+    }
+    s"${opstr.mkString("\n")}${if(shift != 0) s"\np += $shift" else ""}"
+  }
+  def lopStr: String = {
+    val opstr = ops
+      .filter(_._1 != 0)
+      .map{
+        case (i, Some(n)) if n > 0 => s"tape(p + $i) += $n*tmp"
+        case (i, Some(n)) if n < 0 => s"tape(p + $i) -= ${n.abs}*tmp"
+        case (i, None) => s"tape(p + $i) = 0"
+      }
+    s"""|if(tape(p) != 0){
+        |val tmp = tape(p)
+        |${opstr.mkString("\n")}
+        |tape(p) = 0
+        |}""".stripMargin
+  }
+}
+object BlkOP{
+  def apply(v: Vector[(Int, Option[Int])], s: Int): BlkOP = new BlkOP(v, s)
 }
 
 object BFOptimizer {
-  def apply(progRaw: String, debug: Boolean): Try[(Vector[BulkOp], Vector[(Char, Int)])] = {
-    def optBase(progSrc: String): Vector[(Char, Int)] = {
-      val ops = Vector[Char]('>', '<', '+', '-', '.')
-      val nonOps = Vector[Char]('[', ']', ',', '_')
-      
-      @tailrec
-      def bHelper(ac: Vector[(Char, Int)], tag: Char, count: Int, src: String): Vector[(Char, Int)] = {
-        if(debug) println(
-          s"""|Source: $src
-              |Tag: $tag
-              |Count: $count
-              |Opt: ${ac.mkString(" | ")}
-              |""".stripMargin)
-        
-        src.headOption match{
-          case Some(c) =>
-            if((tag == ' ') && ops.contains(c)) bHelper(ac, c, 1, src.tail)
-            else if((tag == ' ') && nonOps.contains(c)) bHelper(ac :+ (c, 1), ' ', 0, src.tail)
-            else if((tag != ' ') && (c == tag)) bHelper(ac, tag, count + 1, src.tail)
-            else if((tag != ' ') && (c != tag) && ops.contains(c)) bHelper(ac :+ (tag, count), c, 1, src.tail)
-            else bHelper(ac :+ (tag, count) :+ (c, 1), ' ', 0, src.tail)
-          case None =>
-            if(tag == ' ') ac
-            else ac :+ (tag, count)
-        }
-      }
+  val ops: Vector[Char] = Vector[Char]('>', '<', '+', '-')
+  val nonOps: Vector[Char] = Vector[Char]('[', ']', ',', '.', '_', 'e')
   
-      val conditioned = progSrc.filter("><][+-,.".contains(_))
-      bHelper(Vector[(Char, Int)](), ' ', 0, conditioned) :+ ('e', 0)
+  def apply(progRaw: String, debug: Boolean): Option[(Vector[BlkOP], Vector[(Char, Int)])] = {
+    val (bopVec, pass1) = bulk(optLazy(progRaw))
+    val pass2 = loop(pass1, bopVec)
+    val pass3 = skip(pass2)
+    pass3.map(prog => (bopVec, prog))
+  }
+  
+  def compOpt(progRaw: String, log: Boolean): Option[(Vector[BlkOP], Vector[(Char, Int)])] = {
+    if(progRaw.count(_ == '[') == progRaw.count(_ == ']')){
+      val (bopVec, pass1) = bulk(optLazy(progRaw))
+      val pass2 = loop(pass1, bopVec)
+      Some(bopVec -> pass2)
+    }else None
+  }
+  
+  def cont(str: String): Option[((Char, Int), String)] = str.headOption match{
+    case Some(h) if ops.contains(h) => Some((h, str.takeWhile(_ == h).length) -> str.dropWhile(_ == h))
+    case Some(h) => Some((h, 0) -> str.tail)
+    case _ => None
+  }
+  def optLazy(progRaw: String): LazyList[(Char, Int)] = LazyList.unfold(progRaw.filter("><][+-,.".contains(_)) :+ 'e')(cont)
+  
+  def bulk(progSrc: LazyList[(Char, Int)]): (Vector[BlkOP], Vector[(Char, Int)]) = {
+    @tailrec
+    def bdo(ac: Vector[(Char, Int)], bac: Vector[BlkOP], vac: Vector[(Int, Option[Int])], shift: Int, ind: Int, src: LazyList[(Char, Int)]): (Vector[BlkOP], Vector[(Char, Int)]) = {
+      src match{
+        case ('>', n) +: tail => bdo(ac, bac, vac, shift + n, ind, tail)
+        case ('<', n) +: tail => bdo(ac, bac, vac, shift - n, ind, tail)
+        case ('+', n) +: tail => bdo(ac, bac, vac :+ (shift -> Some(n)), shift, ind, tail)
+        case ('-', n) +: tail => bdo(ac, bac, vac :+ (shift -> Some(-n)), shift, ind, tail)
+        case ('_', _) +: tail => bdo(ac, bac, vac :+ (shift -> None), shift, ind, tail)
+        case p +: ps =>
+          if(vac.sizeIs == 1) bdo(ac :+ ('a', ind) :+ p, bac :+ BlkOP(vac, shift), Vector[(Int, Option[Int])](), 0, ind + 1, ps)
+          else if(vac.nonEmpty) bdo(ac :+ ('u', ind) :+ p, bac :+ BlkOP(vac, shift), Vector[(Int, Option[Int])](), 0, ind + 1, ps)
+          else if(vac.isEmpty && shift != 0) bdo(ac :+ ('m', shift) :+ p, bac, Vector[(Int, Option[Int])](), 0, ind, ps)
+          else bdo(ac :+ p, bac, vac, shift, ind, ps)
+        case _ => (bac, ac)
+      }
     }
     
-    def optBulk(progSrc: Vector[(Char, Int)]): (Vector[BulkOp], Vector[(Char, Int)]) = {
-      @tailrec
-      def uHelper(ac: Vector[(Char, Int)], mac: Vector[BulkOp], vac: Vector[(Int, Int)], shift: Int, ind: Int, src: Vector[(Char, Int)]): (Vector[BulkOp], Vector[(Char, Int)]) = {
-        if(debug) println(
-          s"""|Source: ${src.mkString(" | ")}
-              |BulkOps: ${vac.mkString(" | ")}
-              |Shift: $shift
-              |Addr: $ind
-              |Opt: ${ac.mkString(" | ")}
-              |""".stripMargin)
-        
-        src match{
-          case ('>', n) +: tail => uHelper(ac, mac, vac, shift + n, ind, tail)
-          case ('<', n) +: tail => uHelper(ac, mac, vac, shift - n, ind, tail)
-          case ('+', n) +: tail => uHelper(ac, mac, vac :+ (shift, n), shift, ind, tail)
-          case ('-', n) +: tail => uHelper(ac, mac, vac :+ (shift, -n), shift, ind, tail)
-          case p +: ps =>
-            if(vac.sizeIs == 1) uHelper(ac :+ ('a', ind) :+ p, mac :+ BulkOp(vac, shift), Vector[(Int, Int)](), 0, ind + 1, ps)
-            else if(vac.nonEmpty) uHelper(ac :+ ('u', ind) :+ p, mac :+ BulkOp(vac.sortBy(_._1), shift), Vector[(Int, Int)](), 0, ind + 1, ps)
-            else if(vac.isEmpty && shift != 0) uHelper(ac :+ ('m', shift) :+ p, mac, Vector[(Int, Int)](), 0, ind, ps)
-            else uHelper(ac :+ p, mac, vac, shift, ind, ps)
-          case _ => (mac, ac)
+    bdo(Vector[(Char, Int)](), Vector[BlkOP](), Vector[(Int, Option[Int])](), 0, 0, progSrc)
+  }
+  
+  def loop(progSrc: Vector[(Char, Int)], bops: Vector[BlkOP]): Vector[(Char, Int)] = {
+    @tailrec
+    def ldo(ac: Vector[(Char, Int)], src: Vector[(Char, Int)]): Vector[(Char, Int)] = {
+      src match{
+        case ('[', _) +: ('u', addr) +: (']', _) +: tail if bops(addr).isLoop => ldo(ac :+ ('l', addr), tail)
+        case ('[', _) +: ('m', stp) +: (']', _) +: tail => ldo(ac :+ ('/', stp), tail)
+        case p +: ps => ldo(ac :+ p, ps)
+        case _ => ac
+      }
+    }
+    
+    ldo(Vector[(Char, Int)](), progSrc)
+  }
+  
+  def skip(progSrc: Vector[(Char, Int)]): Option[Vector[(Char, Int)]] = {
+    @tailrec
+    def sdo(ac: Vector[(Char, Int)], os: List[Int], ind: Int, src: Vector[(Char, Int)]): Option[Vector[(Char, Int)]] = src match{
+      case p +: ps => p match{
+        case ('[', _) => sdo(ac :+ p, ind +: os, ind + 1, ps)
+        case (']', _) => os match{
+          case i +: is => sdo(ac.updated(i, ('[', ind + 1)) :+ (']', i + 1), is, ind + 1, ps)
+          case _ => None
         }
+        case _ => sdo(ac :+ p, os, ind + 1, ps)
       }
-      
-      uHelper(Vector[(Char, Int)](), Vector[BulkOp](), Vector[(Int, Int)](), 0, 0, progSrc)
+      case _ if os.isEmpty => Some(ac)
+      case _ => None
     }
     
-    def optLoop(progSrc: Vector[(Char, Int)], hmap: Vector[BulkOp]): Vector[(Char, Int)] = {
-      @tailrec
-      def lHelper(ac: Vector[(Char, Int)], src: Vector[(Char, Int)]): Vector[(Char, Int)] = {
-        if(debug) println(
-          s"""|Source: ${src.mkString(" | ")}
-              |Opt: ${ac.mkString(" | ")}
-              |""".stripMargin)
-        
-        src match{
-          case ('[', _) +: ('u', addr) +: (']', _) +: tail if hmap(addr).shift == 0 && hmap(addr).ops.filter(_._1 == 0).map(_._2).sum == -1 => lHelper(ac :+ ('l', addr), tail)
-          case ('[', _) +: ('m', stp) +: (']', _) +: tail => lHelper(ac :+ ('/', stp), tail)
-          case p +: ps => lHelper(ac :+ p, ps)
-          case _ => ac
-        }
-      }
-      
-      lHelper(Vector[(Char, Int)](), progSrc)
-    }
-    
-    def optSkip(progSrc: Vector[(Char, Int)]): Try[Vector[(Char, Int)]] = {
-      @tailrec
-      def scrub(ind: Int, count: Int): Try[Int] = {
-        if(progSrc.isDefinedAt(ind)){
-          (progSrc(ind)._1, count) match{
-            case (']', 0) => Success(ind + 1)
-            case ('[', _) => scrub(ind + 1, count + 1)
-            case (']', _) => scrub(ind + 1, count - 1)
-            case _ => scrub(ind + 1, count)
-          }
-        } else Failure(InterpreterException("Bracket Mismatch"))
-      }
-      
-      @tailrec
-      def sHelper(ac: Vector[(Char, Int)], src: Vector[(Char, Int)]): Try[Vector[(Char, Int)]] = src match{
-        case ('[', _) +: _ =>
-          val pos = ac.length
-          scrub(pos + 1, 0) match{
-            case Success(ind) =>
-              if(debug) println(s"Skip: $pos -> $ind")
-              sHelper(ac :+ ('[', ind), src.updated(ind - pos - 1, (']', pos + 1)).tail)
-            case Failure(e) => Failure(e)
-          }
-        case p +: ps => sHelper(ac :+ p, ps)
-        case _ => Success(ac)
-      }
-      
-      sHelper(Vector[(Char, Int)](), progSrc)
-    }
-    
-    def counts(src: Vector[(Char, Int)]): String = s"[${src.count(_._1 == '[')}, ${src.count(_._1 == ']')}]"
-    
-    if(debug) println("Base optimization...\n")
-    val pass1 = optBase(progRaw)
-    if(debug) println(s"Bulk Optimization...\n")
-    val (hmap, pass2) = optBulk(pass1)
-    if(debug) println(s"Simple Loop Optimization...\n")
-    val pass3 = optLoop(pass2, hmap)
-    if(debug) println(s"Jump optimization...\n")
-    val pass4 = optSkip(pass3)
-    if(debug) println(
-      s"""|
-          |Base:  ${progRaw.filter("><+-[],.".contains(_))}
-          |Pass1: ${pass1.map(_._1).mkString}
-          |Pass2: ${pass2.map(_._1).mkString}
-          |Pass3: ${pass3.map(_._1).mkString}
-          |Bracket Sums: [${progRaw.count(_ == '[')}, ${progRaw.count(_ == ']')}] -> ${counts(pass1)} -> ${counts(pass2)} -> ${counts(pass3)}""".stripMargin)
-    
-    pass4 match{
-      case Success(prog) => Success(hmap, prog)
-      case Failure(e) => Failure(e)
-    }
+    sdo(Vector[(Char, Int)](), List[Int](), 0, progSrc)
   }
 }

@@ -14,3 +14,10 @@ nodyn set dynamicTapeSize false
 init set initTapeSize
 olen set outputMaxLength
 dbt set dbTim
+
+testt run Thue hworld.th
+testtb run Thue binc.th
+
+teste run BrainFuck calce.b
+testhw run BrainFuck hworld.b
+testm run BrainFuck mandelbrot.b

@@ -19,7 +19,7 @@ object ConsoleHandlers {
        |
        |- generate <source language> <destination language> <source file> <destination file>
        |- translate <source language> <target language> <source file> <optional destination file>
-       |- optimize <source file> <optional destination file>
+       |- optimize <source file> <destination file>
        |
        |- defineBFLang
        |- loadBFLangs <file>
@@ -69,8 +69,8 @@ object ConsoleHandlers {
     }
   }
   
-  def compileHandler(compilers: mutable.HashMap[(String, String), Generator], bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(args: Vector[String]): Unit = args match{
-    case slang +: dlang +: inam +: onam +: _ => compilers.get((slang, dlang)) match{
+  def generateHandler(generators: mutable.HashMap[(String, String), Generator], bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(args: Vector[String]): Unit = args match{
+    case slang +: dlang +: inam +: onam +: _ => generators.get((slang, dlang)) match{
       case Some(comp) =>
         print(s"Retrieving from $inam... ")
         Try{ Source.fromFile(inam).mkString } match{
@@ -79,9 +79,7 @@ object ConsoleHandlers {
             comp(bools, nums)(progRaw) match{
               case Success(prog) =>
                 print(s"Saving to $onam... ")
-                val oFile = new PrintWriter(new File(onam))
-                oFile.print(prog)
-                oFile.close()
+                writeFile(onam)(prog)
                 println("Done.")
               case Failure(e) => println(s"Error: $e")
             }
@@ -93,55 +91,20 @@ object ConsoleHandlers {
     case _ => println("Not enough arguments.")
   }
   
-  def optimizeHandler(args: Vector[String], debug: Boolean): Unit = args match {
-    case inam +: onam +: _ =>
-      print(s"Retrieving from $inam... ")
-      Try {
-        val iFile = Source.fromFile(inam)
-        val progRaw = iFile.mkString
-        iFile.close()
-        progRaw
-      } match {
-        case Success(progRaw) =>
-          print("Done.\nOptimizing... ")
-          BFOptimizer(progRaw, debug) match {
-            case Success((bops, prog)) =>
-              print(s"Done.\nSaving to $onam... ")
-              val oFile = new PrintWriter(new File(onam))
-              oFile.print(
-                s"""|Optimized: ${prog.map(_._1).mkString}
-                    |BulkOps: ${bops.zipWithIndex.map { case (bop, i) => s"[$i, ${bop.shift}, ${bop.ops.map { case (ind, inc) => s"{$ind->$inc}" }.mkString(", ")}]" }.mkString(", ")}
-                    |Optimized Detail:${prog.zipWithIndex.map { case ((c, n), ind) => s"\n$ind: $c $n" }.mkString}""".stripMargin)
-              oFile.close()
-              println("Done.")
-            case Failure(e) => println(s"Error: $e")
-          }
+  def optimizeHandler(bools: mutable.HashMap[String, (Boolean, String)],
+                      nums: mutable.HashMap[String, (Int, String)])(args: Vector[String]): Unit = {
+    args match{
+      case src +: dest +: _ => grabProg(src) match{
+        case Success(progRaw) => BFOptimizer(progRaw, bools("debug")._1) match{
+          case Some((bops, prog)) =>
+            writeFile(dest)(s"Bops:\n${bops.zipWithIndex.map{case (b, i) => s"$i: $b"}.mkString("\n")}\n\nProgram:\n${prog.zipWithIndex.map{case (p, i) => s"$i: $p"}.mkString("\n")}")
+            println(s"Optimized program saved to $dest")
+          case None => println("Optimizer Failure")
+        }
         case Failure(e) => println(s"Error: $e")
       }
-    case inam +: _ =>
-      print(s"Retrieving from $inam... ")
-      Try {
-        val iFile = Source.fromFile(inam)
-        val progRaw = iFile.mkString
-        iFile.close()
-        progRaw
-      } match {
-        case Success(progRaw) =>
-          print("Done.\nOptimizing... ")
-          BFOptimizer(progRaw, debug) match {
-            case Success((bops, prog)) =>
-              println(
-                s"""|Done.
-                    |
-                    |Optimized: ${prog.map(_._1).mkString}
-                    |BulkOps: ${bops.zipWithIndex.map { case (bop, i) => s"[$i, ${bop.shift}, ${bop.ops.map { case (ind, inc) => s"{$ind->$inc}" }.mkString(", ")}]" }.mkString(", ")}
-                    |Optimized Detail:${prog.zipWithIndex.map { case ((c, n), ind) => s"\n$ind: $c $n" }.mkString}
-                    |""".stripMargin)
-            case Failure(e) => println(s"Error: $e")
-          }
-        case Failure(e) => println(s"Error: $e")
-      }
-    case _ => println("Invalid Arguments.")
+      case _ => println("Not Enough Arguments")
+    }
   }
   
   def mkTrans(bools: mutable.HashMap[String, (Boolean, String)],

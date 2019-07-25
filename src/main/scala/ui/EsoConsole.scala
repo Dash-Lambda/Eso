@@ -1,11 +1,12 @@
 package ui
 
 import ConsoleHandlers._
-import brainfuck.{BFGenerator$, BFManaged, FlufflePuff, Ook}
+import brainfuck.{BFGenerator, BFManaged, FlufflePuff, Ook}
 import common.{Generator, Interpreter, TransInterp, Translator}
 import fractran.{FracTran, FracTranpp}
 import scalarun.ScalaRun
-import whitespace.{WSManaged, WSAssembly}
+import thue.Thue
+import whitespace.{WSAssembly, WSManaged}
 
 import scala.collection.mutable
 
@@ -17,9 +18,9 @@ object EsoConsole {
        |""".stripMargin
   val defaultBindingFile: String = "userBindings.txt"
   val nativeTrans: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
-  val interpVec: Vector[Interpreter] = Vector[Interpreter](FracTran, FracTranpp, ScalaRun, WSManaged, BFManaged)
+  val interpVec: Vector[Interpreter] = Vector[Interpreter](FracTran, FracTranpp, ScalaRun, WSManaged, BFManaged, Thue)
   val interpName: Vector[String] = interpVec.map(_.name)
-  val genVec: Vector[Generator] = Vector[Generator](BFGenerator$)
+  val genVec: Vector[Generator] = Vector[Generator](BFGenerator)
   
   val defBools: Vector[(String, (Boolean, String))] = Vector[(String, (Boolean, String))](
     "log" -> (true, "determines whether output is shown during or after runtime"),
@@ -84,9 +85,9 @@ object EsoConsole {
     def execCommand(inp: Vector[String]): Unit = inp match{
       case "run" +: args => runHandler(interpreters, bools, nums)(args)
       
-      case "generate" +: args => compileHandler(generators, bools, nums)(args)
-      
-      case "optimize" +: args => optimizeHandler(args, bools("debug")._1)
+      case "generate" +: args => generateHandler(generators, bools, nums)(args)
+
+      case "optimize" +: args => optimizeHandler(bools, nums)(args)
       
       case "translate" +: args => translationHandler(bools, nums, Translators)(args)
       case "defineBFLang" +: _ => addTrans(langCreationHandler)

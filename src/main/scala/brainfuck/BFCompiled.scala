@@ -11,7 +11,7 @@ object BFCompiled extends Interpreter{
   
   def apply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(progRaw: String): Try[String] = {
     bools.get("debug") match{
-      case Some((debug, _)) => BFGenerator$(bools, nums)(progRaw) match {
+      case Some((debug, _)) => BFGenerator(bools, nums)(progRaw) match {
         case Success(prog) => Try{
           if(debug) print("Compiling... ")
           val interp = ScalFactory.make(prog)
