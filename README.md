@@ -14,6 +14,7 @@ Current Native language support:
 * [WhiteSpace Assembly](https://github.com/Dash-Lambda/Eso/blob/master/WhiteSpaceSyntax.txt)
 * [FracTran](https://esolangs.org/wiki/Fractran)
 * [FracTran++](https://esolangs.org/wiki/Fractran%2B%2B)
+* [Thue](https://esolangs.org/wiki/Thue)
 * Scala
 
 #### Current features:
