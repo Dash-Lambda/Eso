@@ -1,5 +1,7 @@
 package brainfuck
 
+import common.EsoObj
+
 import scala.annotation.tailrec
 
 case class BlkOP(ops: Vector[(Int, Option[Int])], shift: Int){
@@ -69,31 +71,39 @@ object BlkOP{
   def apply(v: Vector[(Int, Option[Int])], s: Int): BlkOP = new BlkOP(v, s)
 }
 
-object BFOptimizer {
+object BFOptimizer extends EsoObj{
   val ops: Vector[Char] = Vector[Char]('>', '<', '+', '-')
   val nonOps: Vector[Char] = Vector[Char]('[', ']', ',', '.', '_', 'e')
   
   def apply(progRaw: String, debug: Boolean): Option[(Vector[BlkOP], Vector[(Char, Int)])] = {
-    val (bopVec, pass1) = bulk(optLazy(progRaw))
+    val (bopVec, pass1) = bulk(optLazy(progRaw, debug))
     val pass2 = loop(pass1, bopVec)
     val pass3 = skip(pass2)
+    if(debug) println
     pass3.map(prog => (bopVec, prog))
   }
   
-  def compOpt(progRaw: String, log: Boolean): Option[(Vector[BlkOP], Vector[(Char, Int)])] = {
+  def compOpt(progRaw: String, debug: Boolean): Option[(Vector[BlkOP], Vector[(Char, Int)])] = {
     if(progRaw.count(_ == '[') == progRaw.count(_ == ']')){
-      val (bopVec, pass1) = bulk(optLazy(progRaw))
+      val (bopVec, pass1) = bulk(optLazy(progRaw, debug))
       val pass2 = loop(pass1, bopVec)
+      if(debug) println
       Some(bopVec -> pass2)
     }else None
   }
   
+  def optLazy(progRaw: String, debug: Boolean): LazyList[(Char, Int)] = if(debug) optDebug(progRaw) else optBase(progRaw)
+  def optBase(progRaw: String): LazyList[(Char, Int)] = LazyList.unfold(progRaw.filter("><][+-,.".contains(_)) :+ 'e')(cont)
+  def optDebug(progRaw: String): LazyList[(Char, Int)] = {
+    println("Optimizing:")
+    val init = progRaw.filter("><][+-,.".contains(_)) :+ 'e'
+    LazyList.unfold(init){cont(_).map{case (p, s) => print(percBar(s.length, init.length)); (p, s)}}
+  }
   def cont(str: String): Option[((Char, Int), String)] = str.headOption match{
     case Some(h) if ops.contains(h) => Some((h, str.takeWhile(_ == h).length) -> str.dropWhile(_ == h))
     case Some(h) => Some((h, 0) -> str.tail)
     case _ => None
   }
-  def optLazy(progRaw: String): LazyList[(Char, Int)] = LazyList.unfold(progRaw.filter("><][+-,.".contains(_)) :+ 'e')(cont)
   
   def bulk(progSrc: LazyList[(Char, Int)]): (Vector[BlkOP], Vector[(Char, Int)]) = {
     @tailrec

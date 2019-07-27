@@ -46,11 +46,7 @@ object BFGenerator extends Generator{
     
     @tailrec
     def cgo(funcs: List[String], ac: Vector[String], tmp: List[Vector[String]], src: Vector[(Char, Int)], fnum: Int): List[String] = {
-      if (debug) {
-        val per = 100 - (src.length * 100) / prog.length
-        val dots = "." * ((per - 1) / 10)
-        print(s"\u001B[100D$per% $dots")
-      }
+      if (debug) print(percBar(src.length, prog.length))
       src match {
         case (op, num) +: ops => op match {
           case '[' | ']' | 'e' => op match {
@@ -94,7 +90,7 @@ object BFGenerator extends Generator{
           |  else if(p + shift >= len){len = p + shift + 1; tape = tape.padTo(len, 0)}
           |}""".stripMargin
     
-    if (debug) println("\nGenerating:")
+    if (debug) println("Generating:")
     val methStr = cgo(List[String](), Vector("def f0(): Unit = {"), List[Vector[String]](), prog, 1).mkString("\n")
     if (debug) println
     s"""|new Function0[String]{
