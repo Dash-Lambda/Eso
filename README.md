@@ -15,7 +15,14 @@ Current Native language support:
 * [FracTran](https://esolangs.org/wiki/Fractran)
 * [FracTran++](https://esolangs.org/wiki/Fractran%2B%2B)
 * [Thue](https://esolangs.org/wiki/Thue)
+* [P''](https://esolangs.org/wiki/P%E2%80%B2%E2%80%B2)
 * Scala
+
+#### Language Components:
+Languages supported by Eso can currently have 3 types of components:
+* Interpreters: An interpreter executes a program; or, thinking functionally, it defines a relationship between a program string and its result string. An interpreter is the bare minimum for a language to be supported.
+* Translators: A translator defines a relationship between exactly equivalent languages. Two languages are exactly equivalent if they share identical structure and are executed in identical ways, meaning a translator merely changes the syntax. This also means translators are two-way. A translator can be used to add support for derivative languages, as well as to define intelligible languages to make unintelligible languages (like WhiteSpace) easier to use.
+* Generators: A code generator defines a relationship between equivalent programs in non-equivalent languages. The primary purpose of a generator is to turn slow interpreted code into code that can be compiled, as demonstrated by the compiling BrainFuck interpreter. Even though the original and generated programs are equivalent, meaning they perform the same computation, their structure is not necessarily equivalent, meaning generators are only one-way.
 
 #### Current features:
 * Run program from text file
@@ -89,5 +96,26 @@ The FracTran interpreter reads programs as an initial value followed by a list o
 
 ### FracTran++ Program Format
 FracTran++ has identical structure to (and it fully compatible with) FracTran, but with additional syntax detailed [here](https://github.com/Dash-Lambda/Eso/blob/master/FracTranpp_Syntax.txt).
+
+### P'' Program Format
+The P'' interpreter handles Böhm's extended instruction set, with the seven instructions (, ), r, r', L, R, and A. The first line is the ordered alphabet (the first character is the empty symbol), the second line is the initial tape state (blank for empty tape), and all following lines contain the program.
+
+Hello world looks like this:
+```
+.Helo wrd!
+.
+r'L
+r'r'L
+rrA
+r'r'r'L
+rrrA
+rrrrrA
+rrrrA
+rrrA
+rrA
+rrA
+rA
+A
+```
 
 This is very much a work in progress.

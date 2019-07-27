@@ -7,7 +7,7 @@ import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 object BFGenerator extends Generator{
-  val src: String = "BrainFuck2"
+  val src: String = "BrainFuck"
   val dst: String = "Scala"
   def apply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(progRaw: String): Try[String] = {
     getParms(bools, nums)("log", "debug", "dynamicTapeSize")("outputMaxLength", "initTapeSize", "methodSize") match{
@@ -41,9 +41,7 @@ object BFGenerator extends Generator{
               |}""".stripMargin
         
         mf +: funcs.toVector
-      } else {
-        Vector(block.mkString("\n"))
-      }
+      }else Vector(block.mkString("\n"))
     }
     
     @tailrec
