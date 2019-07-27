@@ -93,10 +93,10 @@ object BFOptimizer extends EsoObj{
   }
   
   def optLazy(progRaw: String, debug: Boolean): LazyList[(Char, Int)] = if(debug) optDebug(progRaw) else optBase(progRaw)
-  def optBase(progRaw: String): LazyList[(Char, Int)] = LazyList.unfold(progRaw.filter("><][+-,.".contains(_)) :+ 'e')(cont)
+  def optBase(progRaw: String): LazyList[(Char, Int)] = LazyList.unfold(progRaw.filter("><][+-,.".contains(_)).replaceAll("""\[[+\-]\]""", "_") :+ 'e')(cont)
   def optDebug(progRaw: String): LazyList[(Char, Int)] = {
     println("Optimizing:")
-    val init = progRaw.filter("><][+-,.".contains(_)) :+ 'e'
+    val init = progRaw.filter("><][+-,.".contains(_)).replaceAll("""\[[+\-]\]""", "_") :+ 'e'
     LazyList.unfold(init){cont(_).map{case (p, s) => print(percBar(s.length, init.length)); (p, s)}}
   }
   def cont(str: String): Option[((Char, Int), String)] = str.headOption match{

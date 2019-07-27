@@ -36,7 +36,7 @@ object BFGenerator extends Generator{
           }
         val calls = (0 until groups.length).map { i => s"${fnam}s$i()${if (outputMaxLength != -1) "\nif(end) return" else ""}" }
         val mf =
-          s"""|${block.head.init}
+          s"""|${block.head}
               |${calls.mkString("\n")}
               |}""".stripMargin
         
