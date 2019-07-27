@@ -15,7 +15,7 @@ object BFCompiled extends Interpreter{
         case Success(prog) => Try{
           if(debug) print("Compiling... ")
           val interp = ScalFactory.make(prog)
-          if(debug) println("Done.")
+          if(debug) print("Done.\nRunning... ")
           val res = interp.apply
           res
         }

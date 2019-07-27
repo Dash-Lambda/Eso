@@ -40,7 +40,7 @@ case class BlkOP(ops: Vector[(Int, Option[Int])], shift: Int){
     s"($shift; ${incs.mkString(", ")})"
   }
   
-  def opStr: String = {
+  def opStr(dyn: Boolean): String = {
     val opstr = ops.map{
       case (0, Some(n)) if n > 0 => s"tape(p) += $n"
       case (0, Some(n)) if n < 0 => s"tape(p) -= ${n.abs}"
@@ -50,7 +50,7 @@ case class BlkOP(ops: Vector[(Int, Option[Int])], shift: Int){
     }
     s"${opstr.mkString("\n")}${if(shift != 0) s"\np += $shift" else ""}"
   }
-  def lopStr: String = {
+  def lopStr(dyn: Boolean): String = {
     val opstr = ops
       .filter(_._1 != 0)
       .map{

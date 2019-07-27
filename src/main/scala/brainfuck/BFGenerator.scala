@@ -63,14 +63,14 @@ object BFGenerator extends Generator{
           }
           case _ =>
             val block = op match {
-              case 'u' | 'a' => bops(num).opStr
-              case 'l' => bops(num).lopStr
+              case 'u' | 'a' => s"${if(dynamicTapeSize) s"chkInd(${bops(num).maxShift})\n" else ""}${bops(num).opStr(dynamicTapeSize)}"
+              case 'l' => s"${if(dynamicTapeSize) s"chkInd(${bops(num).maxShift})\n" else ""}${bops(num).lopStr(dynamicTapeSize)}"
               case 'm' => s"p ${if (num > 0) "+=" else "-="} ${num.abs}"
               case '/' =>
                 if (num == 1) s"p = tape.indexOf(0, p)"
                 else if (num == -1) s"p = tape.lastIndexOf(0, p)"
-                else if (num > 0) s"while(tape(p) != 0){p += $num}"
-                else s"while(tape(p) != 0){p -= ${num.abs}}"
+                else if (num > 0) s"while(${if(dynamicTapeSize) "p < len && " else ""}tape(p) != 0){p += $num}"
+                else s"while(${if(dynamicTapeSize) "p < len && " else ""}tape(p) != 0){p -= ${num.abs}}"
               case '[' => "while(tape(p) != 0){"
               case ']' => "}"
               case ',' => "tape(p) = getInp"
@@ -79,35 +79,47 @@ object BFGenerator extends Generator{
                 val limiter = if (outputMaxLength != -1) s"\nif(res.sizeIs >= $outputMaxLength){end = true; return}" else ""
                 s"res += tape(p).toChar$logger$limiter"
             }
-            cgo(funcs, ac :+ block, tmp, ops, fnum)
+            val block2 = if(dynamicTapeSize && "m/".contains(op)) s"$block\nchkInd()" else block
+            cgo(funcs, ac :+ block2, tmp, ops, fnum)
         }
         case _ => funcs
       }
     }
     
-    if (debug) println("Generating:")
+    val dynFunc: String =
+      s"""|
+          |
+          |def chkInd(shift: Int = 0): Unit = {
+          |  if(p == -1){p = len; len += 1; tape = tape.padTo(len, 0)}
+          |  else if(p + shift >= len){len = p + shift + 1; tape = tape.padTo(len, 0)}
+          |}""".stripMargin
+    
+    if (debug) println("\nGenerating:")
     val methStr = cgo(List[String](), Vector("def f0(): Unit = {"), List[Vector[String]](), prog, 1).mkString("\n")
     if (debug) println
     s"""|new Function0[String]{
-        |private val tape = Array.fill($initTapeSize)(0)
-        |private var p = 0
+        |var tape = Array.fill($initTapeSize)(0)${if(dynamicTapeSize) s"\nvar len = $initTapeSize" else ""}
+        |var p = 0
         |val res = new StringBuilder()
-        |var inLog = Vector[Int]()${if (outputMaxLength != -1) "\nvar end = false" else ""}
+        |var inLog = Vector[Int]()${if (outputMaxLength != -1) "\nvar end = false" else ""}${if(dynamicTapeSize) dynFunc else ""}
         |
         |def getInp: Int = {
-        |if(inLog.nonEmpty){
-        |val ret = inLog.head
-        |inLog = inLog.tail
-        |ret
-        |}else{
-        |val inp = scala.io.StdIn.readLine.toVector.map(_.toInt) :+ 10
-        |inLog = inp.tail
-        |inp.head
-        |}}
+        |  if(inLog.nonEmpty){
+        |    val ret = inLog.head
+        |    inLog = inLog.tail
+        |    ret
+        |  }else{
+        |    val inp = scala.io.StdIn.readLine.toVector.map(_.toInt) :+ 10
+        |    inLog = inp.tail
+        |    inp.head
+        |  }
+        |}
         |
         |def apply: String = {
-        |f0()
-        |res.result
+        |  f0()
+        |  val out = res.result
+        |  res.clear()
+        |  out
         |}
         |
         |$methStr}""".stripMargin
