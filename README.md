@@ -39,7 +39,6 @@ Languages supported by Eso can currently have 3 types of components:
 
 ##### WIP:
 * Compiler memory (to avoid unnecessary recompiling)
-* Dynamic tape size for compiled BrainFuck interpreter
 * Unispace interpreter
 * Additional languages and interpreters
 * Modularization
