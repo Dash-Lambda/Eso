@@ -38,6 +38,7 @@ Languages supported by Eso can currently have 3 types of components:
 * Optionally slow down execution in debug mode in some interpreters
 
 ##### WIP:
+* True pure function overhaul
 * Compiler memory (to avoid unnecessary recompiling)
 * Unispace interpreter
 * Additional languages and interpreters
