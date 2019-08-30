@@ -9,7 +9,7 @@ A function is also stable in that each input returns exactly one output. You sho
 
 Ultimately, what functional programming accomplishes is highly modular, testable, and type-safe code. Many functional languages also allow for far more elegant and concise code than is common of imperative and object oriented languages.
 ### Usage of funtional programming in this project
-All of the language components are fully functional, with the sole exception of the compiled BrainFuck interpreter. The user interface is not purely functional, is its structure borrows a lot from functional style.
+All of the language components are purely functional, with the sole exception of the compiled BrainFuck interpreter. The user interface is not purely functional, but its structure borrows a lot from functional style.
 
 Many of these languages support user I/O, which can be difficult because I/O is by definition a side-effect. People have found many ways around this, the most common being to simply *not* write the I/O component in functional style. This project handles I/O using lazily evaluated lists, which are immutable lists whose elements are only evaluated as they are used.
 
@@ -33,8 +33,8 @@ Current Native language support:
 
 #### Language Components:
 Languages supported by Eso can currently have 3 types of components:
-* Interpreter: This is the only requirement to support a language in Eso, and enables it to run programs in the language. An interpreter is a curried function with the (pseudocode) signature configuration => (program => (input => output)), where the configuration is a collection of parameters for any optional features or behaviors the interpreter may have and the program is the source code. This means it defines a relationship between the configuration and the relationship between the program and the relationship between the input and the output... All that means is that when you call the interpreter you don't just get the output, you get another function that takes the input and returns the output.
-* Translator: Some languages have derivatives (BrainFuck has many). A translator defines a relationship between the source code of two languages with one-to-one equivalence, which means you can translatethe code freely between the languages without changing the structure of the program. These have a signature of configuration => (program1 => program2). Currently translators are used to support BrainFuck derivatives and enable the use of a readable assembly version of WhiteSpace.
+* Interpreter: This is the basic requirement to support a language in Eso, and enables it to run programs in the language. An interpreter is a curried function with the (pseudocode) signature configuration => (program => (input => output)), where the configuration is a collection of parameters for any optional features or behaviors the interpreter may have and the program is the source code. This means it defines a relationship between the configuration and the relationship between the program and the relationship between the input and the output... All that means is that when you call the interpreter you don't just get the output, you get another function that takes the input and returns the output.
+* Translator: Some languages have derivatives (BrainFuck has many). A translator defines a relationship between the source code of two languages with one-to-one equivalence, which means you can translate the code freely between the languages without changing the structure of the program. These have a signature of configuration => (program1 => program2). Currently translators are used to support BrainFuck derivatives and enable the use of a readable assembly version of WhiteSpace.
 * Generator: These define a relationship between non-equivalent languages. A generator is one-way, as it changes the structure of the program. These have a signature of configuration => (program1 => program2). Generators are currently used for compiling interpreters to translate the code into Scala.
 
 #### Current features:
@@ -47,13 +47,13 @@ Languages supported by Eso can currently have 3 types of components:
 * Compile and run Scala source files
 * Create and use user-defined BrainFuck languages
 * User-configurable runtime parameters (logging, maximum output size, tape size, etc.)
-* Debug mode
 
 ##### WIP:
 * Functional compiling BrainFuck interpreter
 * Compiler memory (to avoid unnecessary recompiling)
 * Unispace interpreter
 * Additional languages and interpreters
+* Debug features
 * Potentially everything
 
 ### Optimization Strategy
@@ -68,7 +68,7 @@ This is all done using LazyLists, so every pass is performed in a single travers
 ### User-Defined BrainFuck Translators
 There are two ways to define your own BF language:
 * Use the console prompt, which will ask you for the language name and syntax then handle the rest.
-* Make a text file containing your language's information in this form:
+* Make and import a text file containing your language's information in this form:
 ```
 name=...
 [=...
@@ -82,7 +82,7 @@ name=...
 ```
 
 ### On the Scala "Interpreter"
-The main purpose of the Scala interpreter is to run Scala source files generated by Eso's compiler. It assumes the source file is a Function1[Seq[Char], String] definition of the form "new Function0[String]{...}", and returns the result of the defined function. It can run arbitrary Scala code as long as it's in that form.
+The main purpose of the Scala interpreter is to run Scala source files generated by Eso's compiler. It assumes the source file is a Function1[Seq[Char], String] definition of the form "new Function1[Seq[Char], String]{...}", and returns the result of the defined function. It can run arbitrary Scala code as long as it's in that form.
 
 ### FracTran Program Format
 The FracTran interpreter reads programs as an initial value followed by a list of fractions of the form "n/d", each term separated by a line break. The prime generator program looks like this:

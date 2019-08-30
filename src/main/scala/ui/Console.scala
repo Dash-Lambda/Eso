@@ -30,7 +30,7 @@ object Console extends EsoObj{
     ("sHead", true, "toggle whether the read head starts at the beginning of the initial tape or the right end of the tape for P''"),
     ("pNull", false, "toggle whether to print the null/empty character in the output of P'' programs"))
   val numVec: Vector[(String, Int, String)] = Vector[(String, Int, String)](
-    ("bfOpt", 2, "BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled"),
+    ("bfOpt", 1, "BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled"),
     ("init", 40000, "initial tape size for BrainFuck interpreter"),
     ("olen", -1, "maximum output length, useful for non-terminating programs, -1=infinite"),
     ("methSize", 1000, "maximum number of blocks in a generated method"))
