@@ -1,12 +1,10 @@
 package common
 
-import scala.collection.mutable
 import scala.util.Try
 
 trait Interpreter extends EsoObj{
-  def name: String
+  val name: String
   
-  def apply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(progRaw: String): Try[String]
-  
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]]
   override def toString: String = name
 }

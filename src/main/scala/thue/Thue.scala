@@ -1,81 +1,63 @@
 package thue
 
-import common.{Interpreter, InterpreterException}
+import common.{Config, EsoExcep, Interpreter}
 
 import scala.annotation.tailrec
-import scala.collection.mutable
-import scala.io.StdIn
 import scala.util.{Failure, Random, Success, Try}
 
 object Thue extends Interpreter{
   val name: String = "Thue"
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = condition(progRaw) map{case (init, prog) => thi(init, prog)}
   
-  def apply1(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(progRaw: String): Try[String] = {
-    val str =
-      s"""|a::=b
-          |c::=
-          |::=d
-          |::=
-          |e""".stripMargin
-    val cond = str
-      .split("(\r\n|\r|\n)")
-      .takeWhile(_ != "::=")
-      .map(str => (str, str.indexOf("::=")))
-      .collect{case (str, i) if i > 0 => (str.take(i), str.drop(i + 3))}
-    println(cond.mkString("\n"))
-    Success(str)
-  }
-  def apply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(progRaw: String): Try[String] = {
-    getParms(bools, nums)("log")() match{
-      case Some((log +: _, _)) => condition(progRaw) match{
-        case Some((init, prog)) =>
-          if(prog.nonEmpty) Success(eval(prog, init, log))
-          else Failure(InterpreterException("No Initial Value"))
-        case None => Failure(InterpreterException("Malformed Program"))
-      }
-      case None => Failure(InterpreterException("Unspecified Configuration Parameters: log"))
-    }
-  }
-  
-  def eval(prog: Vector[(String, String)], init: String, log: Boolean): String = {
+  def thi(init: String, prog: Vector[(String, String)]): Seq[Char] => LazyList[Char] = {
     val rand = new Random()
-    @tailrec
-    def tso(stat: String, res: String): String = {
-      val hits = prog.filter(p => stat.contains(p._1))
-      if(hits.isEmpty){
-        if(res.nonEmpty) res
-        else{
-          if(log) println(stat)
-          stat
-        }}
+    
+    def collapse(inp: Seq[Char]): Seq[String] = LazyList.unfold(inp){lst =>
+      if(lst.isEmpty) None
       else{
-        val (k, v) = hits(rand.nextInt(hits.length))
-        v match{
-          case ":::" => tso(stat.replaceAllLiterally(k, StdIn.readLine), res)
-          case _ =>
-            if(v.startsWith("~")) {
-              if (log) print(v.tail)
-              tso(stat.replaceAllLiterally(k, ""), res ++ v.tail)
-            }else tso(stat.replaceAllLiterally(k, v), res)
-        }
+        val (hd, tl) = lst.span(_ != '\n')
+        Some((hd.mkString, if(tl.startsWith("\n")) tl.tail else tl))
       }
     }
     
-    tso(init, "")
+    @tailrec
+    def nxt(ac: String, inp: Seq[String]): Option[(String, (String, Seq[String]))] = {
+      val hit = {
+        if(prog.exists(p => ac.contains(p._1))){
+          val hits = prog.filter(p => ac.contains(p._1))
+          Some(hits(rand.nextInt(hits.length)))
+        }else None
+      }
+      
+      hit match{
+        case Some((k, v)) => v match{
+          case ":::" => nxt(ac.replaceAllLiterally(k, inp.head), inp.tail)
+          case _ =>
+            if(v.startsWith("~")) Some((v.tail, (ac.replaceAllLiterally(k, ""), inp)))
+            else nxt(ac.replaceAllLiterally(k, v), inp)
+        }
+        case None => None
+      }
+    }
+    
+    inputs => LazyList.unfold((init, collapse(inputs))){case (ac, inp) => nxt(ac, inp)}.flatten
   }
   
-  def condition(progRaw: String): Option[(String, Vector[(String, String)])] = {
+  def condition(progRaw: String): Try[(String, Vector[(String, String)])] = {
     val lines = progRaw
       .split("(\r\n|\r|\n)")
+      .to(LazyList)
       .filter(_.nonEmpty)
-      .map(str => (str, str.indexOf("::=")))
-    lazy val prog = lines
-      .takeWhile(_._2 != 0)
-      .collect{case (str, i) if i > 0 => (str.take(i), str.drop(i + 3))}
-      .toVector
+    val prog = lines
+      .takeWhile(str => !str.startsWith("::="))
+      .collect{case str if str.contains("::=") => str.split("::=").toVector match{case k +: v +: _ => (k, v)}}
+    val conditioned = lines
+      .dropWhile(str => !str.startsWith("::="))
+      .collectFirst{case str if !str.contains("::=") => (str, prog.toVector)}
     
-    lines
-      .dropWhile(_._2 != 0)
-      .collectFirst{case (str, i) if i == -1 => (str, prog)}
+    conditioned match{
+      case Some(p) => Success(p)
+      case None => Failure(EsoExcep("Malformed Program"))
+    }
   }
 }

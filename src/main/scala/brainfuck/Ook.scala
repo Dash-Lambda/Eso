@@ -1,26 +1,9 @@
 package brainfuck
 
-import scala.annotation.tailrec
-import scala.collection.mutable
+import common.Config
 
-/** Syntax:
-  *
-  * [ => Ook! Ook?
-  *
-  * ] => Ook? Ook!
-  *
-  * + => Ook. Ook.
-  *
-  * - => Ook! Ook!
-  *
-  * > => Ook. Ook?
-  *
-  * < => Ook? Ook.
-  *
-  * . => Ook! Ook.
-  *
-  * , => Ook. Ook!
-  */
+import scala.annotation.tailrec
+import scala.util.{Success, Try}
 
 object Ook extends BFTranslator{
   val name: String = "Ook"
@@ -35,15 +18,15 @@ object Ook extends BFTranslator{
     ("[", "Ook! Ook?"),
     ("]", "Ook? Ook!"))
   
-  def transFrom(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(prog: String): String = {
+  def apply(config: Config)(progRaw: String): Try[String] = {
     @tailrec
     def tHelper(log: String, src: String): String = vals.find(_ == src.take(9)) match{
       case Some(tok) => tHelper(log ++ revSyntax(tok), src.drop(9))
       case None if src.sizeIs > 9 => tHelper(log :+ src.head, src.tail)
       case None => log ++ src
     }
-    
-    tHelper("", prog)
+  
+    Success(tHelper("", progRaw))
   }
-  def transTo(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(prog: String): String = keys.foldLeft(prog){case (str, key) => str.replaceAllLiterally(key, syntax(key))}
+  def unapply(config: Config)(progRaw: String): Try[String] = Success(keys.foldLeft(progRaw){case (str, key) => str.replaceAllLiterally(key, syntax(key))})
 }

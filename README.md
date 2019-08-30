@@ -1,10 +1,23 @@
 # Functional Esoteric Interpreter
 ### Meaning of functional
-Functional programming is a paradigm characterized by zero side-effects. The idea is to build your program around evaluating functions, where the functions take an input and return an output without modifying anything else. The biggest benefits of functional programming are safety and modularity, and in many cases concision.
+Functional programming is a paradigm with two principle characteristics:
 
+##### Zero Side-Effects
+A function defines a relationship between an input and an output. This means a function does not change anything outside of itself. One major example of this is error handling: In most languages, an error is thrown by a method and prevents a return value, and thus must be caught separately. This means code can have unexpected behavior that extends beyond the return, and it can be a pain to deal with. In functional programming, errors are usually handled by returning a wrapper that holds either a result or error information, which eliminates behavior that the caller does not expect.
+##### Referential Transparency
+A function is also stable in that each input returns exactly one output. You should be able to replace any call to a function with the result and not change the behavior of the program, which means a function has no mutable state. As an extension of this, functional programming also makes heavy use of immutable data structures, which are data structures that cannot be changed in place.
+
+Ultimately, what functional programming accomplishes is highly modular, testable, and type-safe code. Many functional languages also allow for far more elegant and concise code than is common of imperative and object oriented languages.
 ### Usage of funtional programming in this project
-The interpreters and translators are -mostly- purely functional, the UI is not. Functional programming is great for backend/core code, but it's not ideal for interactive elements. The only deviation from functional style is the optional console logging during runtime, which is for interactive programs.
+All of the language components are fully functional, with the sole exception of the compiled BrainFuck interpreter. The user interface is not purely functional, is its structure borrows a lot from functional style.
 
+Many of these languages support user I/O, which can be difficult because I/O is by definition a side-effect. People have found many ways around this, the most common being to simply *not* write the I/O component in functional style. This project handles I/O using lazily evaluated lists, which are immutable lists whose elements are only evaluated as they are used.
+
+The interpreters take as input a sequence of characters and return a LazyList of characters. To print the output, the interface calls the interpreter then traverses the output list and prints each character. In effect, this means the interpreter operates in steps; as the list is traversed, the interpreter calls a function to find the next character in succession over and over until the program halts.
+
+Input is a little bit of a cheat. The sequence of characters an interpreter intakes is a "Seq", which encompasses any ordered sequential collection type, including LazyLists. So, to get characters from the user, the LazyList is built by getting a character from the console for each element. Since they're evaluated on-demand, this allows real-time user input inside of a pure function. This preserves referential transparency because you will always get the same output for a given input, but bends the rules slightly by deciding what the input is as it's being used. This also technically eliminates side-effects because the interpreter doesn't have any knowledge of how its input is being built.
+
+As for the compiling interpreter, well... I'm trying. Currently it directly prints to the console and returns an empty LazyList upon completion, which breaks the execution timer and optional file output. I'm looking into an asynchronous approach.
 ### State of the project
 Current Native language support:
 * [Brainfuck](https://esolangs.org/wiki/Brainfuck)
@@ -20,14 +33,14 @@ Current Native language support:
 
 #### Language Components:
 Languages supported by Eso can currently have 3 types of components:
-* Interpreters: An interpreter executes a program; or, thinking functionally, it defines a relationship between a program string and its result string. An interpreter is the bare minimum for a language to be supported.
-* Translators: A translator defines a relationship between exactly equivalent languages. Two languages are exactly equivalent if they share identical structure and are executed in identical ways, meaning a translator merely changes the syntax. This also means translators are two-way. A translator can be used to add support for derivative languages, as well as to define intelligible languages to make unintelligible languages (like WhiteSpace) easier to use.
-* Generators: A code generator defines a relationship between equivalent programs in non-equivalent languages. The primary purpose of a generator is to turn slow interpreted code into code that can be compiled, as demonstrated by the compiling BrainFuck interpreter. Even though the original and generated programs are equivalent, meaning they perform the same computation, their structure is not necessarily equivalent, meaning generators are only one-way.
+* Interpreter: This is the only requirement to support a language in Eso, and enables it to run programs in the language. An interpreter is a curried function with the (pseudocode) signature configuration => (program => (input => output)), where the configuration is a collection of parameters for any optional features or behaviors the interpreter may have and the program is the source code. This means it defines a relationship between the configuration and the relationship between the program and the relationship between the input and the output... All that means is that when you call the interpreter you don't just get the output, you get another function that takes the input and returns the output.
+* Translator: Some languages have derivatives (BrainFuck has many). A translator defines a relationship between the source code of two languages with one-to-one equivalence, which means you can translatethe code freely between the languages without changing the structure of the program. These have a signature of configuration => (program1 => program2). Currently translators are used to support BrainFuck derivatives and enable the use of a readable assembly version of WhiteSpace.
+* Generator: These define a relationship between non-equivalent languages. A generator is one-way, as it changes the structure of the program. These have a signature of configuration => (program1 => program2). Generators are currently used for compiling interpreters to translate the code into Scala.
 
 #### Current features:
 * Run program from text file
+* Log output to text file
 * Unoptimized, optimized, and compiled BrainFuck interpreters
-* Long and SafeLong based WhiteSpace interpreters
 * Translate to and from compatible languages
 * Write WhiteSpace programs with a readable assembly language
 * Generate Scala code from BrainFuck programs
@@ -35,26 +48,23 @@ Languages supported by Eso can currently have 3 types of components:
 * Create and use user-defined BrainFuck languages
 * User-configurable runtime parameters (logging, maximum output size, tape size, etc.)
 * Debug mode
-* Optionally slow down execution in debug mode in some interpreters
 
 ##### WIP:
-* True pure function overhaul
+* Functional compiling BrainFuck interpreter
 * Compiler memory (to avoid unnecessary recompiling)
 * Unispace interpreter
 * Additional languages and interpreters
-* Modularization
 * Potentially everything
 
 ### Optimization Strategy
-The first major difference in the optimizing BrainFuck interpreter is its program and data tapes. Instead of keeping two lists for each one and modifying them at each step, it uses a single static program tape and a single data tape, keeping track of its position in each with a counter. Both are stored using Vectors.
+The optimizing BrainFuck interpreter translates the program into an intermediate language in a series of passes:
+1. Clear loops (loops that set the current cell to 0) are replaced with a single instruction.
+2. Repeated instructions are contracted into one instruction. For instance, >>>>> would be contracted to (>,5).
+3. Unbroken sequences of shifts and increments/decrements are contracted into single 'bulk' operations.
+4. Copy/multiply loops are replaced with a single instruction.
+5. Brackets are assigned the index of their partner to eliminate scrubbing.
 
-The optimizer performs a series of passes over the program:
-1. Filter out all non-BrainFuck characters and replace all clear loops with a single instruction '_'.
-2. Contract all sequences of repeated instructions with a single instruction. For instance, +++++ becomes (+,5).
-3. Collect all unbroken sequences of pointer movements and increments/decrements with single 'bulk' operations that perform the entire sequence in a single large step. Bulk operations are represented by 'u'.
-4. Replace all copy/multiplication loops with a single instruction. This amounts to finding all blocks of the form "[u]" where u does not shift the pointer and decrements the current value by 1, and replacing them with a single 'l' which performs the bulk operation once while multiplying all the increments/decrements by the current value.
-5. Pair every bracket with the index of its corresponding bracket. This eliminates the need to scrub through the program looking for the next bracket on every jump or skip.
-
+This is all done using LazyLists, so every pass is performed in a single traversal.
 ### User-Defined BrainFuck Translators
 There are two ways to define your own BF language:
 * Use the console prompt, which will ask you for the language name and syntax then handle the rest.
@@ -72,7 +82,7 @@ name=...
 ```
 
 ### On the Scala "Interpreter"
-The main purpose of the Scala interpreter is to run Scala source files generated by Eso's compiler. It assumes the source file is a Function0[String] definition of the form "new Function0[String]{...}", and returns the result of the defined function. It can run arbitrary Scala code as long as it's in that form.
+The main purpose of the Scala interpreter is to run Scala source files generated by Eso's compiler. It assumes the source file is a Function1[Seq[Char], String] definition of the form "new Function0[String]{...}", and returns the result of the defined function. It can run arbitrary Scala code as long as it's in that form.
 
 ### FracTran Program Format
 The FracTran interpreter reads programs as an initial value followed by a list of fractions of the form "n/d", each term separated by a line break. The prime generator program looks like this:

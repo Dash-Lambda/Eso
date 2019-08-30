@@ -1,23 +1,16 @@
 package scalarun
 
-import common.{Interpreter, InterpreterException}
+import common.{Config, EsoExcep, Interpreter}
 
-import scala.collection.mutable
 import scala.util.{Failure, Try}
 
 object ScalaRun extends Interpreter{
-  val name = "Scala"
+  val name: String = "Scala"
   
-  def apply(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(progRaw: String): Try[String] = {
-    getParms(bools, nums)("debug")("outputMaxLength") match{
-      case Some((debug +: _, outputMaxLength +: _)) => Try{
-        if(debug) print("Compiling... ")
-        val interp = ScalFactory.make(progRaw)
-        if(debug) println("Done.")
-        if(outputMaxLength == -1) interp.apply
-        else interp.apply.take(outputMaxLength)
-      }
-      case None => Failure(InterpreterException("Unspecified Runtime Parameters"))
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = ScalaFactory(progRaw) map{func =>
+    {inputs =>
+      func(inputs)
+      LazyList[Char]()
     }
   }
 }

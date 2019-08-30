@@ -1,30 +1,13 @@
 package brainfuck
 
-import scala.collection.mutable
+import common.{Config, Translator}
 
-/** Syntax:
-  *
-  * [ => *gasp*
-  *
-  * ] => *pomf*
-  *
-  * + => pf
-  *
-  * - => bl
-  *
-  * > => b
-  *
-  * < => t
-  *
-  * . => !
-  *
-  * , => ?
-  */
+import scala.util.{Success, Try}
 
 object FlufflePuff extends BFTranslator{
   val name: String = "FlufflePuff"
   val baseLang: String = "BrainFuck"
-  lazy val kvPairs: Vector[(String, String)] = Vector[(String, String)](
+  val kvPairs: Vector[(String, String)] = Vector[(String, String)](
     ("[", "*gasp*"),
     ("]", "*pomf*"),
     ("+", "pf"),
@@ -34,6 +17,6 @@ object FlufflePuff extends BFTranslator{
     (".", "!"),
     (",", "?"))
   
-  def transFrom(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(prog: String): String = vals.foldLeft(prog){(str, key) => str.replaceAllLiterally(key, revSyntax(key))}
-  def transTo(bools: mutable.HashMap[String, (Boolean, String)], nums: mutable.HashMap[String, (Int, String)])(prog: String): String = keys.foldLeft(prog){(str, key) => str.replaceAllLiterally(key, syntax(key))}
+  def apply(config: Config)(prog: String): Try[String] = Success(vals.foldLeft(prog){(str, key) => str.replaceAllLiterally(key, revSyntax(key))})
+  def unapply(config: Config)(prog: String): Try[String] = Success(keys.foldLeft(prog){(str, key) => str.replaceAllLiterally(key, syntax(key))})
 }

@@ -6,7 +6,7 @@ n/d if irreducible and n,d != 0: Normal command
 0/d: Input
 	0/1: Value of N
 	0/2: Sequence of exponents for N
-	0/3: Char for value of N
+	0/3: Char for value for N
 	0/4: String with chars representing exponents
 n/0: Output
 	1/0: Value of N
