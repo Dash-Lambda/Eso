@@ -9,9 +9,13 @@ object BFGen extends Generator{
   val src: String = "BrainFuck"
   val dst: String = "Scala"
   
-  def apply(config: Config)(progRaw: String): Try[String] = Try{(config.num("init"), config.num("olen"), config.num("methSize"), config.bool("dyn"))} flatMap{
-    case (init, olen, methSize, dyn) =>
-      BFOptimize.compOpt(progRaw) map{prog => genProg(init, olen, dyn, methSize, prog)}
+  def apply(config: Config)(progRaw: String): Try[String] = Try{(config.num("init"), config.num("olen"), config.num("methSize"), config.bool("dyn"), config.bool("indent"))} flatMap{
+    case (init, olen, methSize, dyn, ind) =>
+      BFOptimize.compOpt(progRaw) map{prog =>
+        val gen = genProg(init, olen, dyn, methSize, prog)
+        if(ind) indent(gen)
+        else gen
+      }
   }
   
   def genProg(init: Int, olen: Int, dyn: Boolean, methSize: Int, prog: LazyList[(Char, Either[Int, BlkOp])]): String = {
@@ -28,7 +32,7 @@ object BFGen extends Generator{
                   |${vec.mkString("\n")}
                   |}""".stripMargin
           }
-        val calls = (0 until groups.length).map { i => s"${fnam}s$i()${if (olen != -1) "\nif(end) return" else ""}" }
+        val calls = (0 until groups.length).map { i => s"${fnam}s$i()${if(olen >= 0) "\nif(end) return ()" else ""}" }
         val mf =
           s"""|${block.head}
               |${calls.mkString("\n")}
@@ -44,7 +48,7 @@ object BFGen extends Generator{
         case (op, arg) +: ops => op match{
           case '[' | ']' | 'e' => op match{
             case '[' =>
-              val call = s"f$fnum()${if (olen != -1) "\nif(end) return" else ""}"
+              val call = s"f$fnum()${if(olen >= 0) "\nif(end) return ()" else ""}"
               val sig = s"def f$fnum(): Unit = while(tape(p) != 0){"
               cgo(funcs, Vector(sig), (ac :+ call) +: tmp, ops, fnum + 1)
             case ']' => cgo(seg(ac :+ "}").mkString("\n") +: funcs, tmp.head, tmp.tail, ops, fnum)
@@ -65,11 +69,13 @@ object BFGen extends Generator{
                   else s"while(${if(dyn) "p < len && " else ""}tape(p) != 0){p -= ${num.abs}}"
                 case '[' => "while(tape(p) != 0){"
                 case ']' => "}"
-                case ',' => "tape(p) = inLog.head.toInt\ninLog = inLog.tail"
+                case ',' => "tape(p) = inp.head.toInt\ninp = inp.tail"
                 case '.' =>
-                  val logger = "\nprint(tape(p).toChar)"
-                  val limiter = if (olen != -1) s"\nif(res.sizeIs >= $olen){end = true; return}" else ""
-                  s"res += tape(p).toChar$logger$limiter"
+                  val limStr =
+                    s"""|
+                        |resLen += 1
+                        |if(resLen >= $olen){end = true; return ()}""".stripMargin
+                  s"queue.put(Some(Success(tape(p).toChar)))${if(olen >= 0) limStr else ""}"
               }
             }
             val block2 = if(dyn && "m/".contains(op)) s"$block\nchkInd()" else block
@@ -87,22 +93,36 @@ object BFGen extends Generator{
           |  else if(p + shift >= len){len = p + shift + 1; tape = tape.padTo(len, 0)}
           |}""".stripMargin
     
-    val methStr = cgo(Vector[String](), Vector("def f0(): Unit = {"), Vector[Vector[String]](), prog, 1).mkString("\n")
+    val methStr = cgo(Vector[String](), Vector("def f0(): Unit = {"), Vector[Vector[String]](), prog, 1).mkString("\n\n")
   
-    s"""|new Function1[Seq[Char], String]{
-        |var tape = Array.fill($init)(0)${if(dyn) s"\nvar len = $init" else ""}
-        |var p = 0
-        |val res = new StringBuilder()
-        |var inLog = Seq[Char]()${if (olen != -1) "\nvar end = false" else ""}${if(dyn) dynFunc else ""}
+    s"""|import java.util.concurrent.{BlockingQueue, SynchronousQueue}
+        |import scala.util.{Try, Success, Failure}
         |
-        |def apply(inputs: Seq[Char]): String = {
-        |  inLog = inputs
-        |  f0()
-        |  val out = res.result
-        |  res.clear()
-        |  out
-        |}
+        |new Function2[BlockingQueue[Option[Try[Char]]], Seq[Char], Runnable]{
+        |  def apply(queue: BlockingQueue[Option[Try[Char]]], inputs: Seq[Char]): Runnable = {
+        |    Stepper(queue, inputs)
+        |  }
         |
-        |$methStr}""".stripMargin
+        |  case class Stepper(queue: BlockingQueue[Option[Try[Char]]], inputs: Seq[Char]) extends Runnable{
+        |    var tape = Array[Int]()${if(dyn) s"\nvar len = 0" else ""}
+        |    var p = 0
+        |    var inp = Seq[Char]()${if(olen >= 0) s"\nvar resLen = 0\nvar end = false" else ""}${if(dyn) dynFunc else ""}
+        |
+        |    def run(): Unit = {
+        |      inp = inputs
+        |      tape = Array.fill($init)(0)
+        |      p = 0
+        |      ${if(dyn) s"len = $init" else ""}
+        |      try{
+        |        f0()
+        |        queue.put(None)
+        |      }catch{
+        |        case e: Throwable => queue.put(Some(Failure(e)))
+        |      }
+        |    }
+        |
+        |    $methStr
+        |  }
+        |}""".stripMargin
   }
 }

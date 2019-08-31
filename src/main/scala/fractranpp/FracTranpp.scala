@@ -5,6 +5,7 @@ import spire.math.SafeLong
 import spire.implicits._
 
 import scala.annotation.tailrec
+import scala.collection.immutable.ArraySeq
 import scala.util.{Failure, Success, Try}
 
 case class FOP(n: SafeLong, d: SafeLong, exp: Vector[Int], ext: Int, j: Boolean, i: Boolean, o: Boolean){
@@ -81,7 +82,7 @@ object FracTranpp extends Interpreter{
       case op +: ops =>
         if(op.i) op.ext match{
           case 1 => nxt(SafeLong(BigInt(getLine(inp))), blk(bid), bid, calls, dropLine(inp))
-          case 2 => nxt(collapse(getLine(inp).split(" ").map(_.toInt)), blk(bid), bid, calls, dropLine(inp))
+          case 2 => nxt(collapse(ArraySeq.unsafeWrapArray(getLine(inp).split(" ").map(_.toInt))), blk(bid), bid, calls, dropLine(inp))
           case 3 => nxt(SafeLong(inp.head.toInt), blk(bid), bid, calls, inp.tail)
           case 4 => nxt(collapse(getLine(inp).map(_.toInt)), blk(bid), bid, calls, dropLine(inp))
         }

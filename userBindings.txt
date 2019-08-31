@@ -1,19 +1,15 @@
-unopt set BFOpt 0
-opt set BFOpt 1
-comp set BFOpt 2
+unopt set bfOpt 0
+opt set bfOpt 1
+comp set bfOpt 2
 
 log set log true
 nolog set log false
 
-debug set debug true
-nodebug set debug false
+dyn set dyn true
+nodyn set dyn false
 
-dyn set dynamicTapeSize true
-nodyn set dynamicTapeSize false
-
-init set initTapeSize
-olen set outputMaxLength
-dbt set dbTim
+init set init
+olen set olen
 
 testt run Thue hworld.th
 testtb run Thue binc.th

@@ -19,7 +19,7 @@ object Console extends EsoObj{
     """|Welcome to Eso, the functional esoteric language interpreter!
        |Type "help" for a list of commands.""".stripMargin
   
-  val bindFile: String = "userbind.txt"
+  val bindFile: String = "userBindings.txt"
   val interpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, ScalaRun)
   val transVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
   val genVec: Vector[Generator] = Vector[Generator](BFGen)
@@ -28,9 +28,10 @@ object Console extends EsoObj{
     ("dyn", false, "resize tape as needed for BF interpreter to eliminate memory limitations"),
     ("fPtr", true, "toggle whether output for P'' programs starts at the read head going right or at the end of the tape going left"),
     ("sHead", true, "toggle whether the read head starts at the beginning of the initial tape or the right end of the tape for P''"),
-    ("pNull", false, "toggle whether to print the null/empty character in the output of P'' programs"))
+    ("pNull", false, "toggle whether to print the null/empty character in the output of P'' programs"),
+    ("indent", false, "toggle whether or not to neatly indent generated Scala code"))
   val numVec: Vector[(String, Int, String)] = Vector[(String, Int, String)](
-    ("bfOpt", 1, "BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled"),
+    ("bfOpt", 2, "BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled"),
     ("init", 40000, "initial tape size for BrainFuck interpreter"),
     ("olen", -1, "maximum output length, useful for non-terminating programs, -1=infinite"),
     ("methSize", 1000, "maximum number of blocks in a generated method"))
