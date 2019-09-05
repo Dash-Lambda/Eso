@@ -99,9 +99,7 @@ object BFGen extends Generator{
         |import scala.util.{Try, Success, Failure}
         |
         |new Function2[BlockingQueue[Option[Try[Char]]], Seq[Char], Runnable]{
-        |  def apply(queue: BlockingQueue[Option[Try[Char]]], inputs: Seq[Char]): Runnable = {
-        |    Stepper(queue, inputs)
-        |  }
+        |  def apply(queue: BlockingQueue[Option[Try[Char]]], inputs: Seq[Char]): Runnable = Stepper(queue, inputs)
         |
         |  case class Stepper(queue: BlockingQueue[Option[Try[Char]]], inputs: Seq[Char]) extends Runnable{
         |    var tape = Array[Int]()${if(dyn) s"\nvar len = 0" else ""}

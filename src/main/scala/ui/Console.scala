@@ -6,6 +6,7 @@ import fractran.FracTran
 import fractranpp.FracTranpp
 import pdoubleprime.PDP
 import scalarun.ScalaRun
+import slashes.Slashes
 import thue.Thue
 import ui.ConsoleUtil._
 import whitespace.{WSAssembly, WhiteSpace}
@@ -20,7 +21,7 @@ object Console extends EsoObj{
        |Type "help" for a list of commands.""".stripMargin
   
   val bindFile: String = "userBindings.txt"
-  val interpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, ScalaRun)
+  val interpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, ScalaRun, Slashes)
   val transVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
   val genVec: Vector[Generator] = Vector[Generator](BFGen)
   val boolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](
