@@ -2,8 +2,9 @@ package ui
 
 import brainfuck.{BFGen, BFManaged, BFOptimize, FlufflePuff, Ook}
 import common.{Config, EsoObj, Generator, Interpreter, Translator}
-import fractran.FracTran
-import fractranpp.FracTranpp
+import deadfish.Deadfish
+import emmental.Emmental
+import fractran.{FracTran, FracTranpp}
 import pdoubleprime.PDP
 import scalarun.ScalaRun
 import slashes.Slashes
@@ -21,7 +22,7 @@ object Console extends EsoObj{
        |Type "help" for a list of commands.""".stripMargin
   
   val bindFile: String = "userBindings.txt"
-  val interpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, ScalaRun, Slashes)
+  val interpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, ScalaRun, Slashes, Deadfish, Emmental)
   val transVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
   val genVec: Vector[Generator] = Vector[Generator](BFGen)
   val boolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](
@@ -30,7 +31,8 @@ object Console extends EsoObj{
     ("fPtr", true, "toggle whether output for P'' programs starts at the read head going right or at the end of the tape going left"),
     ("sHead", true, "toggle whether the read head starts at the beginning of the initial tape or the right end of the tape for P''"),
     ("pNull", false, "toggle whether to print the null/empty character in the output of P'' programs"),
-    ("indent", false, "toggle whether or not to neatly indent generated Scala code"))
+    ("indent", false, "toggle whether or not to neatly indent generated Scala code"),
+    ("dfChar", true, "toggle whether or not to print Deadfish output as char values"))
   val numVec: Vector[(String, Int, String)] = Vector[(String, Int, String)](
     ("bfOpt", 2, "BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled"),
     ("init", 40000, "initial tape size for BrainFuck interpreter"),

@@ -28,6 +28,8 @@ Current Native language support:
 * [Thue](https://esolangs.org/wiki/Thue)
 * [P''](https://esolangs.org/wiki/P%E2%80%B2%E2%80%B2)
 * [///](https://esolangs.org/wiki////)
+* [Deadfish](https://esolangs.org/wiki/Deadfish)
+* [Emmental](https://esolangs.org/wiki/Emmental)
 * Scala
 
 #### Language Components:
@@ -49,9 +51,10 @@ Languages supported by Eso can currently have 3 types of components:
 
 ##### WIP:
 * Multiline bindings
+* Automated testing
 * Compiler memory (to avoid unnecessary recompiling)
-* Unispace interpreter
-* Additional languages and components
+* Additional languages (Unispace, Funciton)
+* Additional components for supported languages
 * Maybe language component-side error handling
 * Debug features
 * Potentially everything

@@ -21,7 +21,7 @@ object Slashes extends Interpreter{
           case c +: cs => bite(cs, ac + c)
           case _ => (ac, Vector())
         }
-    
+        
         val (p, t1) = bite(str.toVector)
         val (r,  t2) = bite(t1)
         (p, r, t2.mkString)

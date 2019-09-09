@@ -49,6 +49,7 @@ object ConsoleUtil extends EsoObj{
       case -1 => res
       case n => res.take(n)
     }
+    
     args match{
       case lang +: fnam +: tail =>
         val interp = interps.keys
@@ -184,7 +185,7 @@ object ConsoleUtil extends EsoObj{
       case fnam +: _ => fnam
       case _ => bfile
     }
-  
+    
     readFile(ifnam) map{str =>
       str.split("\n")
         .toVector
@@ -200,7 +201,7 @@ object ConsoleUtil extends EsoObj{
       case fnam +: _ => fnam
       case _ => bfile
     }
-  
+    
     val bstr = binds.toVector
       .map{case (tok, cmd) => s"$tok ${cmd.mkString(" ")}"}
       .mkString("\n")

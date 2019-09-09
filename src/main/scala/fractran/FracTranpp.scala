@@ -1,8 +1,8 @@
-package fractranpp
+package fractran
 
 import common.{Config, EsoExcep, Interpreter}
-import spire.math.SafeLong
 import spire.implicits._
+import spire.math.SafeLong
 
 import scala.annotation.tailrec
 import scala.collection.immutable.ArraySeq
