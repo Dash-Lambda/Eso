@@ -30,6 +30,7 @@ Current Native language support:
 * [///](https://esolangs.org/wiki////)
 * [Deadfish](https://esolangs.org/wiki/Deadfish)
 * [Emmental](https://esolangs.org/wiki/Emmental)
+* [Befunge-93](https://esolangs.org/wiki/Befunge#Befunge-93)
 * Scala
 
 #### Language Components:
