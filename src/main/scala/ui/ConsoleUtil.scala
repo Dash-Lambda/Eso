@@ -76,7 +76,7 @@ object ConsoleUtil extends EsoObj{
                   }}}
               flg match{
                 case Success(_) => println(s"\nProgram completed in ${rdr}ms")
-                case Failure(e) => println(s"\nProgram failed in ${rdr}ms\nError: $e")
+                case Failure(e) => println(s"\nError: $e\nProgram failed in ${rdr}ms")
               }}}}
       case _ => println("Error: Not Enough Arguments")
     }

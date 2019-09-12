@@ -5,6 +5,7 @@ import common.{Config, EsoObj, Generator, Interpreter, Translator}
 import deadfish.Deadfish
 import emmental.Emmental
 import fractran.{FracTran, FracTranpp}
+import funge.Befunge93
 import pdoubleprime.PDP
 import scalarun.ScalaRun
 import slashes.Slashes
@@ -22,7 +23,7 @@ object Console extends EsoObj{
        |Type "help" for a list of commands.""".stripMargin
   
   val bindFile: String = "userBindings.txt"
-  val interpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, ScalaRun, Slashes, Deadfish, Emmental)
+  val interpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, ScalaRun, Slashes, Deadfish, Emmental, Befunge93)
   val transVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
   val genVec: Vector[Generator] = Vector[Generator](BFGen)
   val boolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](
