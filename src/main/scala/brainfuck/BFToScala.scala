@@ -1,11 +1,11 @@
 package brainfuck
 
-import common.{Config, Generator}
+import common.{Config, Transpiler}
 
 import scala.annotation.tailrec
 import scala.util.Try
 
-object BFGen extends Generator{
+object BFToScala extends Transpiler{
   val src: String = "BrainFuck"
   val dst: String = "Scala"
   

@@ -1,0 +1,191 @@
+0 1 2 3 4 5 6 7 
+GOOD: , works
+GOOD: : duplicates
+GOOD: empty stack pops zero
+GOOD: 2-2 = 0
+GOOD: | works
+GOOD: 0! = 1
+GOOD: 7! = 0
+GOOD: 8*0 = 0
+GOOD: # < jumps into <
+GOOD: \ swaps
+GOOD: 01` = 0
+GOOD: 10` = 1
+GOOD: 900pg gets 9
+GOOD: p modifies space
+Befunge-98 detected.
+GOOD: wraparound works
+GOOD: a pushes 10
+GOOD: b-f push 11-15
+GOOD: [ turns left
+GOOD: ] turns right
+GOOD: instructions between ; are skipped
+UNDEF: # across left edge hits easternmost cell in file
+UNDEF: # across left edge hits easternmost cell on line
+GOOD: 0k^ doesn't execute ^
+GOOD: 1k[ turns left from k
+GOOD: 4k # jumps 4 times from k
+GOOD: 2k ;;;5 executes 5 thrice
+GOOD: 2k# jumps twice from k
+GOOD: ak47k$ leaves 3 fours on stack
+GOOD: 2k6 leaves 3 sixes on stack
+GOOD: putting to and getting (-3 -2) worked, assuming working negative Funge-Space
+GOOD: 9 / 2 = 4
+GOOD: 9 % 2 = 1
+About to test division by zero...
+GOOD: 1 / 0 = 0
+GOOD: 1 % 0 = 0
+GOOD: SGML spaces
+GOOD: n clears 15-cell stack: assuming it works
+GOOD: r reflects
+
+GOOD: 21w turns right
+GOOD: ' pushes 20
+GOOD: 'vs^ goes through
+GOOD: 'vs places v
+GOOD: z doesn't reflect
+GOOD: 3j jumps over 3 cells
+GOOD: 04-j jumps backward the right number of cells
+GOOD: 1j ^ jumps into ^
+GOOD: 10x goes east
+GOOD: 1-1x goes southwest
+GOOD: 32x sets delta to (3, 2)
+Assuming we can trust x...
+GOOD: wraparound with non-cardinal delta appears to work
+GOOD: { transfers cells correctly
+GOOD: { sets storage offset correctly, and p uses it
+GOOD: } resets storage offset
+GOOD: } transfers cells correctly
+GOOD: { with negative argument works
+GOOD: } with negative argument works
+GOOD: } reflects when stack stack has only one stack
+GOOD: u reflects when stack stack has only one stack
+GOOD: u with zero count does nothing
+GOOD: u with a positive count transfers cells correctly
+GOOD: u with a negative count transfers cells correctly
+y claims all of the following:
+	That t is implemented
+	That buffered I/O is being used
+	That the number of bytes per cell is 4 
+	That the interpreter's handprint is 1165193033 
+	That the interpreter's version is 1 
+	That the behaviour of = is unavailable
+	That the system's path separator is /
+	That this Funge has 2 dimensions
+	That the ID of the current IP is 0 
+	That the team number of the current IP is 0 
+	That the position of the IP was ( 64 89 )
+	That the delta of the IP was ( -1 0 )
+	That the offset of the IP was ( 0 0 )
+	That the least point containing a non-space cell is ( -3 -2 )
+	That the greatest point, relative to that point, is ( 187 914 )
+BAD: should have been ( 183 911 )
+	That the day of the month is 3 
+	That the month is 10 
+	That the year is 2019 
+	That the time is 10 : 44 : 16 
+	That the size of the stack stack is 1 
+	That the stack sizes are [ -1 ] from top to bottom
+	That the command-line arguments were: [ null ]
+	That the environment variables are:
+Best that the above claims are manually verified to be correct.
+GOOD: 1y works
+GOOD: 5y works
+GOOD: dy works
+GOOD: 1y and 5y do not disagree about =
+No reliable cross-platform method of testing: assume = works
+UNDEF: i not implemented according to 1y - cannot test it
+UNDEF: can't test o without working i, may overwrite some existing file
+1y says this is Concurrent Funge-98
+
+Going to test concurrent execution with 2 IPs.
+Assuming that instructions without any particular concurrency-related behaviour, such as ^>v<#, take one tick.
+Will continue to produce textual output, so strings must work correctly where concurrency is concerned: "a b" should take 5 ticks, 'a should take 1.
+
+GOOD: basic concurrency seems to work
+GOOD: reflected IP copied stack
+Parent IP: ID 0 
+Child IP: ID 1 
+GOOD: child IP executed before parent IP
+GOOD: single space takes 0 ticks
+GOOD: multiple spaces take 0 ticks
+GOOD: z takes 1 tick
+GOOD: jumping over code with ; takes 0 ticks
+GOOD: 5kz takes 3 ticks
+GOOD: "a  b" takes 5 ticks
+
+Done testing concurrent execution.
+
+BAD: 0y pushes wrong stack size
+GOOD: ] turns flying IP right
+BAD: : on empty stack doesn't make stack size 2, says y
+BAD: \ on empty stack doesn't make stack size 2, says y
+
+GOOD: ( pops correctly
+GOOD: ) pops correctly
+
+Here's how your interpreter deals with some possibilities unmentioned in the specification...
+UNDEF: k with a negative argument executes 0 times or less often than the absolute value of the argument
+UNDEF: the empty string wrapped around the edge of space contains 1 character(s) (hopefully spaces)
+UNDEF: ( with a negative count reflects and pops 0 times or less than the absolute value of the count
+UNDEF: ) with a negative count reflects and pops 0 times or less than the absolute value of the count
+
+GOOD: null byte in string and zero compare as equal
+GOOD: ' followed by a byte greater than 127 works
+GOOD: form feed does not appear to exist in Funge-Space
+BAD: after spacing top-left corner, y should report least point as ( -2 -1 ), not ( -10 -10 )
+BAD: after spacing top-left corner, y should report greatest point as ( 182 910 ), not ( 201 930 )
+BAD: after spacing right edge, least point reported by y should remain ( -2 -1 )
+BAD: after spacing right edge, y should report greatest point as ( 181 910 ), not ( 201 930 )
+BAD: after spacing bottom edge, y should report greatest point as ( 181 909 ), not ( 201 930 )
+
+The Befunge-98 core has been completely tested.
+Moving on to fingerprints.
+A line (consider it UNDEF, though not marked as such) will be emitted for each fingerprint tested for, whether or not the interpreter supports it.
+If the interpreter loads the fingerprint, subsequent lines will be GOOD or BAD depending on whether the interpreter behaves according to the fingerprint's specification.
+Fingerprints will be unloaded after being tested. If ) does not work, it will fail silently.
+
+Testing fingerprint NULL... not loaded.
+Testing fingerprint HRTI... not loaded.
+Testing fingerprint MODE... not loaded.
+Testing fingerprint MODU... not loaded.
+Testing fingerprint ORTH... not loaded.
+Testing fingerprint PERL... not loaded.
+Testing fingerprint REFC... not loaded.
+Testing fingerprint ROMA... not loaded.
+Testing fingerprint TOYS... not loaded.
+Testing fingerprint TURT... not loaded.
+Testing fingerprint BASE... not loaded.
+Testing fingerprint CPLI... not loaded.
+Testing fingerprint DATE... not loaded.
+Testing fingerprint DIRF... not loaded.
+Testing fingerprint EVAR... not loaded.
+Testing fingerprint FILE... not loaded.
+Testing fingerprint FING... not loaded.
+Testing fingerprint FIXP... not loaded.
+Testing fingerprint FPSP... not loaded.
+Testing fingerprint FPDP... not loaded.
+Testing fingerprint 3DSP... not loaded.
+Testing fingerprint FRTH... not loaded.
+Testing fingerprint IIPC... not loaded.
+Testing fingerprint IMAP... not loaded.
+Testing fingerprint INDV... not loaded.
+Testing fingerprint REXP... not loaded.
+Testing fingerprint SOCK... not loaded.
+Testing fingerprint STRN... not loaded.
+Testing fingerprint SUBR... not loaded.
+Testing fingerprint TIME... not loaded.
+Testing fingerprint JSTR... not loaded.
+
+About to test detailed () behaviour with two fingerprints.
+MODU and ROMA were chosen for their simplicity (for implementers) and partially overlapping instruction set.
+UNDEF: ROMA not found.
+
+About to test, using ROMA, whether t copies the parent IP's loaded fingerprint semantics to the child IP.
+This is unmentioned in the specification, and thus is UNDEF.
+UNDEF: ROMA not found.
+
+The Mycology Befunge-98 test suite is practically done.
+Trying to quit with q. If the return status is 15, consider it GOOD...
+
+Return: 15

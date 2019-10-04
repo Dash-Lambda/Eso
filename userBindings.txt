@@ -17,3 +17,5 @@ testtb run Thue binc.th
 teste run BrainFuck calce.b
 testhw run BrainFuck hworld.b
 testm run BrainFuck mandelbrot.b
+
+testMycology run Befunge-98 mycology.b98

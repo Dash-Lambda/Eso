@@ -3,15 +3,16 @@ package ui
 import java.io.{File, PrintWriter}
 
 import brainfuck.{BFTranslator, GenBFT}
-import common.{Config, EsoExcep, EsoObj, Generator, Interpreter, Translator}
+import common.{Config, EsoExcep, EsoObj, Transpiler, Interpreter, Translator}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
 import scala.io.StdIn.readLine
-import scala.io.Source
+import scala.io.{BufferedSource, Source}
 import scala.util.{Failure, Success, Try}
 
 object ConsoleUtil extends EsoObj{
+  val encodings: LazyList[String] = LazyList("UTF-8", "Cp1252", "UTF-16")
   val helpText: String =
     s"""|- run <language> <source file> <optional destination file>
         |
@@ -41,6 +42,28 @@ object ConsoleUtil extends EsoObj{
         |""".stripMargin
   
   def inputs: LazyList[Char] = LazyList.continually(readLine :+ '\n').flatten
+  
+  def unsafeRun(interps: immutable.HashMap[String, Interpreter],
+                trans: immutable.HashMap[(String, String), Translator],
+                config: Config)(args: Vector[String]): Unit = {
+    def olim(res: LazyList[Char]): LazyList[Char] = config.num("olen") match{
+      case -1 => res
+      case n => res.take(n)
+    }
+    
+    args match{
+      case lang +: fnam +: tail =>
+        val interp = interps.keys
+          .map(k => (k, buildTrans(config, trans)(lang, k)))
+          .collectFirst{case (k, Some(t)) => (str: String) => t(str) flatMap interps(k)(config)}
+        doOrOp(interp, "LangErr"){intp =>
+          doOrErr(readFile(fnam)){progRaw =>
+            val i = intp(progRaw)
+            (i map (_(inputs))) foreach (res => olim(res) foreach print)
+          }
+        }
+    }
+  }
   
   def runHandler(interps: immutable.HashMap[String, Interpreter],
                  trans: immutable.HashMap[(String, String), Translator],
@@ -115,7 +138,7 @@ object ConsoleUtil extends EsoObj{
     case _ => println("Error: Not Enough Arguments")
   }
   
-  def genHandler(config: Config, gens: immutable.HashMap[(String, String), Generator])(args: Vector[String]): Unit = args match{
+  def genHandler(config: Config, gens: immutable.HashMap[(String, String), Transpiler])(args: Vector[String]): Unit = args match{
     case l1 +: l2 +: in +: on +: _ => doOrOp(gens.get((l1, l2)), "Generator Not Recognized"){gen =>
       doOrErr(readFile(in)){progRaw =>
         doOrErr(gen(config)(progRaw)){prog =>
@@ -223,7 +246,7 @@ object ConsoleUtil extends EsoObj{
   
   def listLangsHandler(interps: immutable.HashMap[String, Interpreter],
                        trans: immutable.HashMap[(String, String), Translator],
-                       comps: immutable.HashMap[(String, String), Generator]): String = {
+                       comps: immutable.HashMap[(String, String), Transpiler]): String = {
     f"""|Languages...
         |${interps.values.map(i => s"- $i").toVector.sorted.mkString("\n")}
         |
@@ -255,10 +278,20 @@ object ConsoleUtil extends EsoObj{
         |$bstr""".stripMargin
   }
   
-  def readFile(fnam: String): Try[String] = Try{
-    val iFile = Source.fromFile(fnam)
-    val res = iFile.mkString
-    iFile.close()
+  def getSource(fnam: String): Option[Try[String]] = encodings
+    .map(e => readFile(fnam, e))
+    .collectFirst {
+      case s: Success[String] => s
+      case Failure(ex: java.io.FileNotFoundException) => Failure(ex)
+    }
+  def readFile(fnam: String): Try[String] = getSource(fnam) match{
+    case Some(s) => s
+    case None => Failure(EsoExcep("Incompatible File Encoding"))
+  }
+  def readFile(fnam: String, enc: String): Try[String] = Try{
+    val src = Source.fromFile(fnam, enc)
+    val res = src.mkString
+    src.close()
     res
   }
   def writeFile(fnam: String, str: String): Unit = {

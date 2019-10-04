@@ -3,7 +3,7 @@ package common
 import scala.annotation.tailrec
 import scala.util.Try
 
-trait Generator {
+trait Transpiler {
   val src: String
   val dst: String
   

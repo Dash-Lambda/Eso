@@ -12,7 +12,7 @@ object Befunge93 extends Interpreter{
   
   def bfgRun(progRaw: String): Seq[Char] => LazyList[Char] = {
     val rand = new Random()
-    val bfProg = BFGProg(progRaw, 80, 25)
+    val bfProg = BF93Prog(progRaw)
     
     def chomp(inp: Seq[Char]): (String, Seq[Char]) = {
       val (hd, tl) = inp.splitAt(inp.indexOf('\n'))
@@ -29,12 +29,13 @@ object Befunge93 extends Interpreter{
     }
     
     @tailrec
-    def bfi(px: Int, py: Int, dx: Int, dy: Int, bs: Boolean, stk: LazyList[Long], inp: Seq[Char], prog: BFGProg): Option[(String, (Int, Int, Int, Int, Boolean, LazyList[Long], Seq[Char], BFGProg))] = {
+    def bfi(px: Int, py: Int, dx: Int, dy: Int, bs: Boolean, stk: LazyList[Long], inp: Seq[Char], prog: BF93Prog): Option[(String, (Int, Int, Int, Int, Boolean, LazyList[Long], Seq[Char], BF93Prog))] = {
       prog.get(px, py) match{
         case Some(c) if bs =>
-          if(c == '"') bfi(px + dx, py + dy, dx, dy, false, stk, inp, prog)
+          if(c == '"') bfi(px + dx, py + dy, dx, dy, bs = false, stk, inp, prog)
           else bfi(px + dx, py + dy, dx, dy, bs, c.toLong #:: stk, inp, prog)
-        case Some(c) => c match{
+        case Some(c) =>
+          c match{
           case '>' => bfi(px + 1, py, 1, 0, bs, stk, inp, prog)
           case '<' => bfi(px - 1, py, -1, 0, bs, stk, inp, prog)
           case '^' => bfi(px, py - 1, 0, -1, bs, stk, inp, prog)
@@ -51,7 +52,7 @@ object Befunge93 extends Interpreter{
           case '|' =>
             if(stk.head == 0) bfi(px, py + 1, 0, 1, bs, stk.tail, inp, prog)
             else bfi(px, py - 1, 0, -1, bs, stk.tail, inp, prog)
-          case '"' => bfi(px + dx, py + dy, dx, dy, true, stk, inp, prog)
+          case '"' => bfi(px + dx, py + dy, dx, dy, bs = true, stk, inp, prog)
           case '&' =>
             val (tok, rem) = chomp(inp)
             bfi(px + dx, py + dy, dx, dy, bs, tok.toLong #:: stk, rem, prog)
@@ -79,8 +80,8 @@ object Befunge93 extends Interpreter{
             else bfi(px + dx, py + dy, dx, dy, bs, stk, inp, prog)
         }
         case None =>
-          val nx = (px + prog.xdim)%prog.xdim
-          val ny = (py + prog.ydim)%prog.ydim
+          val nx = (px + 80)%80
+          val ny = (py + 25)%25
           bfi(nx, ny, dx, dy, bs, stk, inp, prog)
       }
     }
