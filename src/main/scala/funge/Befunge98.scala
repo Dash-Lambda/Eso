@@ -19,7 +19,7 @@ object Befunge98 extends Interpreter{
           case FIPSplit(nProg, nInp, nFip1, nFip2) => bdo(ips :+ nFip2.setID(idCnt) :+ nFip1, nProg, nInp, idCnt + 1, halt)
           case FIPOut(str, nProg, nInp, nFip) => Some((str, (ips :+ nFip, nProg, nInp, idCnt, halt)))
           case FIPHalt(ret) => ret match{
-            case Some(r) => Some((s"\nReturn: $r", (Vector(), prog, Seq(), 0, true)))
+            case Some(r) => if(config.bool("bfRetCode")) Some((s"\nReturn: $r", (Vector(), prog, Seq(), 0, true))) else None
             case None => bdo(ips, prog, inp, idCnt, halt)
           }
         }

@@ -54,6 +54,8 @@ Languages supported by Eso can currently have 3 types of components:
 * User-configurable runtime parameters (logging, maximum output size, tape size, etc.)
 * Befunge-98 fingerprint support
     * BOOL
+    * MODU
+    * ROMA
 
 ##### WIP:
 * Multiline bindings

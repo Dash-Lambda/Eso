@@ -80,10 +80,10 @@ y claims all of the following:
 	That the least point containing a non-space cell is ( -3 -2 )
 	That the greatest point, relative to that point, is ( 187 914 )
 BAD: should have been ( 183 911 )
-	That the day of the month is 3 
+	That the day of the month is 4 
 	That the month is 10 
 	That the year is 2019 
-	That the time is 10 : 44 : 16 
+	That the time is 07 : 24 : 41 
 	That the size of the stack stack is 1 
 	That the stack sizes are [ -1 ] from top to bottom
 	That the command-line arguments were: [ null ]
@@ -148,11 +148,25 @@ Fingerprints will be unloaded after being tested. If ) does not work, it will fa
 Testing fingerprint NULL... not loaded.
 Testing fingerprint HRTI... not loaded.
 Testing fingerprint MODE... not loaded.
-Testing fingerprint MODU... not loaded.
+Testing fingerprint MODU... loaded.
+GOOD: a04-M pushes -2
+Assuming that "C-language integer remainder" refers to C99 C, it used to be undefined...
+GOOD: a04-R pushes 2
+GOOD: 0a-04-R pushes -2
+GOOD: 0a-04-U pushes 2
+
 Testing fingerprint ORTH... not loaded.
 Testing fingerprint PERL... not loaded.
 Testing fingerprint REFC... not loaded.
-Testing fingerprint ROMA... not loaded.
+Testing fingerprint ROMA... loaded.
+GOOD: I pushes 1 
+GOOD: V pushes 5 
+GOOD: X pushes 10 
+GOOD: L pushes 50 
+GOOD: C pushes 100 
+GOOD: D pushes 500 
+GOOD: M pushes 1000 
+
 Testing fingerprint TOYS... not loaded.
 Testing fingerprint TURT... not loaded.
 Testing fingerprint BASE... not loaded.
@@ -179,11 +193,21 @@ Testing fingerprint JSTR... not loaded.
 
 About to test detailed () behaviour with two fingerprints.
 MODU and ROMA were chosen for their simplicity (for implementers) and partially overlapping instruction set.
-UNDEF: ROMA not found.
+Loaded ROMA, then MODU.
+GOOD: M has MODU semantics
+GOOD: CDILRUVX doesn't reflect
+Unloaded ROMA.
+GOOD: M has ROMA semantics
+GOOD: RU doesn't reflect
+GOOD: all of CDILVX reflected
+Unloaded MODU.
+GOOD: R and U reflected
 
 About to test, using ROMA, whether t copies the parent IP's loaded fingerprint semantics to the child IP.
 This is unmentioned in the specification, and thus is UNDEF.
-UNDEF: ROMA not found.
+Loaded ROMA.
+Forked into child IP.
+UNDEF: IVXLCDM didn't reflect: child IP has ROMA loaded
 
 The Mycology Befunge-98 test suite is practically done.
 Trying to quit with q. If the return status is 15, consider it GOOD...

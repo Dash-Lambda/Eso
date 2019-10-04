@@ -52,7 +52,12 @@ case class BF98Prog(prog: Matrix[Int], origin: Vec2D[Int], cal: Calendar, bDiv: 
     sdo(pos)
   }
   def skipAll(pos: Vec2D[Int], dt: Vec2D[Int], e: Int): Vec2D[Int] = {
-    @tailrec def sdo(p: Vec2D[Int]): Vec2D[Int] = if(this.apply(p) == e) sdo(p + dt) else p
+    @tailrec
+    def sdo(p: Vec2D[Int]): Vec2D[Int] = get(p) match{
+      case Some(`e`) => sdo(p + dt)
+      case Some(_) => p
+      case None => sdo(wrap(p, dt))
+    }
     sdo(pos)
   }
   def skipN(pos: Vec2D[Int], dt: Vec2D[Int], num: Int): Vec2D[Int] = {

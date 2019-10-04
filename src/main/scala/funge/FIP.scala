@@ -25,7 +25,7 @@ case class FIPHalt(code: Option[Int]) extends FIPRet{
   def step: FIPHalt = this
 }
 
-case class FIP(id: Int, ip: Vec2D[Int], dt: Vec2D[Int], so: Vec2D[Int], bs: Boolean, stk: Vector[LazyList[Int]], binds: immutable.HashMap[Char, (BF98Prog, Seq[Char], FIP) => FIPRet]){
+case class FIP(id: Int, ip: Vec2D[Int], dt: Vec2D[Int], so: Vec2D[Int], bs: Boolean, stk: Vector[LazyList[Int]], binds: immutable.HashMap[Char, Vector[(BF98Prog, Seq[Char], FIP) => FIPRet]]){
   val rand = new Random
   def cleared: LazyList[Int] = LazyList.continually(0)
   
@@ -295,7 +295,7 @@ case class FIP(id: Int, ip: Vec2D[Int], dt: Vec2D[Int], so: Vec2D[Int], bs: Bool
               FIPCont(prog, inp, FIP(id, npos, dt, so, bs, (pick +: ns) +: stk.tail, binds))
             }
         }
-      case c if binds.isDefinedAt(c) => binds(c)(prog, inp, this)
+      case c if binds.isDefinedAt(c) && binds(c).nonEmpty => binds(c).head(prog, inp, this)
       case '(' =>
         TOSS match{
           case n +: ns =>
@@ -303,8 +303,15 @@ case class FIP(id: Int, ip: Vec2D[Int], dt: Vec2D[Int], so: Vec2D[Int], bs: Bool
             val id = nam.foldLeft(0){case (ac, n) => (ac*256) + n}
             BF98Lib.get(id) match{
               case Some(fp) =>
-                val nBind = fp.binds.foldLeft(binds){case (bs, b) => bs + b}
-                FIPCont(prog, inp, FIP(id, npos, dt, so, bs, ns.drop(n) +: stk.tail, nBind))
+                val nBind = fp.binds.foldLeft(binds){
+                  case (bs, (k, b)) =>
+                    val eb = bs.get(k) match{
+                      case Some(v) => v
+                      case None => Vector()
+                    }
+                    bs + ((k, b +: eb))
+                }
+                FIPCont(prog, inp, FIP(id, npos, dt, so, bs, (1 +: id +:ns.drop(n)) +: stk.tail, nBind))
               case None => FIPCont(prog, inp, FIP(id, prog.getNextInd(ip, -dt), -dt, so, bs, ns.drop(n) +: stk.tail, binds))
             }
         }
@@ -315,7 +322,12 @@ case class FIP(id: Int, ip: Vec2D[Int], dt: Vec2D[Int], so: Vec2D[Int], bs: Bool
             val id = nam.foldLeft(0){case (ac, n) => (ac*256) + n}
             BF98Lib.get(id) match{
               case Some(fp) =>
-                val nBind = fp.binds.foldLeft(binds){case (bs, b) => bs - b._1}
+                val nBind = fp.binds.foldLeft(binds){
+                  case (bs, (k, _)) => bs.get(k) match{
+                    case Some(v) => bs + ((k, v.drop(1)))
+                    case None => bs
+                  }
+                }
                 FIPCont(prog, inp, FIP(id, npos, dt, so, bs, ns.drop(n) +: stk.tail, nBind))
               case None => FIPCont(prog, inp, FIP(id, prog.getNextInd(ip, -dt), -dt, so, bs, ns.drop(n) +: stk.tail, binds))
             }
