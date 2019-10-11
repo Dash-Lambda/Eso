@@ -2,11 +2,11 @@ package funge
 
 import java.util.Calendar
 
-import common.{Matrix, Vec2D}
+import common.{EsoObj, Matrix, Vec2D}
 
 import scala.annotation.tailrec
 
-case class BF98Prog(prog: Matrix[Int], origin: Vec2D[Int], cal: Calendar, bDiv: Boolean){
+case class BF98Prog(prog: Matrix[Int], origin: Vec2D[Int], cal: Calendar, bDiv: Boolean) extends EsoObj{
   def apply(p: Vec2D[Int]): Int = {
     val pnt = p + origin
     if(prog.isDefinedAt(pnt.x, pnt.y)) prog(pnt.x, pnt.y)
@@ -111,11 +111,6 @@ case class BF98Prog(prog: Matrix[Int], origin: Vec2D[Int], cal: Calendar, bDiv: 
     (-origin, origin + Vec2D(prog.xdim, prog.ydim))
   }
 }
-object BF98Prog{
-  def apply(progRaw: String, cal: Calendar, bDiv: Boolean): BF98Prog = {
-    val lines = progRaw.linesIterator.map(_.toVector.map(_.toInt)).toVector
-    val xdim = lines.map(_.size).max
-    val padded = lines.map(v => v.padTo(xdim, 32))
-    new BF98Prog(Matrix(padded), Vec2D(0, 0), cal, bDiv)
-  }
+object BF98Prog extends EsoObj{
+  def apply(progRaw: String, cal: Calendar, bDiv: Boolean): BF98Prog = new BF98Prog(Matrix(StringToRect(progRaw)), Vec2D(0, 0), cal, bDiv)
 }

@@ -34,6 +34,7 @@ Current Native language support:
 * [Emmental](https://esolangs.org/wiki/Emmental)
 * [Befunge-93](https://esolangs.org/wiki/Befunge#Befunge-93)
 * [Befunge-98](https://esolangs.org/wiki/Funge-98)
+* [Wierd](https://esolangs.org/wiki/Wierd) ([Compliant with wierd-new.c](https://github.com/graue/esofiles/blob/master/wierd/impl/wierd-new.c))
 * Scala
 
 #### Language Components:

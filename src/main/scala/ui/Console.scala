@@ -1,7 +1,7 @@
 package ui
 
-import brainfuck.{BFToScala, BFManaged, BFOptimize, FlufflePuff, Ook}
-import common.{Config, EsoObj, Transpiler, Interpreter, Translator}
+import brainfuck.{BFManaged, BFOptimize, BFToScala, FlufflePuff, Ook}
+import common.{Config, EsoObj, Interpreter, Translator, Transpiler}
 import deadfish.Deadfish
 import emmental.Emmental
 import fractran.{FracTran, FracTranpp}
@@ -12,6 +12,7 @@ import slashes.Slashes
 import thue.Thue
 import ui.ConsoleUtil._
 import whitespace.{WSAssembly, WhiteSpace}
+import wierd.Wierd
 
 import scala.collection.{immutable, mutable}
 import scala.io.StdIn
@@ -23,7 +24,7 @@ object Console extends EsoObj{
        |Type "help" for a list of commands.""".stripMargin
   
   val bindFile: String = "userBindings.txt"
-  val interpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, ScalaRun, Slashes, Deadfish, Emmental, Befunge93, Befunge98)
+  val interpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, ScalaRun, Slashes, Deadfish, Emmental, Befunge93, Befunge98, Wierd)
   val transVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
   val genVec: Vector[Transpiler] = Vector[Transpiler](BFToScala)
   val boolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](

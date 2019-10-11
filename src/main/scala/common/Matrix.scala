@@ -33,6 +33,22 @@ case class Matrix[T](vec: Vector[T], xdim: Int, ydim: Int){
     val pvec = Vector.fill((x0 + xdim + x1)*y0)(e) ++ nvec ++ Vector.fill((x0 + xdim + x1)*y1)(e)
     Matrix[T](pvec, x0 + xdim + x1, y0 + ydim + y1)
   }
+  def padTo(x: Int, y: Int, e: T): Matrix[T] = {
+    val x0 = if(x < 0) x.abs else 0
+    val x1 = if(x >= xdim) x + 1 - xdim else 0
+    val y0 = if(y < 0) y.abs else 0
+    val y1 = if(y >= ydim) y + 1 - ydim else 0
+    //println(s"- padTo: <$x, $y> => ($x0, $x1, $y0, $y1)")
+    padWith(x0, y0, x1, y1, e)
+  }
+  def padWithOrigin(x: Int, y: Int, e: T): (Matrix[T], Vec2D[Int]) = {
+    val x0 = if(x < 0) x.abs else 0
+    val x1 = if(x >= xdim) x + 1 - xdim else 0
+    val y0 = if(y < 0) y.abs else 0
+    val y1 = if(y >= ydim) y + 1 - ydim else 0
+    //println(s"- padTo: <$x, $y> => ($x0, $x1, $y0, $y1)")
+    (padWith(x0, y0, x1, y1, e), Vec2D(x0, y0))
+  }
   
   def isDefinedAt(x: Int, y: Int): Boolean = 0 <= x && x < xdim && 0 <= y && y < ydim
   def getInd(x: Int, y: Int): Int = (y*xdim) + x
@@ -44,4 +60,6 @@ object Matrix{
     val ydim = vecs.size
     new Matrix[T](vecs.flatten, xdim, ydim)
   }
+  
+  def charString(mat: Matrix[Int]): String = mat.vec.map(_.toChar).grouped(mat.xdim).map(_.mkString).mkString("\n")
 }
