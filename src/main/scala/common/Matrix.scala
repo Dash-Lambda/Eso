@@ -41,14 +41,6 @@ case class Matrix[T](vec: Vector[T], xdim: Int, ydim: Int){
     //println(s"- padTo: <$x, $y> => ($x0, $x1, $y0, $y1)")
     padWith(x0, y0, x1, y1, e)
   }
-  def padWithOrigin(x: Int, y: Int, e: T): (Matrix[T], Vec2D[Int]) = {
-    val x0 = if(x < 0) x.abs else 0
-    val x1 = if(x >= xdim) x + 1 - xdim else 0
-    val y0 = if(y < 0) y.abs else 0
-    val y1 = if(y >= ydim) y + 1 - ydim else 0
-    //println(s"- padTo: <$x, $y> => ($x0, $x1, $y0, $y1)")
-    (padWith(x0, y0, x1, y1, e), Vec2D(x0, y0))
-  }
   
   def isDefinedAt(x: Int, y: Int): Boolean = 0 <= x && x < xdim && 0 <= y && y < ydim
   def getInd(x: Int, y: Int): Int = (y*xdim) + x
