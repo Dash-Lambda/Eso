@@ -8,7 +8,7 @@ import common.{Config, EsoExcep, EsoObj, Transpiler, Interpreter, Translator}
 import scala.annotation.tailrec
 import scala.collection.immutable
 import scala.io.StdIn.readLine
-import scala.io.{BufferedSource, Source}
+import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
 object ConsoleUtil extends EsoObj{
@@ -16,7 +16,7 @@ object ConsoleUtil extends EsoObj{
   val helpText: String =
     s"""|- run <language> <source file> <optional destination file>
         |
-        |- generate <source language> <destination language> <source file> <destination file>
+        |- transpile <source language> <destination language> <source file> <destination file>
         |- translate <source language> <destination language> <source file> <destination file>
         |
         |- defineBFLang
@@ -83,8 +83,9 @@ object ConsoleUtil extends EsoObj{
             print(s"Building interpreter... ")
             val (i, bdr) = timeIt(intp(progRaw))
             println(s"Done in ${bdr}ms.")
-            doOrErr(i map (_(inputs))){res =>
+            doOrErr(i){r =>
               val (flg, rdr) = timeIt{
+                val res = r(inputs)
                 tryAll{
                   tail match{
                     case onam +: _ =>
@@ -159,7 +160,7 @@ object ConsoleUtil extends EsoObj{
   
   def loadBFLHandler(args: Vector[String]): Vector[((String, String), BFTranslator)] = args match{
     case fnam +: _ => doOrErr(readFile(fnam)){str =>
-      val lines = str.split("(\r\n|\r|\n)").toVector
+      val lines = str.linesIterator.toVector
       
       @tailrec
       def ldo(ac: Vector[BFTranslator], src: Vector[String]): Vector[((String, String), BFTranslator)] = src match{
@@ -210,7 +211,7 @@ object ConsoleUtil extends EsoObj{
     }
     
     readFile(ifnam) map{str =>
-      str.split("\n")
+      str.linesIterator
         .toVector
         .filter(_.nonEmpty)
         .map{ln =>
@@ -253,7 +254,7 @@ object ConsoleUtil extends EsoObj{
         |Translators...
         |${trans.values.map(t => s"- $t").toVector.sorted.mkString("\n")}
         |
-        |Generators...
+        |Transpilers...
         |${comps.keys.map{case (snam, dnam) => s"- $snam -> $dnam"}.toVector.sorted.mkString("\n")}
         |""".stripMargin
   }

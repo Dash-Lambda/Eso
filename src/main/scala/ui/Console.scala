@@ -1,13 +1,13 @@
 package ui
 
-import brainfuck.{BFManaged, BFOptimize, BFToScala, FlufflePuff, Ook}
+import brainfuck.{BFManaged, BFToCPP, BFToScala, FlufflePuff, Ook}
 import common.{Config, EsoObj, Interpreter, Translator, Transpiler}
 import deadfish.Deadfish
 import emmental.Emmental
 import fractran.{FracTran, FracTranpp}
 import funge.{Befunge93, Befunge98}
 import pdoubleprime.PDP
-import scalarun.ScalaRun
+import scala_run.ScalaRun
 import slashes.Slashes
 import thue.Thue
 import ui.ConsoleUtil._
@@ -24,9 +24,9 @@ object Console extends EsoObj{
        |Type "help" for a list of commands.""".stripMargin
   
   val bindFile: String = "userBindings.txt"
-  val interpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, ScalaRun, Slashes, Deadfish, Emmental, Befunge93, Befunge98, Wierd)
+  val interpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, Slashes, Deadfish, Emmental, Befunge93, Befunge98, Wierd, ScalaRun)
   val transVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
-  val genVec: Vector[Transpiler] = Vector[Transpiler](BFToScala)
+  val genVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP)
   val boolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](
     ("log", false, "toggle detailed console logging"),
     ("dyn", false, "resize tape as needed for BF interpreter to eliminate memory limitations"),
@@ -85,12 +85,10 @@ object Console extends EsoObj{
     }
     
     def execCommand(inp: Vector[String]): Unit = inp match{
-      case "urun" +: args => unsafeRun(mkImmut(interps), mkImmut(trans), Config(bools, nums))(args)
+      //case "urun" +: args => unsafeRun(mkImmut(interps), mkImmut(trans), Config(bools, nums))(args)
       case "run" +: args => runHandler(mkImmut(interps), mkImmut(trans), Config(bools, nums))(args)
 
-      case "Optimize" +: fnam +: _ => readFile(fnam) flatMap BFOptimize.compOpt foreach (lst => println(lst.map(_._1).mkString))
-
-      case "generate" +: args => genHandler(Config(bools, nums), mkImmut(gens))(args)
+      case "transpile" +: args => genHandler(Config(bools, nums), mkImmut(gens))(args)
 
       case "translate" +: args => transHandler(Config(bools, nums), mkImmut(trans))(args)
       case "defineBFLang" +: _ => trans += bflMakeHandler

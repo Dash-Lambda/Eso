@@ -1,15 +1,11 @@
-package scalarun
+package scala_internal
 
 import java.util.concurrent.{BlockingQueue, SynchronousQueue}
 
-import common.{Config, EsoExcep, Interpreter}
-
 import scala.util.{Failure, Success, Try}
 
-object ScalaRun extends Interpreter{
-  val name: String = "Scala"
-  
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = ScalaFactory(progRaw) map{func =>
+object ScalaInternRun extends (String => Try[Seq[Char] => LazyList[Char]]){
+  def apply(progRaw: String): Try[Seq[Char] => LazyList[Char]] = ScalaFactory(progRaw) map{func =>
     {inputs =>
       val synQueue = new SynchronousQueue[Option[Try[Char]]]()
       val runner: Runnable = func(synQueue, inputs)

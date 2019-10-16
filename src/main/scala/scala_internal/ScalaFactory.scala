@@ -1,4 +1,4 @@
-package scalarun
+package scala_internal
 
 import java.util.concurrent.BlockingQueue
 

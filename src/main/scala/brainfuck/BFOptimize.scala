@@ -9,6 +9,7 @@ case class BlkOp(ops: Vector[(Int, Option[Int])], shift: Int) extends EsoObj{
   lazy val maxShift: Int = math.max(shift, ops.map(_._1).max)
   lazy val (ind, inc) = ops.head
   
+  def incStr(n: Int): String = s"${if(n < 0) "-" else "+"}= ${n.abs}"
   def isLoop: Boolean = (shift == 0) && !ops.contains((0, None)) && (ops.collect{case (0, Some(n)) => n}.sum == -1)
   def isMove: Boolean = ops.isEmpty
   
@@ -30,20 +31,17 @@ case class BlkOp(ops: Vector[(Int, Option[Int])], shift: Int) extends EsoObj{
   
   def opStr: String = {
     val opstr = ops.map{
-      case (0, Some(n)) if n > 0 => s"tape(p) += $n"
-      case (0, Some(n)) if n < 0 => s"tape(p) -= ${n.abs}"
-      case (i, Some(n)) if n > 0 => s"tape(p + $i) += $n"
-      case (i, Some(n)) if n < 0 => s"tape(p + $i) -= ${n.abs}"
+      case (0, Some(n)) => s"tape(p) ${incStr(n)}"
+      case (i, Some(n)) => s"tape(p + $i) ${incStr(n)}"
       case (i, None) => s"tape(p + $i) = 0"
     }
-    s"${opstr.mkString("\n")}${if(shift != 0) s"\np += $shift" else ""}"
+    s"${opstr.mkString("\n")}${if(shift != 0) s"\np ${incStr(shift)}" else ""}"
   }
   def lopStr: String = {
     val opstr = ops
       .filter(_._1 != 0)
       .map{
-        case (i, Some(n)) if n > 0 => s"tape(p + $i) += $n*tmp"
-        case (i, Some(n)) if n < 0 => s"tape(p + $i) -= ${n.abs}*tmp"
+        case (i, Some(n)) => s"tape(p + $i) ${incStr(n)}*tmp"
         case (i, None) => s"tape(p + $i) = 0"
       }
     s"""|if(tape(p) != 0){

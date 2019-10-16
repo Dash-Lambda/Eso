@@ -11,6 +11,9 @@ nodyn set dyn false
 init set init
 olen set olen
 
+indent set indent true
+nodent set indent false
+
 testt run Thue hworld.th
 testtb run Thue binc.th
 
@@ -19,3 +22,5 @@ testhw run BrainFuck hworld.b
 testm run BrainFuck mandelbrot.b
 
 testMycology run Befunge-98 mycology.b98
+testBFScal transpile BrainFuck Scala hworld.b hworld.scal
+testScal run Scala hworld.scal
