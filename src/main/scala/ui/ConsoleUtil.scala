@@ -105,7 +105,10 @@ object ConsoleUtil extends EsoObj{
       case _ => println("Error: Not Enough Arguments")
     }
   }
-  
+  def findTransPath(config: Config, trans: immutable.HashMap[(String, String), Translator])(lang1: String, lang2: Seq[String]): Option[(String, String => Try[String])] = {
+    println(s"$lang1 => ${lang2.mkString("[", ", ", "]")}")
+    lang2.to(LazyList).map(l2 => (l2, buildTrans(config, trans)(lang1, l2))).collectFirst{case (nam, Some(t)) => (nam, t)}
+  }
   def buildTrans(config: Config, trans: immutable.HashMap[(String, String), Translator])(lang1: String, lang2: String): Option[String => Try[String]] = {
     lazy val t2 = mkMap(trans.toVector.flatMap{case ((l1, l2), t) => Seq(((l1, l2), t.apply(config)(_)), ((l2, l1), t.unapply(config)(_)))})
     lazy val seed: String => Try[String] = str => Success(str)
@@ -139,15 +142,19 @@ object ConsoleUtil extends EsoObj{
     case _ => println("Error: Not Enough Arguments")
   }
   
-  def genHandler(config: Config, gens: immutable.HashMap[(String, String), Transpiler])(args: Vector[String]): Unit = args match{
-    case l1 +: l2 +: in +: on +: _ => doOrOp(gens.get((l1, l2)), "Generator Not Recognized"){gen =>
-      doOrErr(readFile(in)){progRaw =>
-        doOrErr(gen(config)(progRaw)){prog =>
-          writeFile(on, prog)
-          println(s"Translation saved to $on.")
+  def genHandler(config: Config, trans: immutable.HashMap[(String, String), Translator], gens: immutable.HashMap[(String, String), Transpiler])(args: Vector[String]): Unit = args match{
+    case l1 +: l2 +: in +: on +: _ =>
+      val dsts = gens.keys.collect{case (lang1, `l2`) => lang1}.toSeq
+      val tplr = findTransPath(config, trans)(l1, dsts) flatMap {case (nam, t) => gens.get((nam, l2)) map {g => (prg: String) => t(prg) flatMap g(config)}}
+      doOrOp(tplr, "Transpiler Not Recognized"){gen =>
+        doOrErr(readFile(in)){progRaw =>
+          doOrErr(gen(progRaw)){prog =>
+            writeFile(on, prog)
+            println(s"Translation saved to $on.")
+          }
         }
       }
-    }
+    case _ => println("Error: Not Enough Arguments")
   }
   
   def bflMakeHandler: ((String, String), BFTranslator) = {
@@ -255,7 +262,7 @@ object ConsoleUtil extends EsoObj{
         |${trans.values.map(t => s"- $t").toVector.sorted.mkString("\n")}
         |
         |Transpilers...
-        |${comps.keys.map{case (snam, dnam) => s"- $snam -> $dnam"}.toVector.sorted.mkString("\n")}
+        |${comps.keys.map{case (snam, dnam) => s"- $snam => $dnam"}.toVector.sorted.mkString("\n")}
         |""".stripMargin
   }
   

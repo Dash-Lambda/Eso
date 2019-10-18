@@ -11,7 +11,7 @@ import scala_run.ScalaRun
 import slashes.Slashes
 import thue.Thue
 import ui.ConsoleUtil._
-import whitespace.{WSAssembly, WhiteSpace}
+import whitespace.{WSAssembly, WhiteSpace, WhiteSpaceToScala}
 import wierd.Wierd
 
 import scala.collection.{immutable, mutable}
@@ -26,7 +26,7 @@ object Console extends EsoObj{
   val bindFile: String = "userBindings.txt"
   val interpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, Slashes, Deadfish, Emmental, Befunge93, Befunge98, Wierd, ScalaRun)
   val transVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
-  val genVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP)
+  val genVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala)
   val boolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](
     ("log", false, "toggle detailed console logging"),
     ("dyn", false, "resize tape as needed for BF interpreter to eliminate memory limitations"),
@@ -88,7 +88,7 @@ object Console extends EsoObj{
       //case "urun" +: args => unsafeRun(mkImmut(interps), mkImmut(trans), Config(bools, nums))(args)
       case "run" +: args => runHandler(mkImmut(interps), mkImmut(trans), Config(bools, nums))(args)
 
-      case "transpile" +: args => genHandler(Config(bools, nums), mkImmut(gens))(args)
+      case "transpile" +: args => genHandler(Config(bools, nums), mkImmut(trans), mkImmut(gens))(args)
 
       case "translate" +: args => transHandler(Config(bools, nums), mkImmut(trans))(args)
       case "defineBFLang" +: _ => trans += bflMakeHandler

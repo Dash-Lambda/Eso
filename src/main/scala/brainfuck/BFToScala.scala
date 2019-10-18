@@ -22,7 +22,7 @@ object BFToScala extends BFTranspiler{
               case '[' => "while(tape(p) != 0){"
               case ']' => "}"
               case ',' => "tape(p) = inp.head.toInt\ninp = inp.tail"
-              case '.' => "print(tape(p).toChar)"
+              case '.' => s"print(tape(p).toChar)"
               case 'e' => ""
             }
             case Right(bop) => op match {
@@ -47,7 +47,7 @@ object BFToScala extends BFTranspiler{
   
     s"""|var tape = Array.fill($init)(0)${if (dyn) s"\nvar len = 0" else ""}
         |var p = 0
-        |var inp = LazyList.continually(scala.io.StdIn.readLine()).flatten${if (olen >= 0) s"\nvar resLen = 0\nvar end = false" else ""}
+        |var inp = LazyList.continually(scala.io.StdIn.readLine()).map(_ + "\n").flatten${if (olen >= 0) s"\nvar resLen = 0\nvar end = false" else ""}
         |${if (dyn) dynFunc else ""}
         |$methStr""".stripMargin
   }
