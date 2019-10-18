@@ -49,7 +49,7 @@ Languages supported by Eso can currently have 3 types of components:
 * Unoptimized, optimized, and compiled BrainFuck interpreters
 * Translate to and from compatible languages
 * Write WhiteSpace programs with a readable assembly language
-* Transpile BrainFuck to Scala and C++
+* Transpile between certain languages
 * Compile and run Scala source files
 * Create and use user-defined BrainFuck languages
 * User-configurable runtime parameters (logging, maximum output size, tape size, etc.)
