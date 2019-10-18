@@ -106,7 +106,6 @@ object ConsoleUtil extends EsoObj{
     }
   }
   def findTransPath(config: Config, trans: immutable.HashMap[(String, String), Translator])(lang1: String, lang2: Seq[String]): Option[(String, String => Try[String])] = {
-    println(s"$lang1 => ${lang2.mkString("[", ", ", "]")}")
     lang2.to(LazyList).map(l2 => (l2, buildTrans(config, trans)(lang1, l2))).collectFirst{case (nam, Some(t)) => (nam, t)}
   }
   def buildTrans(config: Config, trans: immutable.HashMap[(String, String), Translator])(lang1: String, lang2: String): Option[String => Try[String]] = {

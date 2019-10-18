@@ -17,8 +17,8 @@ object NonPersistent extends EsoObj{
         |- persistent
         |- help
         |
-        |Optional arguments are supplied as name-value pairs, e.g. "run BrainFuck mandelbrot.b -dyn true -init 1 -opt 1
-        |"""".stripMargin
+        |Optional arguments are supplied as name-value pairs, e.g. "run BrainFuck mandelbrot.b -dyn true -init 1 -opt 1"
+        |""".stripMargin
   
   def main(args: Array[String]): Unit = args.toVector match{
     case cmd +: args =>
