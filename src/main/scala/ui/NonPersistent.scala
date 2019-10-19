@@ -57,7 +57,7 @@ object NonPersistent extends EsoObj{
           case _ => pdo(ss, bs, ns)
         }
         else if(EsoDefaults.defBoolVec.map(_._1).contains(s.tail)) ss match{
-          case b +: tl => pdo(tl, bs :+ ((s, b == "true")), ns)
+          case b +: tl => pdo(tl, bs :+ ((s.tail, b == "true")), ns)
           case _ => pdo(ss, bs, ns)
         }
         else pdo(ss, bs, ns)
