@@ -35,21 +35,39 @@ object Unlambda extends Interpreter{
       '|' -> PIPE,
       'e' -> E)
     
-    def pdo(src: Vector[Char]): (Expr, Vector[Char]) = src match{
-      case '`' +: cs =>
-        val (x, c1) = pdo(cs)
-        val (y, c2) = pdo(c1)
-        (AppExpr(x, y), c2)
-      case '.' +: c +: cs => (FuncExpr(OUT(c)), cs)
-      case '?' +: c +: cs => (FuncExpr(QUES(c)), cs)
-      case f +: cs if funcMap.isDefinedAt(f) => (FuncExpr(funcMap(f)), cs)
-      case '#' +: cs => pdo(cs.dropWhile(c => !"\r\n".contains(c)))
-      case _ +: cs => pdo(cs)
+    trait PCont{
+      def apply(e: Expr): PCont
+    }
+    object PEnd extends PCont{
+      def apply(e: Expr): PCont = PRes(e)
+    }
+    case class PRes(x: Expr) extends PCont{
+      def apply(e: Expr): PCont = PRes(x)
+    }
+    case class PApp(cc: PCont) extends PCont{
+      def apply(x: Expr): PCont = PApp1(x, cc)
+    }
+    case class PApp1(x: Expr, cc: PCont) extends PCont{
+      def apply(y: Expr): PCont = cc(AppExpr(x, y))
     }
     
-    Try{pdo(progRaw.toVector)} match{
-      case Success((exp, _)) => Success(exp)
-      case Failure(_) => Failure(EsoExcep("Invalid Expression"))
+    @tailrec
+    def pdoc(src: Vector[Char], cc: PCont): Option[Expr] = src match{
+      case '`' +: cs => pdoc(cs, PApp(cc))
+      case '.' +: c +: cs => pdoc(cs, cc(FuncExpr(OUT(c))))
+      case '?' +: c +: cs => pdoc(cs, cc(FuncExpr(QUES(c))))
+      case f +: cs if funcMap.isDefinedAt(f) => pdoc(cs, cc(FuncExpr(funcMap(f))))
+      case '#' +: cs => pdoc(cs.dropWhile(c => !"\r\n".contains(c)), cc)
+      case _ +: cs => pdoc(cs, cc)
+      case _ => cc match{
+        case PRes(e) => Some(e)
+        case _ => None
+      }
+    }
+    
+    pdoc(progRaw.toVector, PEnd) match{
+      case Some(exp) => Success(exp)
+      case None => Failure(EsoExcep("Invalid Expression"))
     }
   }
   
