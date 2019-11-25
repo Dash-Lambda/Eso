@@ -35,6 +35,7 @@ Current Native language support:
 * [Befunge-93](https://esolangs.org/wiki/Befunge#Befunge-93)
 * [Befunge-98](https://esolangs.org/wiki/Funge-98)
 * [Wierd](https://esolangs.org/wiki/Wierd) ([Compliant with wierd-new.c](https://github.com/graue/esofiles/blob/master/wierd/impl/wierd-new.c))
+* [Unlambda](https://esolangs.org/wiki/Unlambda)
 * Scala
 
 #### Language Components:
@@ -59,6 +60,8 @@ Languages supported by Eso can currently have 3 types of components:
     * ROMA
 
 ##### WIP:
+* Option to take program input from a file
+* REPL mode
 * Multiline bindings
 * Automated testing
 * Compiler memory (to avoid unnecessary recompiling)
@@ -68,9 +71,10 @@ Languages supported by Eso can currently have 3 types of components:
 * Potentially everything
 
 ##### Languages Being Worked On
-* Unispace (difficulty with finding particularly good documentation)
-* Funciton (difficulty handling lazy input with its reversed string encoding)
-* Wierd
+* [Unispace](https://esolangs.org/wiki/Unispace) (difficulty with finding particularly good documentation)
+* [Funciton](https://esolangs.org/wiki/Grass) (difficulty handling lazy input with its reversed string encoding)
+* [SNUSP](https://esolangs.org/wiki/SNUSP)
+* [Grass](https://esolangs.org/wiki/Grass)
 
 ### BrainFuck Optimization Strategy
 The optimizing BrainFuck interpreter translates the program into an intermediate language in a series of passes:

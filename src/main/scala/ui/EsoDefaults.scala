@@ -10,6 +10,7 @@ import pdoubleprime.PDP
 import scala_run.ScalaRun
 import slashes.Slashes
 import thue.Thue
+import unlambda.Unlambda
 import whitespace.{WSAssembly, WhiteSpace, WhiteSpaceToScala}
 import wierd.Wierd
 
@@ -22,7 +23,7 @@ object EsoDefaults extends EsoObj{
        |Type "help" for a list of commands.""".stripMargin
   
   val defBindFile: String = "userBindings.txt"
-  val defInterpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, Slashes, Deadfish, Emmental, Befunge93, Befunge98, Wierd, ScalaRun)
+  val defInterpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, Slashes, Deadfish, Emmental, Befunge93, Befunge98, Wierd, ScalaRun, Unlambda)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
   val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala)
   val defBoolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](

@@ -43,28 +43,6 @@ object ConsoleUtil extends EsoObj{
   
   def inputs: LazyList[Char] = LazyList.continually(readLine :+ '\n').flatten
   
-  def unsafeRun(interps: immutable.HashMap[String, Interpreter],
-                trans: immutable.HashMap[(String, String), Translator],
-                config: Config)(args: Vector[String]): Unit = {
-    def olim(res: LazyList[Char]): LazyList[Char] = config.num("olen") match{
-      case -1 => res
-      case n => res.take(n)
-    }
-    
-    args match{
-      case lang +: fnam +: tail =>
-        val interp = interps.keys
-          .map(k => (k, buildTrans(config, trans)(lang, k)))
-          .collectFirst{case (k, Some(t)) => (str: String) => t(str) flatMap interps(k)(config)}
-        doOrOp(interp, "LangErr"){intp =>
-          doOrErr(readFile(fnam)){progRaw =>
-            val i = intp(progRaw)
-            (i map (_(inputs))) foreach (res => olim(res) foreach print)
-          }
-        }
-    }
-  }
-  
   def runHandler(interps: immutable.HashMap[String, Interpreter],
                  trans: immutable.HashMap[(String, String), Translator],
                  config: Config)(args: Vector[String]): Unit = {

@@ -31,7 +31,7 @@ object NonPersistent extends EsoObj{
         case "listVars" => doOrErr(parseToConfig(args)){cfg => println(listVarsHandler(cfg, EsoDefaults.defDesc))}
         case "persistent" => Console.run()
         case "help" => println(helpStr)
-        case _ => println("Error: Invalid Command")
+        case _ => println("Error: Invalid Command\nUse 'help' for list of commands.")
       }
     case _ => Console.run()
   }

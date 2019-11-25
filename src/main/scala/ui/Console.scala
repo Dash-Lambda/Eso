@@ -51,7 +51,6 @@ object Console extends EsoObj{
     }
     
     def execCommand(inp: Vector[String]): Unit = inp match{
-      //case "urun" +: args => unsafeRun(mkImmut(interps), mkImmut(trans), Config(bools, nums))(args)
       case "run" +: args => runHandler(mkImmut(interps), mkImmut(trans), Config(bools, nums))(args)
 
       case "transpile" +: args => genHandler(Config(bools, nums), mkImmut(trans), mkImmut(gens))(args)
