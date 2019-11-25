@@ -21,14 +21,14 @@ object NonPersistent extends EsoObj{
         |""".stripMargin
   
   def main(args: Array[String]): Unit = args.toVector match{
-    case cmd +: args =>
-      val nargs = args.takeWhile(s => !s.startsWith("-"))
+    case cmd +: tail =>
+      val nargs = tail.takeWhile(s => !s.startsWith("-"))
       cmd match{
-        case "run" => doOrErr(parseToConfig(args)){cfg => runHandler(EsoDefaults.defInterpMap, EsoDefaults.defTransMap, cfg)(nargs)}
-        case "transpile" => doOrErr(parseToConfig(args)){cfg => genHandler(cfg, EsoDefaults.defTransMap, EsoDefaults.defGenMap)(nargs)}
-        case "translate" => doOrErr(parseToConfig(args)){cfg => transHandler(cfg, EsoDefaults.defTransMap)(nargs)}
+        case "run" => doOrErr(parseToConfig(tail)){cfg => runHandler(EsoDefaults.defInterpMap, EsoDefaults.defTransMap, cfg)(nargs)}
+        case "transpile" => doOrErr(parseToConfig(tail)){cfg => genHandler(cfg, EsoDefaults.defTransMap, EsoDefaults.defGenMap)(nargs)}
+        case "translate" => doOrErr(parseToConfig(tail)){cfg => transHandler(cfg, EsoDefaults.defTransMap)(nargs)}
         case "listLangs" => println(listLangsHandler(EsoDefaults.defInterpMap, EsoDefaults.defTransMap, EsoDefaults.defGenMap))
-        case "listVars" => doOrErr(parseToConfig(args)){cfg => println(listVarsHandler(cfg, EsoDefaults.defDesc))}
+        case "listVars" => doOrErr(parseToConfig(tail)){cfg => println(listVarsHandler(cfg, EsoDefaults.defDesc))}
         case "persistent" => Console.run()
         case "help" => println(helpStr)
         case _ => println("Error: Invalid Command\nUse 'help' for list of commands.")
