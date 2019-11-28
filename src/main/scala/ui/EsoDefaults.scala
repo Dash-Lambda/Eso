@@ -9,7 +9,7 @@ import funge.{Befunge93, Befunge98}
 import pdoubleprime.PDP
 import scala_run.ScalaRun
 import slashes.Slashes
-import snusp.SNUSP
+import snusp.{BFToSNUSP, SNUSP}
 import thue.Thue
 import unlambda.Unlambda
 import whitespace.{WSAssembly, WhiteSpace, WhiteSpaceToScala}
@@ -26,7 +26,7 @@ object EsoDefaults extends EsoObj{
   val defBindFile: String = "userBindings.txt"
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, Slashes, Deadfish, Emmental, Befunge93, Befunge98, Wierd, ScalaRun, Unlambda, SNUSP)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
-  val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala)
+  val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP)
   val defBoolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](
     ("log", false, "toggle detailed console logging"),
     ("dyn", false, "resize tape as needed for BF interpreter to eliminate memory limitations"),

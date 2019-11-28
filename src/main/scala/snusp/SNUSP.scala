@@ -83,12 +83,14 @@ object SNUSP extends Interpreter{
       case Vec2D(0, -1) => Vec2D(-1, 0)
       case Vec2D(1, 0) => Vec2D(0, 1)
       case Vec2D(0, 1) => Vec2D(1, 0)
+      case _ => dt
     }
     def RULDdt: Vec2D[Int] = dt match{
       case Vec2D(1, 0) => Vec2D(0, -1)
       case Vec2D(0, -1) => Vec2D(1, 0)
       case Vec2D(-1, 0) => Vec2D(0, 1)
       case Vec2D(0, 1) => Vec2D(-1, 0)
+      case _ => dt
     }
     
     def apply(prog: Matrix[Char], state: State, rand: Random): (State, SNOB) = prog.get(ip) match{
