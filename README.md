@@ -73,7 +73,6 @@ Languages supported by Eso can currently have 3 types of components:
 ##### Languages Being Worked On
 * [Unispace](https://esolangs.org/wiki/Unispace) (difficulty with finding particularly good documentation)
 * [Funciton](https://esolangs.org/wiki/Grass) (difficulty handling lazy input with its reversed string encoding)
-* [SNUSP](https://esolangs.org/wiki/SNUSP)
 * [Grass](https://esolangs.org/wiki/Grass)
 
 ### BrainFuck Optimization Strategy
