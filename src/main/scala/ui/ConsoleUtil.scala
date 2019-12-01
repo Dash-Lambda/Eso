@@ -43,6 +43,27 @@ object ConsoleUtil extends EsoObj{
   
   def inputs: LazyList[Char] = LazyList.continually(readLine :+ '\n').flatten
   
+  def debugRun(interps: immutable.HashMap[String, Interpreter],
+               trans: immutable.HashMap[(String, String), Translator],
+               config: Config)(args: Vector[String]): Unit = {
+    args match{
+      case lang +: fnam +: _ =>
+        doOrOp(interps.get(lang), "Language Not Recognized"){intp =>
+          doOrErr(readFile(fnam)){progRaw =>
+            print("Building interpreter... ")
+            val i = intp(config)(progRaw)
+            println("Done.")
+            doOrErr(i){r =>
+              val res = r(inputs)
+              res.foreach(print)
+              println("Program completed.")
+            }
+          }
+        }
+      case _ => println("Error: Not Enough Arguments")
+    }
+  }
+  
   def runHandler(interps: immutable.HashMap[String, Interpreter],
                  trans: immutable.HashMap[(String, String), Translator],
                  config: Config)(args: Vector[String]): Unit = {

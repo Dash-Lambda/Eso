@@ -19,6 +19,7 @@ case class Config(bool: immutable.HashMap[String, Boolean], num: immutable.HashM
   def set(nam: String, n: Int): Config = Config(bool, num + ((nam, n)), cal, rand)
 }
 object Config extends EsoObj{
+  def blank: Config = new Config(immutable.HashMap(), immutable.HashMap(), Calendar.getInstance, new Random())
   def apply(bool: mutable.HashMap[String, Boolean], num: mutable.HashMap[String, Int]): Config = new Config(mkImmut(bool), mkImmut(num), Calendar.getInstance, new Random())
   def apply(bool: immutable.HashMap[String, Boolean], num: immutable.HashMap[String, Int]): Config = new Config(bool, num, Calendar.getInstance, new Random())
 }
