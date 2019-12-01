@@ -37,6 +37,7 @@ Current Native language support:
 * [Wierd](https://esolangs.org/wiki/Wierd) ([Compliant with wierd-new.c](https://github.com/graue/esofiles/blob/master/wierd/impl/wierd-new.c))
 * [Unlambda](https://esolangs.org/wiki/Unlambda)
 * [Grass](https://esolangs.org/wiki/Grass)
+* [Path](https://esolangs.org/wiki/PATH)
 * Scala
 
 #### Language Components:
