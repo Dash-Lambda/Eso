@@ -22,6 +22,8 @@ object FracTran extends Interpreter{
   }
   
   def condition(progRaw: String): Try[(SafeLong, Vector[(SafeLong, SafeLong)])] = {
+    val fracExp = raw"""\A(.*)/(.*)\z""".r
+    
     val lines = progRaw.filter("0123456789/\n".contains(_)).split("\n").toVector
     
     def mkFrac(ns: String, ds: String): (SafeLong, SafeLong) = {
@@ -33,10 +35,8 @@ object FracTran extends Interpreter{
     
     @tailrec
     def cdo(ac: Vector[(SafeLong, SafeLong)], src: Vector[String]): Vector[(SafeLong, SafeLong)] = src match{
-      case op +: ops => op.split('/').toVector match{
-        case n +: d +: tail if tail.isEmpty => cdo(ac :+ mkFrac(n, d), ops)
-        case _ => cdo(ac, ops)
-      }
+      case fracExp(n, d) +: ops => cdo(ac :+ mkFrac(n, d), ops)
+      case _ +: ops => cdo(ac, ops)
       case _ => ac
     }
     

@@ -44,13 +44,15 @@ object Thue extends Interpreter{
   }
   
   def condition(progRaw: String): Try[(String, Vector[(String, String)])] = {
+    val ruleExp = raw"""\A(.*)::=(.*)\z""".r
+    
     val lines = progRaw
-      .split("(\r\n|\r|\n)")
+      .linesIterator
       .to(LazyList)
       .filter(_.nonEmpty)
     val prog = lines
       .takeWhile(str => !str.startsWith("::="))
-      .collect{case str if str.contains("::=") => str.split("::=").toVector match{case k +: v +: _ => (k, v)}}
+      .collect{case ruleExp(k, v) => (k, v)}
     val conditioned = lines
       .dropWhile(str => !str.startsWith("::="))
       .collectFirst{case str if !str.contains("::=") => (str, prog.toVector)}
