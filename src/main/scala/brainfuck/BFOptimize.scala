@@ -1,6 +1,6 @@
 package brainfuck
 
-import common.EsoObj
+import common.{EsoObj, MemTape}
 
 import scala.annotation.tailrec
 import scala.util.Try
@@ -15,18 +15,18 @@ case class BlkOp(ops: Vector[(Int, Option[Int])], shift: Int) extends EsoObj{
   
   override def toString: String = s"{$shift; ${ops.map{case (i, arg) => s"$i -> ${arg match{case Some(n) => n.toString; case None => "_"}}"}.mkString(", ")}}"
   
-  def doLoop(p: Int, dat: Vector[Int]): Vector[Int] = {
+  def doLoop(p: Int, dat: MemTape[Int]): MemTape[Int] = {
     val num = dat(p)
     if(num == 0) dat
     else ops.foldLeft(dat){
-      case (ac, (i, Some(n))) => ac.updated(p + i, ac(p + i) + num*n)
-      case (ac, (i, None)) => ac.updated(p + i, 0)
+      case (ac, (i, Some(n))) => ac.inc(p + i, num*n)
+      case (ac, (i, None)) => ac.set(p + i, 0)
     }
   }
   
-  def doOp(p: Int, dat: Vector[Int]): Vector[Int] = ops.foldLeft(dat){
-    case (ac, (i, Some(n))) => ac.updated(p + i, ac(p + i) + n)
-    case (ac, (i, None)) => ac.updated(p + i, 0)
+  def doOp(p: Int, dat: MemTape[Int]): MemTape[Int] = ops.foldLeft(dat){
+    case (ac, (i, Some(n))) => ac.inc(p + i, n)
+    case (ac, (i, None)) => ac.set(p + i, 0)
   }
   
   def opStr: String = {
@@ -54,7 +54,7 @@ case class BlkOp(ops: Vector[(Int, Option[Int])], shift: Int) extends EsoObj{
 
 object BFOptimize extends EsoObj{
   val blks: Vector[Char] = Vector('<', '>', '+', '-', '_')
-  val ops: Vector[Char] = Vector('<', '>', '+', '-')
+  val opts: Vector[Char] = Vector('<', '>', '+', '-')
   
   def apply(progRaw: String): Try[Vector[(Char, Either[Int, BlkOp])]] = Try{optSkip(optLoop(optBulk(optBase(progRaw))))}
   def compOpt(progRaw: String): Try[LazyList[(Char, Either[Int, BlkOp])]] = Try{optLoop(optBulk(optBase(progRaw)))}
@@ -74,7 +74,7 @@ object BFOptimize extends EsoObj{
   }
   
   def cont(str: String): Option[((Char, Int), String)] = str.headOption.map{h =>
-    if(ops.contains(h)) (h, str.takeWhile(_ == h).length) -> str.dropWhile(_ == h)
+    if(opts.contains(h)) (h, str.takeWhile(_ == h).length) -> str.dropWhile(_ == h)
     else (h, 0) -> str.tail
   }
   

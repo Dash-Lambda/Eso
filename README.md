@@ -150,4 +150,18 @@ rA
 A
 ```
 
+### On the Befunge-98 Interpreter
+You'll notice in the Mycology report that there are two things Eso's Funge-98 interpreter fails at: Reporting stack size and reporting the dimensions of the program space.
+
+The stack size is reported weird because Funge's stacks are bottomless. When you try to pop an empty stack, instead of throwing an error, it returns a 0; Eso's implementation handles this quite naturally with LazyLists, treating each stack on the stack-stack as an endless list of 0s. This means the size is always infinite, so Eso reports the size as -1.
+
+Eso's implementation of Funge-98's program space is a row-major matrix with an origin vector (when indexing into Funge-space, the coordinate vector is added to the origin vector to get the real indices). When an out-of-bounds cell is queried it returns a default value, and when an out-of-bounds cell is modified both the matrix and the origin are adjusted to reach that cell. Even the cell is set to whitespace, the matrix only *grows* to reach new cells.
+
+I'm looking into solutions for both of these, but I don't see them as large problems.
+
+Expect more fingerprints to become available over time. ... Slowly, probably. Whenever I get bored between new language components.
+
+### On the Unlambda Interpreter
+This one was probably the most difficult one to understand thus far. All of the languages implemented in Eso prior were either imperative or had a clearly imperative way to execute them, but that's not really the case for Lambda Calculus-based languages.
+
 This is very much a work in progress.

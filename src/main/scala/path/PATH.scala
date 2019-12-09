@@ -1,6 +1,6 @@
 package path
 
-import common.{Config, Interpreter, Matrix, Vec2D}
+import common.{Config, Interpreter, Matrix, MemTape, Vec2D}
 
 import scala.annotation.tailrec
 import scala.util.Try
@@ -25,24 +25,7 @@ object PATH extends Interpreter{
       case None => Vec2D(0, 0)
     }
     
-    inputs => LazyList.unfold(PIP(initIP, Vec2D(1, 0), Tape(Vector.fill(initTapeSize)(0), dyn), 0, inputs): POB)(rdo)
-  }
-  
-  case class Tape(vec: Vector[Int], dyn: Boolean){
-    def apply(i: Int): Int = vec.lift(i) match{
-      case Some(n) => n
-      case None if dyn => 0
-    }
-    
-    def set(i: Int, n: Int): Tape = {
-      if(!vec.isDefinedAt(i) && dyn) Tape(vec.padTo(i + 1, 0).updated(i, n), dyn)
-      else Tape(vec.updated(i, n), dyn)
-    }
-    
-    def inc(i: Int, n: Int): Tape = vec.lift(i) match{
-      case Some(m) => Tape(vec.updated(i, m + n), dyn)
-      case None if dyn => Tape(vec.padTo(i + 1, 0).updated(i, n), dyn)
-    }
+    inputs => LazyList.unfold(PIP(initIP, Vec2D(1, 0), MemTape(Vector.fill(initTapeSize)(0), dyn, 0), 0, inputs): POB)(rdo)
   }
   
   trait POB{
@@ -54,7 +37,7 @@ object PATH extends Interpreter{
   case class POUT(c: Char, nxt: POB) extends POB{
     def apply(prog: Matrix[Char]): POB = nxt
   }
-  case class PIP(ip: Vec2D[Int], dt: Vec2D[Int], tape: Tape, tp: Int, inp: Seq[Char]) extends POB{
+  case class PIP(ip: Vec2D[Int], dt: Vec2D[Int], tape: MemTape[Int], tp: Int, inp: Seq[Char]) extends POB{
     def stp(ndt: Vec2D[Int]): PIP = PIP(ip + ndt, ndt, tape, tp, inp)
     
     def apply(prog: Matrix[Char]): POB = prog.get(ip) match{

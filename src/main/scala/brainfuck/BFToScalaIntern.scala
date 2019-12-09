@@ -1,33 +1,33 @@
 package brainfuck
 
 import scala.annotation.tailrec
+import scala.util.matching.Regex
 
 object BFToScalaIntern extends BFTranspiler{
   val dst: String = "Scala"
+  val fSig: Regex = raw"""def (.*)\(\).*""".r
   
   def genProg(init: Int, olen: Int, dyn: Boolean, methSize: Int, prog: LazyList[(Char, Either[Int, BlkOp])]): String = {
     def incStr(n: Int): String = s"${if(n < 0) "-" else "+"}= ${n.abs}"
     
     def seg(block: Vector[String]): Vector[String] = {
-      if (block.sizeIs > methSize - 2) {
-        val fnam = block.head.drop(4).takeWhile(_ != '(')
+      if(block.sizeIs > methSize - 2){
+        val fnam = block.head match{
+          case fSig(str) => str
+        }
         val lines = block.tail.init
         val groups = lines.grouped(methSize).to(LazyList)
         val funcs = groups
           .zipWithIndex
-          .map {
+          .map{
             case (vec, i) =>
               s"""|def ${fnam}s$i(): Unit = {
                   |${vec.mkString("\n")}
                   |}""".stripMargin
           }
-        val calls = (0 until groups.length).map { i => s"${fnam}s$i()${if(olen >= 0) "\nif(end) return ()" else ""}" }
-        val mf =
-          s"""|${block.head}
-              |${calls.mkString("\n")}
-              |}""".stripMargin
-      
-        mf +: funcs.toVector
+        val calls = (0 until groups.length).map{i => s"${fnam}s$i()${if(olen >= 0) "\nif(end) return ()" else ""}"}
+        val mf = block.head +: (calls.toVector :+ "}")
+        seg(mf) ++ funcs.toVector
       }else Vector(block.mkString("\n"))
     }
     

@@ -1,6 +1,6 @@
 package pdoubleprime
 
-import common.{Config, Interpreter}
+import common.{Config, Interpreter, MemTape}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -19,19 +19,19 @@ object PDP extends Interpreter{
   
   def pdi(initSize: Int, fromPtr: Boolean, startHead: Boolean, printNull: Boolean)(alpha: Vector[Char], init: Vector[Char], prog: Vector[Char], jMap: immutable.HashMap[Int, Int]): Seq[Char] => LazyList[Char] = {
     @tailrec
-    def nxt(pc: Int, tc: Int, tape: Vector[Int]): LazyList[Char] = prog(pc) match{
+    def nxt(pc: Int, tc: Int, tape: MemTape[Int]): LazyList[Char] = prog(pc) match{
       case '(' => nxt(if(tape(tc) == 0) jMap(pc) + 1 else pc + 1, tc, tape)
       case ')' => nxt(if(tape(tc) != 0) jMap(pc) + 1 else pc + 1, tc, tape)
       case 'R' => nxt(pc + 1, tc + 1, tape)
       case 'A' =>
-        if(tc > 0) nxt(pc + 1, tc - 1, tape.updated(tc, (tape(tc) + 1)%alpha.size))
-        else nxt(pc + 1, tc, 0 +: tape.updated(tc, (tape(tc) + 1)%alpha.size))
+        if(tc > 0) nxt(pc + 1, tc - 1, tape.alter(tc, n => (n + 1)%alpha.size))
+        else nxt(pc + 1, tc, 0 +: tape.alter(tc, n => (n + 1)%alpha.size))
       case 'e' =>
         val trunc = if(fromPtr) tape.drop(tc) else tape
-        (if(printNull) trunc else trunc.filter(_ > 0)).map(alpha(_)).to(LazyList)
+        (if(printNull) trunc.to(LazyList) else trunc.to(LazyList).filter(_ > 0)).map(alpha(_))
     }
     
-    val initTape = init.map(alpha.indexOf(_)).reverse.padTo(initSize, 0).reverse
+    val initTape = MemTape(init.map(alpha.indexOf(_)).reverse.padTo(initSize, 0).reverse, dyn=false, 0)
     _ => nxt(0, if(startHead) math.max(0, initSize - init.size) else initSize - 1, initTape)
   }
   

@@ -1,6 +1,6 @@
 package brainfuck
 
-import common.{Config, Interpreter}
+import common.{Config, Interpreter, MemTape}
 
 import scala.annotation.tailrec
 import scala.util.Try
@@ -15,32 +15,31 @@ object BFBase extends Interpreter{
   
   def bfRun(init: Int, dyn: Boolean, prog: Vector[Char]): Seq[Char] => LazyList[Char] = {
     @tailrec
-    def jump(i: Int, c: Int, stp: Boolean): Int = prog(i) match{
-      case '[' if stp => jump(i + 1, c + 1, stp)
-      case ']' if stp && c > 0 => jump(i + 1, c - 1, stp)
-      case ']' if stp && c == 0 => i + 1
-      case ']' if !stp => jump(i - 1, c + 1, stp)
-      case '[' if !stp && c > 0 => jump(i - 1, c - 1, stp)
-      case '[' if !stp && c == 0 => i + 1
-      case _ =>
-        if(stp) jump(i + 1, c, stp)
-        else jump(i - 1, c, stp)
+    def scrub(pc: Int, c: Int = 0): Int = prog(pc) match{
+      case ']' =>
+        if(c == 1) pc + 1
+        else scrub(pc + 1, c - 1)
+      case '[' => scrub(pc + 1, c + 1)
+      case _ => scrub(pc + 1, c)
     }
     
     @tailrec
-    def nxt(pc: Int, dc: Int, tape: Vector[Int], inp: Seq[Char]): Option[(Char, (Int, Int, Vector[Int], Seq[Char]))] = prog(pc) match{
-      case '>' => nxt(pc + 1, dc + 1, if(dyn) tape.padTo(dc + 2, 0) else tape, inp)
-      case '<' => nxt(pc + 1, dc - 1, tape, inp)
-      case '+' => nxt(pc + 1, dc, tape.updated(dc, tape(dc) + 1), inp)
-      case '-' => nxt(pc + 1, dc, tape.updated(dc, tape(dc) - 1), inp)
-      case '[' if tape(dc) == 0 => nxt(jump(pc, -1, stp = true), dc, tape, inp)
-      case ']' if tape(dc) != 0 => nxt(jump(pc, -1, stp = false), dc, tape, inp)
-      case ',' => nxt(pc + 1, dc, tape.updated(dc, inp.head.toInt), inp.tail)
-      case '.' => Some((tape(dc).toChar, (pc + 1, dc, tape, inp)))
+    def step(pc: Int, dc: Int, tape: MemTape[Int], inp: Seq[Char], loops: Vector[Int]): Option[(Char, (Int, Int, MemTape[Int], Seq[Char], Vector[Int]))] = prog(pc) match{
+      case '>' => step(pc + 1, dc + 1, tape, inp, loops)
+      case '<' => step(pc + 1, dc - 1, tape, inp, loops)
+      case '+' => step(pc + 1, dc, tape.inc(dc, 1), inp, loops)
+      case '-' => step(pc + 1, dc, tape.inc(dc, -1), inp, loops)
+      case '[' =>
+        if(tape(dc) == 0) step(scrub(pc), dc, tape, inp, loops)
+        else step(pc + 1, dc, tape, inp, (pc + 1) +: loops)
+      case ']' =>
+        if(tape(dc) != 0) step(loops.head, dc, tape, inp, loops)
+        else step(pc + 1, dc, tape, inp, loops.tail)
+      case ',' => step(pc + 1, dc, tape.set(dc, inp.head.toInt), inp.tail, loops)
+      case '.' => Some((tape(dc).toChar, (pc + 1, dc, tape, inp, loops)))
       case 'e' => None
-      case _ => nxt(pc + 1, dc, tape, inp)
     }
     
-    inputs => LazyList.unfold((0: Int, 0: Int, Vector.fill(init)(0), inputs)){case (pc, dc, tape, inp) => nxt(pc, dc, tape, inp)}
+    inputs => LazyList.unfold((0: Int, 0: Int, MemTape(Vector.fill(init)(0), dyn, 0), inputs, Vector[Int]())){case (pc, dc, tape, inp, loops) => step(pc, dc, tape, inp, loops)}
   }
 }
