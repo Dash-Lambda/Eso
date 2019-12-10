@@ -108,7 +108,18 @@ case class BF98Prog(prog: Matrix[Int], origin: Vec2D[Int], cal: Calendar, bDiv: 
   }
   
   def getBounds: (Vec2D[Int], Vec2D[Int]) = {
-    (-origin, origin + Vec2D(prog.xdim, prog.ydim))
+    val vecs = prog.vec.grouped(prog.xdim).toVector
+    val tran = vecs.transpose
+    
+    val x0 = tran.indexWhere(_.exists(_ != 32))
+    val x1 = tran.lastIndexWhere(_.exists(_ != 32))
+    val y0 = vecs.indexWhere(_.exists(_ != 32))
+    val y1 = vecs.lastIndexWhere(_.exists(_ != 32))
+    
+    val least = Vec2D(x0, y0)
+    val great = Vec2D(x1, y1)
+    
+    (least - origin, great - least)
   }
 }
 object BF98Prog extends EsoObj{
