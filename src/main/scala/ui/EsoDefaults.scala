@@ -25,6 +25,7 @@ object EsoDefaults extends EsoObj{
     """|Welcome to Eso, the functional esoteric language interpreter!
        |Type "help" for a list of commands.""".stripMargin
   
+  val defBFLFile: String = "BFLangs.txt"
   val defBindFile: String = "userBindings.txt"
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, Slashes, Deadfish, Emmental, Befunge93, Befunge98, Wierd, ScalaRun, Unlambda, SNUSP, Grass, PATH)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)

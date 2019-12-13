@@ -78,12 +78,11 @@ y claims all of the following:
 	That the delta of the IP was ( -1 0 )
 	That the offset of the IP was ( 0 0 )
 	That the least point containing a non-space cell is ( -3 -2 )
-	That the greatest point, relative to that point, is ( 187 914 )
-BAD: should have been ( 183 911 )
-	That the day of the month is 4 
-	That the month is 10 
+	That the greatest point, relative to that point, is ( 183 911 )
+	That the day of the month is 12 
+	That the month is 12 
 	That the year is 2019 
-	That the time is 07 : 24 : 41 
+	That the time is 10 : 02 : 21 
 	That the size of the stack stack is 1 
 	That the stack sizes are [ -1 ] from top to bottom
 	That the command-line arguments were: [ null ]
@@ -133,11 +132,9 @@ UNDEF: ) with a negative count reflects and pops 0 times or less than the absolu
 GOOD: null byte in string and zero compare as equal
 GOOD: ' followed by a byte greater than 127 works
 GOOD: form feed does not appear to exist in Funge-Space
-BAD: after spacing top-left corner, y should report least point as ( -2 -1 ), not ( -10 -10 )
-BAD: after spacing top-left corner, y should report greatest point as ( 182 910 ), not ( 201 930 )
-BAD: after spacing right edge, least point reported by y should remain ( -2 -1 )
-BAD: after spacing right edge, y should report greatest point as ( 181 910 ), not ( 201 930 )
-BAD: after spacing bottom edge, y should report greatest point as ( 181 909 ), not ( 201 930 )
+GOOD: y reports shrunk bounds correctly after spacing top-left corner
+GOOD: y reports shrunk bounds correctly after spacing right edge
+GOOD: y reports shrunk bounds correctly after spacing bottom edge
 
 The Befunge-98 core has been completely tested.
 Moving on to fingerprints.
@@ -211,5 +208,3 @@ UNDEF: IVXLCDM didn't reflect: child IP has ROMA loaded
 
 The Mycology Befunge-98 test suite is practically done.
 Trying to quit with q. If the return status is 15, consider it GOOD...
-
-Return: 15

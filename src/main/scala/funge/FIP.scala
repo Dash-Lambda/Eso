@@ -51,9 +51,7 @@ case class FIP(id: Int, ip: Vec2D[Int], dt: Vec2D[Int], so: Vec2D[Int], bs: Bool
             FIPCont(prog, inp, FIP(id, npos2, dt, so, bs, ns +: stk.tail, binds))
           }else{
             prog(npos).toChar match{
-              case '#' => TOSS match{
-                case n +: ns => FIPCont(prog, inp, FIP(id, prog.getNextInd(ip + (dt*n), dt), dt, so, bs, ns +: stk.tail, binds))
-              }
+              case '#' => FIPCont(prog, inp, FIP(id, prog.getNextInd(ip + (dt*n), dt), dt, so, bs, ns +: stk.tail, binds))
               case op2 => rep(prog, inp, ip, op2, n).step
             }
           }
@@ -300,16 +298,16 @@ case class FIP(id: Int, ip: Vec2D[Int], dt: Vec2D[Int], so: Vec2D[Int], bs: Bool
         TOSS match{
           case n +: ns =>
             val nam = ns.take(n)
-            val id = nam.foldLeft(0){case (ac, n) => (ac*256) + n}
+            val id = nam.foldLeft(0){case (ac, m) => (ac*256) + m}
             BF98Lib.get(id) match{
               case Some(fp) =>
                 val nBind = fp.binds.foldLeft(binds){
-                  case (bs, (k, b)) =>
-                    val eb = bs.get(k) match{
+                  case (bnds, (k, b)) =>
+                    val eb = bnds.get(k) match{
                       case Some(v) => v
                       case None => Vector()
                     }
-                    bs + ((k, b +: eb))
+                    bnds + ((k, b +: eb))
                 }
                 FIPCont(prog, inp, FIP(id, npos, dt, so, bs, (1 +: id +:ns.drop(n)) +: stk.tail, nBind))
               case None => FIPCont(prog, inp, FIP(id, prog.getNextInd(ip, -dt), -dt, so, bs, ns.drop(n) +: stk.tail, binds))
@@ -319,13 +317,13 @@ case class FIP(id: Int, ip: Vec2D[Int], dt: Vec2D[Int], so: Vec2D[Int], bs: Bool
         TOSS match{
           case n +: ns =>
             val nam = ns.take(n)
-            val id = nam.foldLeft(0){case (ac, n) => (ac*256) + n}
+            val id = nam.foldLeft(0){case (ac, m) => (ac*256) + m}
             BF98Lib.get(id) match{
               case Some(fp) =>
                 val nBind = fp.binds.foldLeft(binds){
-                  case (bs, (k, _)) => bs.get(k) match{
-                    case Some(v) => bs + ((k, v.drop(1)))
-                    case None => bs
+                  case (bnds, (k, _)) => bnds.get(k) match{
+                    case Some(v) => bnds + ((k, v.drop(1)))
+                    case None => bnds
                   }
                 }
                 FIPCont(prog, inp, FIP(id, npos, dt, so, bs, ns.drop(n) +: stk.tail, nBind))

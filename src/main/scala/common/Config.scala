@@ -9,8 +9,7 @@ case class Config(bool: immutable.HashMap[String, Boolean], num: immutable.HashM
   def apply(tag: String): Either[Int, Boolean] = Either.cond(bool.isDefinedAt(tag), bool(tag), num(tag))
   def get(tag: String): Option[Either[Int, Boolean]] = Try{apply(tag)} match{
     case Success(res) => Some(res)
-    case _ => None
-  }
+    case _ => None}
   
   def bools: Vector[(String, Boolean)] = bool.toVector.sortBy(_._1)
   def nums: Vector[(String, Int)] = num.toVector.sortBy(_._1)
