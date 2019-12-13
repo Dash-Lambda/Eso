@@ -11,16 +11,16 @@ object ScalaRun extends Interpreter{
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = builder(progRaw) map {func => {_ => LazyList(exec(func)).flatten}}
   
-  def exec(func: () => Any): String = {
-    tryAll{func()} match{
-      case Failure(e) => s"Error: $e"
-      case Success(_) => ""
-    }
-  }
+  def exec(a: Seq[String] => Unit): String = tryAll{a(Seq())} match{
+    case Failure(e) => s"Error: $e"
+    case Success(_) => ""}
   
-  def builder(prog: String): Try[() => Any] = Try{
+  def builder(prog: String): Try[Seq[String] => Unit] = Try{
     val toolbox = currentMirror.mkToolBox()
     val tree = toolbox.parse(prog)
-    toolbox.compile(tree)
+    
+    import toolbox.u._
+    val sym = toolbox.define(tree.asInstanceOf[ImplDef])
+    args => toolbox.eval(q"$sym.main(Array(${args.mkString(", ")}))")
   }
 }

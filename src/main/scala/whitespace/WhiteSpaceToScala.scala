@@ -49,7 +49,8 @@ object WhiteSpaceToScala extends Transpiler{
           case "outChar" => "print(stack.pop.toChar)"
           case "outNum" => "print(stack.pop)"
           case "endProg" =>
-            if(sub) "endProg = true\n}"
+            if(sub && ops.isEmpty) "endProg = true\n}"
+            else if(sub) "endProg = true\nreturn"
             else "endProg = true"
         }
         
@@ -73,7 +74,8 @@ object WhiteSpaceToScala extends Transpiler{
     val getStr = "def get(): Unit = {val addr = stack.pop; stack.push(heap(addr))}"
     
     val progStr = gpo(Vector(), prog)
-    s"""|import scala.collection._
+    s"""|object WSProg{
+        |import scala.collection._
         |import spire.math.SafeLong
         |import spire.implicits._
         |
@@ -94,9 +96,8 @@ object WhiteSpaceToScala extends Transpiler{
         |$storeStr
         |$getStr
         |
-        |def fInit(): Unit = {
+        |def main(args: Array[String]): Unit = {
         |$progStr
-        |
-        |fInit()""".stripMargin
+        |}""".stripMargin
   }
 }
