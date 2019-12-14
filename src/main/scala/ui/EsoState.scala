@@ -4,6 +4,7 @@ import common.{Config, EsoObj, Interpreter, Translator, Transpiler}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
+import scala.util.matching.Regex
 import scala.util.{Success, Try}
 
 trait EsoState extends EsoObj
@@ -71,11 +72,18 @@ case class EsoRunState(interps: immutable.HashMap[String, Interpreter],
   }
 }
 object EsoRunState extends EsoObj{
-  def default: EsoRunState = EsoRunState(
+  val opReg: Regex = raw"""[^-]*-(\w+) (\w+)(.*)\z""".r
+  
+  val default: EsoRunState = EsoRunState(
     mkMap(EsoDefaults.defInterpVec.map(i => (i.name, i))),
     mkMap(EsoDefaults.defGenVec.map(g => (g.id, g))),
     mkMap(EsoDefaults.defTransVec.map(t => (t.id, t))),
     mkMap(EsoDefaults.defBoolVec.map(t => (t._1, t._2))),
     mkMap(EsoDefaults.defNumVec.map(t => (t._1, t._2))),
     mkMap(Vector()))
+  
+  @tailrec
+  def withOps(str: String, state: EsoRunState = default): EsoRunState = str match{
+    case opReg(k, v, ops) => withOps(ops, state.setVar(k, v))
+    case _ => state}
 }

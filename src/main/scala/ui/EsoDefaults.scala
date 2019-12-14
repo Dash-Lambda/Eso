@@ -25,6 +25,29 @@ object EsoDefaults extends EsoObj{
     """|Welcome to Eso, the functional esoteric language interpreter!
        |Type "help" for a list of commands.""".stripMargin
   
+  val fileExtensionsVec: Vector[(String, String)] = Vector(
+    ("slash", "///"),
+    ("b93", "Befunge-93"),
+    ("b98", "Befunge-98"),
+    ("b", "BrainFuck"),
+    ("df", "DeadFish"),
+    ("emm", "Emmental"),
+    ("ft", "FracTran"),
+    ("ftp", "FracTran++"),
+    ("grs", "Grass"),
+    ("pdp", "P''"),
+    ("path", "PATH"),
+    ("snusp", "SNUSP"),
+    ("scala", "Scala"),
+    ("th", "Thue"),
+    ("unl", "Unlambda"),
+    ("ws", "WhiteSpace"),
+    ("wd", "Wierd"),
+    ("fl", "FlufflePuff"),
+    ("ook", "Ook"),
+    ("wsa", "WSAssembly"))
+  val fileExtensionMap: immutable.HashMap[String, String] = mkMap(fileExtensionsVec)
+  
   val defBFLFile: String = "BFLangs.txt"
   val defBindFile: String = "userBindings.txt"
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, Slashes, Deadfish, Emmental, Befunge93, Befunge98, Wierd, ScalaRun, Unlambda, SNUSP, Grass, PATH)
@@ -50,4 +73,32 @@ object EsoDefaults extends EsoObj{
   val defInterpMap: immutable.HashMap[String, Interpreter] = mkMap(defInterpVec map (i => (i.name, i)))
   val defTransMap: immutable.HashMap[(String, String), Translator] = mkMap(defTransVec map (t => (t.id, t)))
   val defGenMap: immutable.HashMap[(String, String), Transpiler] = mkMap(defGenVec map (g => (g.id, g)))
+  
+  val nonPersistentHandlers: Vector[InterfaceHandler] = Vector(
+    RunProgHandler,
+    TranslateHandler,
+    TranspileHandler,
+    ShowSyntaxHandler,
+    ListLangsHandler,
+    ListVarsHandler,
+    ListFileAssociationsHandler)
+  
+  val persistentHandlers: Vector[InterfaceHandler] = Vector(
+    RunProgHandler,
+    TranslateHandler,
+    TranspileHandler,
+    DefineBFLangHandler,
+    LoadBFLangsHandler,
+    SaveBFLangsHandler,
+    ShowSyntaxHandler,
+    ClearBindingsHandler,
+    LoadBindingsHandler,
+    SaveBindingsHandler,
+    ListBindingsHandler,
+    SetVarHandler,
+    SetDefaultsHandler,
+    ListLangsHandler,
+    ListVarsHandler,
+    ListFileAssociationsHandler,
+    ExitHandler)
 }

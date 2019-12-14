@@ -1,29 +1,41 @@
 package ui
 
-import InterfaceHandlers._
+import common.EsoObj
 
-object EsoExecutor {
-  def apply(prs: EsoParsed)(state: EsoRunState): EsoState = prs match{
+import scala.collection.immutable
+import scala.util.matching.Regex
+
+case class EsoExecutor(cmds: Vector[InterfaceHandler]) extends EsoObj{
+  val boundReg: Regex = raw"""(\w+)((?: .*)?)\z""".r
+  val handlers: immutable.HashMap[String, InterfaceHandler] = mkMap(cmds map (h => (h.nam, h)))
+  
+  def apply(state: EsoRunState)(inp: String): EsoState = parse(state.binds)(inp) match{
+    case EsoCmd("help", args) =>
+      showHelp()
+      state
+    case EsoCmd(cmd, args) => handlers.get(cmd) match{
+      case Some(h) => h(state)(args)
+      case None =>
+        println("Error: Invalid Command")
+        state}
     case ParseFail =>
       println("Error: Invalid Command")
-      state
-    case EsoCmd(cmd, args) => cmd match{
-      case "run" => runProg(state)(args)
-      case "transpile" => genProg(state)(args)
-      case "translate" => transProg(state)(args)
-      case "defineBFLang" => defineBFLang(state)
-      case "loadBFLangs" => loadBFLangs(state)(args)
-      case "saveBFLangs" => saveBFLangs(state)(args)
-      case "clrBindings" => clrBindings(state)
-      case "listBindings" => listBindings(state)
-      case "loadBindings" => loadBindings(state)(args)
-      case "saveBindings" => saveBindings(state)(args)
-      case "syntax" => syntax(state)(args)
-      case "set" => setEnvVars(state)(args)
-      case "defaults" => EsoRunState.default
-      case "listLangs" => listLangs(state)
-      case "listVars" => listEnvVars(state)
-      case "help" => showHelp(state)
-      case "exit" => exit()
-      case _ => unknown(state)}}
+      state}
+  
+  def parse(binds: immutable.HashMap[String, String])(inp: String): EsoParsed = inp match{
+    case boundReg(b, ops) if binds.isDefinedAt(b) => EsoParser(s"${binds(b)}$ops")
+    case _ => EsoParser(inp)}
+  
+  def showHelp(): Unit = {
+    val cStr = cmds.map(h => s"- ${h.nam} ${h.helpStr}").sorted.mkString("\n")
+    val hStr =
+      s"""|Commands:
+          |$cStr
+          |
+          |Syntax:
+          |<expr>: Required
+          |{expr}: Optional
+          |expr*: Repeated any number of times
+          |""".stripMargin
+    println(hStr)}
 }

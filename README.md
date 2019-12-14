@@ -48,7 +48,9 @@ Languages supported by Eso can currently have 3 types of components:
 
 #### Current features:
 * Run programs from text files
+* Feed input from text files
 * Log output to text files
+* Automatic file associations for known extensions
 * Unoptimized, optimized, and compiled BrainFuck interpreters
 * Translate to and from compatible languages
 * Write WhiteSpace programs with a readable assembly language
@@ -56,6 +58,7 @@ Languages supported by Eso can currently have 3 types of components:
 * Compile and run Scala source files
 * Create and use user-defined BrainFuck languages
 * User-configurable runtime parameters (logging, maximum output size, tape size, etc.)
+* User-configurable bindings ("bind \<token\> \<command\>", "unbind \<token\>")
 * Befunge-98 fingerprint support
     * BOOL
     * MODU
@@ -75,6 +78,29 @@ Languages supported by Eso can currently have 3 types of components:
 ##### Languages Being Worked On
 * [Unispace](https://esolangs.org/wiki/Unispace) (difficulty with finding particularly good documentation)
 * [Funciton](https://esolangs.org/wiki/Grass) (difficulty handling lazy input with its reversed string encoding)
+
+### How the Interface and Command Parser Works
+Eso has two different interfaces, persistent and non-persistent.
+
+The non-persistent interface is the entry point. If it receives no arguments from the console, or if it receives the single argument "persistent", it starts the persistent interface; otherwise, it executes the command.
+This interface is useful for quick actions and working with other tools, for example:
+```
+>eso transpile -sl BrainFuck -tl C++ -s lostKingdom.b -o lostKingdom.cpp -init 1000 -dyn true -indent true
+Transpiled program saves to lostKingdom.cpp.
+>gcc lostKingdom.cpp -o lostKingdom
+>lostKingdom.exe
+...
+```
+
+The persistent interface takes over the console, so you cannot use other tools while it's running. The advantage of this is that it can maintain environment variables, such as runtime parameters, bindings, and user-defined translators.
+
+Both interfaces parse their arguments into a leading command followed by a list of options. Command-specific options can be seen with "help", and the non-persistent interface allows you to additionally pass name-value pairs to configure runtime parameters.
+
+Internally, each interface has a "state" object that holds its current environment (parameters, interpreters, translators, transpilers, etc...) and a set of handlers, which are special function objects that are responsible for individual commands.
+
+When the interface receives a command and parses it, it tries to match the command tag to the name of a handler. If it finds a matching handler, it passes the handler the current state and the parsed arguments, and the handler returns a new state; the persistent interface makes this new state the current state, while the non-persistent interface throws it away. If it doesn't find a handler, then it complains with an error message.
+
+The idea behind the state/handler approach is pure modularity. It is very simple to add new functionality by writing a new handler and plugging it in or adding new parameters to the state; far simpler than it would be to modify a monolithic interface object directly. 
 
 ### BrainFuck Optimization Strategy
 The optimizing BrainFuck interpreter translates the program into an intermediate language in a series of passes:
