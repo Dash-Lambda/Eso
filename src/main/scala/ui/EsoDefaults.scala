@@ -7,6 +7,7 @@ import emmental.Emmental
 import fractran.{FracTran, FracTranpp}
 import funge.{Befunge93, Befunge98}
 import grass.Grass
+import metatape.Metatape
 import path.PATH
 import pdoubleprime.PDP
 import scala_run.ScalaRun
@@ -45,12 +46,31 @@ object EsoDefaults extends EsoObj{
     ("wd", "Wierd"),
     ("fl", "FlufflePuff"),
     ("ook", "Ook"),
-    ("wsa", "WSAssembly"))
+    ("wsa", "WSAssembly"),
+    ("mt", "Metatape"))
   val fileExtensionMap: immutable.HashMap[String, String] = mkMap(fileExtensionsVec)
   
   val defBFLFile: String = "BFLangs.txt"
   val defBindFile: String = "userBindings.txt"
-  val defInterpVec: Vector[Interpreter] = Vector[Interpreter](BFManaged, WhiteSpace, FracTran, FracTranpp, Thue, PDP, Slashes, Deadfish, Emmental, Befunge93, Befunge98, Wierd, ScalaRun, Unlambda, SNUSP, Grass, PATH)
+  val defInterpVec: Vector[Interpreter] = Vector[Interpreter](
+    BFManaged,
+    WhiteSpace,
+    FracTran,
+    FracTranpp,
+    Thue,
+    PDP,
+    Slashes,
+    Deadfish,
+    Emmental,
+    Befunge93,
+    Befunge98,
+    Wierd,
+    ScalaRun,
+    Unlambda,
+    SNUSP,
+    Grass,
+    PATH,
+    Metatape)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
   val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP)
   val defBoolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](
@@ -67,7 +87,8 @@ object EsoDefaults extends EsoObj{
     ("bfOpt", 2, "BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled"),
     ("init", 40000, "initial tape size for interpreters with a data tape"),
     ("olen", -1, "maximum output length, useful for non-terminating programs, -1=infinite"),
-    ("methSize", 1000, "maximum number of blocks in a generated method (for compiling interpreters"))
+    ("methSize", 1000, "maximum number of blocks in a generated method (for compiling interpreters"),
+    ("mtCharWidth", 8, "bit width of input characters for Metatape"))
   val defDesc: immutable.HashMap[String, String] = mkMap((defBoolVec ++ defNumVec).map{case (id, _, dc) => (id, dc)})
   
   val defInterpMap: immutable.HashMap[String, Interpreter] = mkMap(defInterpVec map (i => (i.name, i)))
@@ -84,6 +105,7 @@ object EsoDefaults extends EsoObj{
     ListFileAssociationsHandler)
   
   val persistentHandlers: Vector[InterfaceHandler] = Vector(
+    //DebugHandler,
     RunProgHandler,
     TranslateHandler,
     TranspileHandler,

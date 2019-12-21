@@ -38,6 +38,7 @@ Current Native language support:
 * [Unlambda](https://esolangs.org/wiki/Unlambda)
 * [Grass](https://esolangs.org/wiki/Grass)
 * [Path](https://esolangs.org/wiki/PATH)
+* [Metatape](https://esolangs.org/wiki/Metatape)
 * Scala
 
 #### Language Components:
