@@ -83,6 +83,39 @@ trait InterfaceHandler extends EsoObj{
     (res, System.currentTimeMillis - t)}
 }
 
+object DebugHandler extends InterfaceHandler{
+  override val nam: String = "debug"
+  override val helpStr: String = "Unsafe run handler, for getting detailed error information out of the runtime while writing new components"
+  
+  val fextReg: Regex = raw""".*\.(\w+)\z""".r
+  
+  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+    def inputs: Try[LazyList[Char]] = args.get("i") match{
+      case Some(fnam) => readFile(fnam) map (_.to(LazyList))
+      case None => Success(LazyList.continually(StdIn.readLine + '\n').flatten)}
+    
+    doOrOp(args.get("s"), "Missing Source File"){src =>
+      val langOp = args.get("l") match{
+        case None => src match{
+          case fextReg(fext) => EsoDefaults.fileExtensionMap.get(fext)
+          case _ => None}
+        case l => l}
+      doOrOp(langOp, "Unrecognized Language or File Extension"){lang =>
+        doOrOp(findTransPath(state, lang, state.interpNames), "Language Not Recognized"){
+          case (inam, t) =>
+            doOrErr(readFile(src)){progRaw =>
+              print("Building Interpreter... ")
+              val prog = t(progRaw) match{case Success(str) => str}
+              val i = state.interps(inam)(state.config)(prog)
+              println("Done.")
+              doOrErr(i){r =>
+                doOrErr(inputs){inp =>
+                  val res = r(inp)
+                  res.foreach(print)
+                  println("\nProgram Completed")}}}}}}
+    state}
+}
+
 object RunProgHandler extends InterfaceHandler{
   val nam: String = "run"
   override val helpStr: String = "<-s :sourceFileName:> {-l :language:, -i :inputFileName:, -o :outputFileName:}"
@@ -93,11 +126,11 @@ object RunProgHandler extends InterfaceHandler{
     def olim(res: LazyList[Char]): LazyList[Char] = state.nums("olen") match{
       case -1 => res
       case n => res.take(n)}
-  
+    
     def inputs: Try[LazyList[Char]] = args.get("i") match{
       case Some(fnam) => readFile(fnam) map (_.to(LazyList))
-      case None => Success(LazyList.continually(StdIn.readLine).flatten)}
-  
+      case None => Success(LazyList.continually(StdIn.readLine + '\n').flatten)}
+    
     def printer(out: Seq[Char]): Unit = args.get("o") match{
       case Some(onam) =>
         val of = new PrintWriter(new File(onam))
@@ -118,7 +151,7 @@ object RunProgHandler extends InterfaceHandler{
         doOrOp(findTransPath(state, lang, state.interpNames), "Language Not Recognized"){
           case (inam, t) =>
             doOrErr(readFile(src)){progRaw =>
-              print(s"Building Interpreter... ")
+              print("Building Interpreter... ")
               doOrErr(t(progRaw)){prog =>
                 val (i, bdr) = timeIt(state.interps(inam)(state.config)(prog))
                 println(s"Done in ${bdr}ms.")
@@ -130,9 +163,8 @@ object RunProgHandler extends InterfaceHandler{
                     flg match{
                       case Success(_) => println(s"\nProgram completed in ${rdr}ms")
                       case Failure(e) => println(s"\nError: $e\nProgram failed in ${rdr}ms")}}}}}}}}
-  
-    state
-  }
+    
+    state}
 }
 
 object TranslateHandler extends InterfaceHandler{
@@ -141,13 +173,13 @@ object TranslateHandler extends InterfaceHandler{
   
   override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val ext = MapExtractor(args)
-  
+    
     def printer(str: String): Unit = args.get("o") match{
       case Some(onam) =>
         writeFile(onam, str)
         println(s"Translation saved to $onam.")
       case None => println(str)}
-  
+    
     Vector("sl", "tl", "s") match{
       case ext(sl, tl, i) =>
         doOrOp(buildTrans(state)(sl, tl), "No Applicable Translation Path"){t =>
@@ -155,9 +187,8 @@ object TranslateHandler extends InterfaceHandler{
             doOrErr(t(progRaw)){prog =>
               printer(prog)}}}
       case _ => println("Error: Not Enough Arguments")}
-  
-    state
-  }
+    
+    state}
 }
 
 object TranspileHandler extends InterfaceHandler{
@@ -166,13 +197,13 @@ object TranspileHandler extends InterfaceHandler{
   
   override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val ext = MapExtractor(args)
-  
+    
     def printer(str: String): Unit = args.get("o") match{
       case Some(onam) =>
         writeFile(onam, str)
         println(s"Transpiled program saved to $onam.")
       case None => println(str)}
-  
+    
     Vector("sl", "tl", "s") match{
       case ext(sl, tl, s) =>
         val ins = state.genNames.map(_._1)
@@ -187,9 +218,8 @@ object TranspileHandler extends InterfaceHandler{
                       doOrErr(tout(prog2)){prog3 =>
                         printer(prog3)}}}}}}
       case _ => println("Error: Not Enough Arguments")}
-  
-    state
-  }
+    
+    state}
 }
 
 object DefineBFLangHandler extends InterfaceHandler{
@@ -199,38 +229,43 @@ object DefineBFLangHandler extends InterfaceHandler{
   override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val nam = StdIn.readLine("Name: ")
     val syn = Vector("[", "]", "<", ">", "+", "-", ",", ".") map{c => (c, StdIn.readLine(s"$c => "))}
-    state.addTrans(GenBFT(nam, syn))
-  }
+    state.addTrans(GenBFT(nam, syn))}
 }
 
 object LoadBFLangsHandler extends InterfaceHandler{
   override val nam: String = "loadBFLangs"
   override val helpStr: String = "{-f :fileName:}"
   
+  private val bfNamReg = raw"""(?s)[^\#]*\#(\V*)(.*)\z""".r
+  private val bfBindReg = raw"""(?s)[^\[\]\+\-\<\>\,\.]*([\[\]\+\-\<\>\,\.])\=\>(\V*)\z""".r
+  
   override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
-    val bflReg = raw"""[^#]*#(\S+)\n((?:[\+-,\.<>\[\]]=>[^\n]+\n*){8})(.*)\z""".r
-    val bfcReg = raw"""[^\+-,\.<>\[\]]*([\+-,\.<>\[\]])=>([^\n]+)(.*)\z""".r
+    @tailrec
+    def cdo(src: Vector[Char], ac: Vector[(String, String)] = Vector()): (Vector[(String, String)], String) = src match{
+      case c +: '=' +: '>' +: cs if "[]<>+-,.".contains(c) && ac.sizeIs < 8 =>
+        val bind = cs.takeWhile(_ != '\n')
+        val tl = cs.dropWhile(_ != '\n').drop(1)
+        cdo(tl, ac :+ (c.toString, bind.mkString))
+      case _ +: cs if ac.sizeIs < 8 => cdo(cs, ac)
+      case _ => (ac, src.mkString)}
     
     @tailrec
-    def cdo(src: String, ac: Vector[(String, String)] = Vector()): Option[Vector[(String, String)]] = src match{
-      case bfcReg(k, v, cs) => cdo(cs, ac :+ (k, v))
-      case _ =>
-        if("[]<>+-,.".forall(c => ac.exists(_._1 == c.toString))) Some(ac)
-        else None}
-    @tailrec
     def mkTrans(str: String, ac: Vector[BFTranslator] = Vector()): Vector[BFTranslator] = str match{
-      case bflReg(nam, cs, tl) => cdo(cs) match{
-        case Some(ps) => mkTrans(tl, ac :+ GenBFT(nam, ps))
-        case None => mkTrans(tl, ac)}
+      case bfNamReg(nam, bod) =>
+        cdo(bod.toVector) match{
+          case (vec, tl) if "[]<>+-,.".forall(c => vec.map(_._1).contains(c.toString)) => mkTrans(tl, ac :+ GenBFT(nam, vec))
+          case _ => mkTrans(bod, ac)}
       case _ => ac}
-  
+    
     val fnam = args.get("f") match{
       case Some(str) => str
       case None => EsoDefaults.defBFLFile}
+    
     doOrErr(readFile(fnam))(mkTrans(_)) match{
-      case Some(bfts) => state.addAllTrans(bfts)
-      case None => state}
-  }
+      case Some(bfts) =>
+        println(s"Loaded BF Langs:\n${bfts.map(t => s"- ${t.name}").mkString("\n")}")
+        state.addAllTrans(bfts)
+      case None => state}}
 }
 
 object SaveBFLangsHandler extends InterfaceHandler{
@@ -241,17 +276,16 @@ object SaveBFLangsHandler extends InterfaceHandler{
     val fnam = args.get("f") match{
       case Some(str) => str
       case None => EsoDefaults.defBFLFile}
-    val bfStr = state.trans.values
-      .collect{
-        case bft: BFTranslator =>
-          s"""|#${bft.name}
-              |${bft.syntax.map{case (k, v) => s"$k=>$v"}.mkString("\n")}""".stripMargin}
+    val ignore = EsoDefaults.defTransVec.map(_.id)
+    val bfStr = state.trans.collect{
+      case (id, bft: BFTranslator) if !ignore.contains(id) =>
+        s"""|#${bft.name}
+            |${bft.syntax.map{case (k, v) => s"$k=>$v"}.mkString("\n")}""".stripMargin}
       .mkString("\n")
     
     writeFile(fnam, bfStr)
-  
-    state
-  }
+    
+    state}
 }
 
 object ShowSyntaxHandler extends InterfaceHandler{
@@ -266,9 +300,8 @@ object ShowSyntaxHandler extends InterfaceHandler{
         case None => "Error: Language Not Recognized"}
       case _ => "Error: Not Enough Arguments"}
     println(str)
-  
-    state
-  }
+    
+    state}
 }
 
 object ClearBindingsHandler extends InterfaceHandler{
@@ -286,8 +319,8 @@ object LoadBindingsHandler extends InterfaceHandler{
     val breg = raw"""(\S+) (.*)\z""".r
     val fnam = args.get("f") match{
       case Some(str) => str
-      case None => EsoDefaults.defBindFile
-    }
+      case None => EsoDefaults.defBindFile}
+    
     doOrErr(readFile(fnam)){str =>
       str
         .linesIterator
@@ -296,8 +329,7 @@ object LoadBindingsHandler extends InterfaceHandler{
         .foldLeft(state){
           case (s, (t, b)) => s.addBind(t, b)}} match{
       case Some(s) => s
-      case None => state}
-  }
+      case None => state}}
 }
 
 object SaveBindingsHandler extends InterfaceHandler{
@@ -308,12 +340,11 @@ object SaveBindingsHandler extends InterfaceHandler{
     val fnam = args.get("f") match{
       case Some(str) => str
       case None => EsoDefaults.defBindFile}
-  
+    
     val bindStr = state.binds.toVector.map{case (k, v) => s"$k $v"}.mkString("\n")
     writeFile(fnam, bindStr)
-  
-    state
-  }
+    
+    state}
 }
 
 object ListBindingsHandler extends InterfaceHandler{
@@ -325,15 +356,14 @@ object ListBindingsHandler extends InterfaceHandler{
       .map{case (k, v) => s"- $k => $v"}
       .sorted
       .mkString("\n")
-  
+    
     val str =
       s"""|Bindings...
           |$bindStr
           |""".stripMargin
     println(str)
-  
-    state
-  }
+    
+    state}
 }
 
 object SetVarHandler extends InterfaceHandler{
@@ -366,9 +396,8 @@ object ListLangsHandler extends InterfaceHandler{
           |${state.gens.keys.map{case (snam, dnam) => s"- $snam => $dnam"}.toVector.sorted.mkString("\n")}
           |""".stripMargin
     println(str)
-  
-    state
-  }
+    
+    state}
 }
 
 object ListVarsHandler extends InterfaceHandler{
@@ -387,9 +416,8 @@ object ListVarsHandler extends InterfaceHandler{
           |$strs
           |""".stripMargin
     println(str)
-  
-    state
-  }
+    
+    state}
 }
 
 object ListFileAssociationsHandler extends InterfaceHandler{
@@ -403,8 +431,7 @@ object ListFileAssociationsHandler extends InterfaceHandler{
           |$fStr
           |""".stripMargin
     println(str)
-    state
-  }
+    state}
 }
 
 object ExitHandler extends InterfaceHandler{
