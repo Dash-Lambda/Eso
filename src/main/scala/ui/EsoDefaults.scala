@@ -89,7 +89,8 @@ object EsoDefaults extends EsoObj{
     ("init", 40000, "initial tape size for interpreters with a data tape"),
     ("olen", -1, "maximum output length, useful for non-terminating programs, -1=infinite"),
     ("methSize", 1000, "maximum number of blocks in a generated method (for compiling interpreters"),
-    ("mtCharWidth", 8, "bit width of input characters for Metatape"))
+    ("mtCharWidth", 8, "bit width of input characters for Metatape"),
+    ("fileEOF", 0, "character value to end file input strings with"))
   val defDesc: immutable.HashMap[String, String] = mkMap((defBoolVec ++ defNumVec).map{case (id, _, dc) => (id, dc)})
   
   val defInterpMap: immutable.HashMap[String, Interpreter] = mkMap(defInterpVec map (i => (i.name, i)))

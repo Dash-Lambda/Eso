@@ -91,7 +91,7 @@ object DebugHandler extends InterfaceHandler{
   
   override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     def inputs: Try[LazyList[Char]] = args.get("i") match{
-      case Some(fnam) => readFile(fnam) map (_.to(LazyList))
+      case Some(fnam) => readFile(fnam) map (_.to(LazyList) :+ state.nums("fileEOF").toChar)
       case None => Success(LazyList.continually(StdIn.readLine + '\n').flatten)}
     
     doOrOp(args.get("s"), "Missing Source File"){src =>
@@ -129,7 +129,7 @@ object RunProgHandler extends InterfaceHandler{
       case n => res.take(n)}
     
     def inputs: Try[LazyList[Char]] = args.get("i") match{
-      case Some(fnam) => readFile(fnam) map (_.to(LazyList))
+      case Some(fnam) => readFile(fnam) map (_.to(LazyList) :+ state.nums("fileEOF").toChar)
       case None => Success(LazyList.continually(StdIn.readLine + '\n').flatten)}
     
     def printer(out: Seq[Char]): Unit = args.get("o") match{
