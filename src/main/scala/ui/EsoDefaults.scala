@@ -7,7 +7,7 @@ import emmental.Emmental
 import fractran.{FracTran, FracTranpp}
 import funge.{Befunge93, Befunge98}
 import grass.Grass
-import metatape.Metatape
+import metatape.{BFToMetatape, Metatape}
 import path.PATH
 import pdoubleprime.PDP
 import scala_run.ScalaRun
@@ -72,7 +72,7 @@ object EsoDefaults extends EsoObj{
     PATH,
     Metatape)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
-  val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP)
+  val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape)
   val defBoolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](
     ("log", false, "toggle detailed console logging"),
     ("dyn", false, "resize tape as needed for BF interpreter to eliminate memory limitations"),
@@ -82,7 +82,8 @@ object EsoDefaults extends EsoObj{
     ("indent", false, "toggle whether or not to neatly indent generated Scala code"),
     ("dfChar", true, "toggle whether or not to print Deadfish output as char values"),
     ("bfDiv", true, "toggle whether or not divison by 0 evaluates to 0 in Befunge-98 (not yet implemented)"),
-    ("bfRetCode", false, "toggle whether or not the Befunge-98 return code is displayed"))
+    ("bfRetCode", false, "toggle whether or not the Befunge-98 return code is displayed"),
+    ("printNum", false, "print output as numerical values rather than characters"))
   val defNumVec: Vector[(String, Int, String)] = Vector[(String, Int, String)](
     ("bfOpt", 2, "BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled"),
     ("init", 40000, "initial tape size for interpreters with a data tape"),

@@ -3,6 +3,7 @@ package ui
 import common.EsoObj
 
 import scala.annotation.tailrec
+import scala.collection.immutable
 import scala.io.StdIn
 import scala.util.matching.Regex
 
@@ -13,7 +14,7 @@ object Persistent extends EsoObj{
   
   def start(): Unit = {
     println(EsoDefaults.defWelcome)
-    run()}
+    run(LoadBindingsHandler(EsoRunState.default)(immutable.HashMap()))}
   
   @tailrec
   def run(state: EsoState = EsoRunState.default): Unit = state match{

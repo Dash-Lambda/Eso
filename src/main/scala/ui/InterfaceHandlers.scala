@@ -123,6 +123,7 @@ object RunProgHandler extends InterfaceHandler{
   val fextReg: Regex = raw""".*\.(\w+)\z""".r
   
   override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+    val printNum = state.bools("printNum")
     def olim(res: LazyList[Char]): LazyList[Char] = state.nums("olen") match{
       case -1 => res
       case n => res.take(n)}
@@ -135,11 +136,12 @@ object RunProgHandler extends InterfaceHandler{
       case Some(onam) =>
         val of = new PrintWriter(new File(onam))
         out foreach{c =>
-          print(c)
-          of.print(c)
+          val str = if(printNum) c.toInt.toString + ' ' else c.toString
+          print(str)
+          of.print(str)
           of.flush()}
         of.close()
-      case None => out foreach print}
+      case None => out foreach(c => print(if(printNum) c.toInt.toString + ' ' else c.toString))}
     
     doOrOp(args.get("s"), "Missing Source File"){src =>
       val langOp = args.get("l") match{

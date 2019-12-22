@@ -82,6 +82,7 @@ Current native language support (in chronological order):
     * ROMA
 
 #### WIP:
+* Automatic method breakup for user-facing BrainFuck=>Scala transpiler (already done in internal one)
 * REPL mode
 * Multiline bindings
 * Automated testing

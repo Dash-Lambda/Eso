@@ -8,7 +8,7 @@ import scala.util.matching.Regex
 import scala.util.{Random, Success, Try}
 
 object Metatape extends Interpreter{
-  override val name: String = "Metatape"
+  val name: String = "Metatape"
   
   private val pnam: Regex = raw"""(?s)([^@]*)@([^\{\}/]*)(.*)""".r
   private val namreg1: Regex = raw"""\s*(\S)\s*(.*)\z""".r
@@ -23,10 +23,14 @@ object Metatape extends Interpreter{
     def initEnv(inputs: Seq[Char]): MEnv = MEnv(rand, bitInp(inputs, padLen), Vector(), padLen, subs)
     
     @tailrec
-    def rdo(state: State): Option[(Char, State)] = state match{
-      case HaltState => None
-      case PrintState(c, nxt) => Some((c, nxt))
-      case _ => rdo(state.step())}
+    def rdo(state: State): Option[(Char, State)] = {
+      //Thread.sleep(10)
+      //println(s"- State: $state")
+      state match{
+        case HaltState => None
+        case PrintState(c, nxt) => Some((c, nxt))
+        case _ => rdo(state.step())}
+    }
       
     inputs => LazyList.unfold(RunState(initIP, initEnv(inputs), initCont): State)(rdo)}
   
@@ -56,7 +60,7 @@ object Metatape extends Interpreter{
     def uncomment(src: Vector[Char], ac: Vector[Char] = Vector(), blk: Boolean = false): String = src match{
       case '/' +: '*' +: cs => uncomment(cs, ac, blk=true)
       case '*' +: '/' +: cs if blk => uncomment(cs, ac, blk=false)
-      case '/' +: '/' +: cs => uncomment(cs.dropWhile(_ != '\n').tail, ac, blk)
+      case '/' +: '/' +: cs => uncomment(cs.dropWhile(_ != '\n').drop(1), ac, blk)
       case c +: cs =>
         if(blk) uncomment(cs, ac, blk)
         else uncomment(cs, ac :+ c, blk)
@@ -85,6 +89,7 @@ object Metatape extends Interpreter{
     def step(): State = HaltState
   }
   case class RunState(ip: MIP, env: MEnv, cc: Cont) extends State{
+    override def toString: String = s"RUNSTATE:\n - IP: $ip\n - CC: $cc"
     def step(): State = cc(ip, env)
   }
   case class PrintState(c: Char, nxt: State) extends State{
@@ -92,9 +97,11 @@ object Metatape extends Interpreter{
   }
   
   object FinCont extends Cont{
+    override def toString: String = s"FINCONT"
     def apply(ip: MIP, env: MEnv): State = HaltState
   }
   case class SkipCont(prog: Vector[Char], cnt: Int, lcnt: Int, loops: Vector[Vector[Char]], cc: Cont) extends Cont{
+    override def toString: String = s"SKIPCONT(${prog.mkString}, $cc)"
     def apply(ip: MIP, env: MEnv): State = prog match{
       case op +: ops => op match{
         case '(' => RunState(ip, env, SkipCont(ops, cnt + 1, lcnt, loops, cc))
@@ -107,9 +114,14 @@ object Metatape extends Interpreter{
         case _ => RunState(ip, env, SkipCont(ops, cnt, lcnt, loops, cc))}}
   }
   case class ForkCont(sip: MIP, cc: Cont) extends Cont{
+    override def toString: String = s"FORKCONT($cc)"
     def apply(ip: MIP, env: MEnv): State = cc(sip.set(ip.cur), env)
   }
+  case class BlockCont(loops: Vector[Vector[Char]], cc: Cont) extends Cont{
+    def apply(ip: MIP, env: MEnv): State = HaltState
+  }
   case class RunCont(prog: Vector[Char], loops: Vector[Vector[Char]], cc: Cont) extends Cont{
+    override def toString: String = s"RunCont(${prog.mkString}, $cc)"
     def apply(ip: MIP, env: MEnv): State = prog match{
       case op +: ops => op match{
         case '.' => RunState(ip, env, RunCont(ops, loops, cc))
@@ -125,6 +137,9 @@ object Metatape extends Interpreter{
         case ')' => RunState(ip, env, RunCont(ops, loops, cc))
         case '[' => RunState(ip, env, RunCont(ops, ops +: loops, cc))
         case ']' => RunState(ip, env, RunCont(loops.head, loops, cc))
+        case '{' => RunState(ip, env, RunCont(ops, Vector(), BlockCont(loops, cc)))
+        case '}' => cc match{
+          case BlockCont(lp2, c2) => RunState(ip, env, RunCont(ops, lp2, c2))}
         case '?' =>
           if(env.rand.nextInt(2) == 0) RunState(ip.set(MNull), env, RunCont(ops, loops, cc))
           else RunState(ip, env, RunCont(ops, loops, cc))
@@ -191,10 +206,16 @@ object Metatape extends Interpreter{
     def set(c: MCell): MTape
   }
   object MNull extends MCell{
+    override def toString: String = "X"
     def init(root: MCell): MTape = MTape(immutable.HashMap[Int, MCell](), 0, root)
     def set(c: MCell): MTape = MTape(immutable.HashMap(0 -> c), 0, MNull)
   }
   case class MTape(tape: immutable.HashMap[Int, MCell], cur: Int, root: MCell) extends MCell{
+    override def toString: String = {
+      val mini = if(tape.nonEmpty) tape.keys.min else 0
+      val maxi = if(tape.nonEmpty) tape.keys.max else 0
+      LazyList.range(mini, maxi + 1).map(apply).mkString("[", "", "]")
+    }
     def apply(i: Int): MCell = tape.get(i) match{
       case Some(c) => c
       case None => MNull}
