@@ -16,12 +16,12 @@ object BFToMetatape extends Transpiler{
     val opMap = immutable.HashMap[Char, String](
       '>' -> ">",
       '<' -> "<",
-      '+' -> "!{inc}",
-      '-' -> "!{dec}",
-      '[' -> "!{chk}ee>(<xx[",
-      ']' -> "!{chk}ee>(<xx]|<xx)|<xx)",
-      ',' -> "!{read}",
-      '.' -> "!{print}")
+      '+' -> "!+",
+      '-' -> "!-",
+      '[' -> "!cee>(<xx[",
+      ']' -> "!cee>(<xx]|<xx)|<xx)",
+      ',' -> "!,",
+      '.' -> "!.")
     
     @tailrec
     def tdo(src: Vector[Char], ac: String = ""): String = src match{
@@ -31,13 +31,13 @@ object BFToMetatape extends Transpiler{
     def strFill(n: Int)(str: String): String = Vector.fill(n)(str).mkString
     
     val mtProg =
-      s"""|@reset{[[(e(|x<])|<])x}
-          |@inc{eeexx>[(n>]|ex)!{reset}x}
-          |@dec{eeexx${strFill(wid)(">")}>ex${strFill(wid)("<")}[(n|ex>])!{reset}x}
-          |@read{eeexx${strFill(wid)(">")}${strFill(wid)("exi<")}x}
-          |@print{e${strFill(wid)(">")}${strFill(wid)("o<")}x}
-          |@fail{!{reset}e>ex<x}
-          |@chk{eeex>n<x ${strFill(wid)(">(!{fail}|")}!{reset}${strFill(wid)(")")}x}
+      s"""|@r{[[(e(|x<])|<])x}
+          |@+{eeexx>[(n>]|ex)!rx}
+          |@-{eeexx${strFill(wid)(">")}>ex${strFill(wid)("<")}[(n|ex>])!rx}
+          |@,{eeexx${strFill(wid)(">")}${strFill(wid)("exi<")}x}
+          |@.{e${strFill(wid)(">")}${strFill(wid)("o<")}x}
+          |@f{!re>ex<x}
+          |@c{eeex>n<x ${strFill(wid)(">(!f|")}!r${strFill(wid)(")")}x}
           |
           |${tdo(prog)}""".stripMargin
     Success(mtProg)}
