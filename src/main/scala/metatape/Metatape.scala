@@ -23,15 +23,11 @@ object Metatape extends Interpreter{
     def initEnv(inputs: Seq[Char]): MEnv = MEnv(rand, bitInp(inputs, padLen), Vector(), padLen, subs)
     
     @tailrec
-    def rdo(state: State): Option[(Char, State)] = {
-      //Thread.sleep(10)
-      //println(s"- State: $state")
-      state match{
-        case HaltState => None
-        case PrintState(c, nxt) => Some((c, nxt))
-        case _ => rdo(state.step())}
-    }
-      
+    def rdo(state: State): Option[(Char, State)] = state match{
+      case HaltState => None
+      case PrintState(c, nxt) => Some((c, nxt))
+      case _ => rdo(state.step())}
+    
     inputs => LazyList.unfold(RunState(initIP, initEnv(inputs), initCont): State)(rdo)}
   
   def parse(progRaw: String): (Vector[Char], immutable.HashMap[String, Vector[Char]]) = {
@@ -59,7 +55,7 @@ object Metatape extends Interpreter{
     @tailrec
     def uncomment(src: Vector[Char], ac: Vector[Char] = Vector(), blk: Boolean = false): String = src match{
       case '/' +: '*' +: cs => uncomment(cs, ac, blk=true)
-      case '*' +: '/' +: cs if blk => uncomment(cs, ac, blk=false)
+      case '*' +: '/' +: cs if blk => uncomment(cs, ac)
       case '/' +: '/' +: cs => uncomment(cs.dropWhile(_ != '\n').drop(1), ac, blk)
       case c +: cs =>
         if(blk) uncomment(cs, ac, blk)

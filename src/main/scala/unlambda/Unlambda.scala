@@ -16,8 +16,7 @@ object Unlambda extends Interpreter{
     def udo(state: State): Option[(Char, State)] = state match{
       case EndState => None
       case PrintState(c, nxt) => Some((c, nxt))
-      case _ => udo(state.step())
-    }
+      case _ => udo(state.step())}
     
     inputs => LazyList.unfold(EvalState(progExpr, EndCont, Env(None, inputs)): State)(udo)
   }
@@ -61,21 +60,17 @@ object Unlambda extends Interpreter{
       case _ +: cs => pdoc(cs, cc)
       case _ => cc match{
         case PRes(e) => Some(e)
-        case _ => None
-      }
-    }
+        case _ => None}}
     
     pdoc(progRaw.toVector, PEnd) match{
       case Some(exp) => Success(exp)
-      case None => Failure(EsoExcep("Invalid Expression"))
-    }
+      case None => Failure(EsoExcep("Invalid Expression"))}
   }
   
   case class Env(cur: Option[Char], inp: Seq[Char]){
     def read: Env = inp match{
       case c +: cs => Env(Some(c), cs)
-      case _ => Env(None, inp)
-    }
+      case _ => Env(None, inp)}
   }
   
   trait State{
@@ -185,20 +180,17 @@ object Unlambda extends Interpreter{
       val nEnv = env.read
       env.cur match{
         case None => AppState(f, V, cc, nEnv)
-        case _ => AppState(f, I, cc, nEnv)
-      }
+        case _ => AppState(f, I, cc, nEnv)}
     }
   }
   case class QUES(c: Char) extends Func{
     def apply(f: Func, cc: Cont, env: Env): State = env.cur match{
       case Some(`c`) => AppState(f, I, cc, env)
-      case _ => AppState(f, V, cc, env)
-    }
+      case _ => AppState(f, V, cc, env)}
   }
   object PIPE extends Func{
     def apply(f: Func, cc: Cont, env: Env): State = env.cur match{
       case Some(c) => AppState(f, OUT(c), cc, env)
-      case None => AppState(f, V, cc, env)
-    }
+      case None => AppState(f, V, cc, env)}
   }
 }
