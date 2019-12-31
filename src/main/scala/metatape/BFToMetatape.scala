@@ -12,7 +12,7 @@ object BFToMetatape extends Transpiler{
   
   def apply(config: Config)(progRaw: String): Try[String] = {
     val wid: Int = config.num("mtCharWidth")
-    val prog = progRaw.toVector.filter("[]<>+-,.".contains(_))
+    val prog = progRaw.filter("[]<>+-,.".contains(_)).replaceAll("""\[[+\-]\]""", "_").toVector
     val opMap = immutable.HashMap[Char, String](
       '>' -> ">",
       '<' -> "<",
@@ -21,12 +21,18 @@ object BFToMetatape extends Transpiler{
       '[' -> "!cee>(<xx[",
       ']' -> "!cee>(<xx]|<xx)|<xx)",
       ',' -> "!,",
-      '.' -> "!.")
+      '.' -> "!.",
+      '_' -> "n")
     
     @tailrec
-    def tdo(src: Vector[Char], ac: String = ""): String = src match{
-      case c +: cs => tdo(cs, ac ++ opMap(c))
+    def tdo2(src: Vector[Char] = prog, ac: String = ""): String = src match{
+      case c +: cs => tdo2(cs, ac ++ opMap(c))
       case _ => ac}
+    @tailrec
+    def tdo(i: Int = 0, ac: String = ""): String = prog.lift(i) match{
+      case Some(c) => tdo(i + 1, ac ++ opMap(c))
+      case None => ac
+    }
     
     def strFill(n: Int)(str: String): String = Vector.fill(n)(str).mkString
     
@@ -39,6 +45,6 @@ object BFToMetatape extends Transpiler{
           |@f{!re>ex<x}
           |@c{eeex>n<x ${strFill(wid)(">(!f|")}!r${strFill(wid)(")")}x}
           |
-          |${tdo(prog)}""".stripMargin
+          |${tdo()}""".stripMargin
     Success(mtProg)}
 }

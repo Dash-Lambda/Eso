@@ -19,6 +19,7 @@ trait InterfaceHandler extends EsoObj{
   def apply(state: EsoRunState)(args: immutable.HashMap[String, String]): EsoState
   
   val encodings: LazyList[String] = LazyList("UTF-8", "Cp1252", "UTF-16")
+  val fextReg: Regex = raw""".*\.(\w+)\z""".r
   
   def findTransPath(state: EsoRunState, sl: String, tls: Seq[String]): Option[(String, String => Try[String])] = tls.iterator.map(tl => (tl, buildTrans(state)(sl, tl))).collectFirst{case (nam, Some(t)) => (nam, t)}
   def findTransPath(state: EsoRunState, sls: Seq[String], tl: String): Option[(String, String => Try[String])] = sls.iterator.map(sl => (sl, buildTrans(state)(sl, tl))).collectFirst{case (nam, Some(t)) => (nam, t)}
@@ -36,7 +37,7 @@ trait InterfaceHandler extends EsoObj{
         vec.flatMap{c =>
           val nxt = links.get(c.last) match{
             case Some(v) => v
-            case _ => Vector[String]()}
+            case _ => Vector()}
           nxt.filter(b => !c.contains(b)).map(l => c :+ l)}}
       .takeWhile(_.nonEmpty)
       .flatten
@@ -84,12 +85,10 @@ trait InterfaceHandler extends EsoObj{
 }
 
 object DebugHandler extends InterfaceHandler{
-  override val nam: String = "debug"
-  override val helpStr: String = "Unsafe run handler, for getting detailed error information out of the runtime while writing new components"
+  val nam: String = "debug"
+  val helpStr: String = "Unsafe run handler, for getting detailed error information out of the runtime while writing new components"
   
-  val fextReg: Regex = raw""".*\.(\w+)\z""".r
-  
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     def inputs: Try[LazyList[Char]] = args.get("i") match{
       case Some(fnam) => readFile(fnam) map (_.to(LazyList) :+ state.nums("fileEOF").toChar)
       case None => Success(LazyList.continually(StdIn.readLine + '\n').flatten)}
@@ -118,11 +117,9 @@ object DebugHandler extends InterfaceHandler{
 
 object RunProgHandler extends InterfaceHandler{
   val nam: String = "run"
-  override val helpStr: String = "<-s :sourceFileName:> {-l :language:, -i :inputFileName:, -o :outputFileName:}"
+  val helpStr: String = "<-s :sourceFileName:> {-l :language:, -i :inputFileName:, -o :outputFileName:}"
   
-  val fextReg: Regex = raw""".*\.(\w+)\z""".r
-  
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val printNum = state.bools("printNum")
     def olim(res: LazyList[Char]): LazyList[Char] = state.nums("olen") match{
       case -1 => res
@@ -155,25 +152,23 @@ object RunProgHandler extends InterfaceHandler{
             doOrErr(readFile(src)){progRaw =>
               print("Building Interpreter... ")
               doOrErr(t(progRaw)){prog =>
-                val (i, bdr) = timeIt(state.interps(inam)(state.config)(prog))
-                println(s"Done in ${bdr}ms.")
-                doOrErr(i){r =>
-                  doOrErr(inputs){inp =>
-                    val (flg, rdr) = timeIt{
-                      val res = r(inp)
-                      tryAll{printer(olim(res))}}
-                    flg match{
-                      case Success(_) => println(s"\nProgram completed in ${rdr}ms")
-                      case Failure(e) => println(s"\nError: $e\nProgram failed in ${rdr}ms")}}}}}}}}
+                timeIt(state.interps(inam)(state.config)(prog)) match{
+                  case (i, dur) => println(s"Done in ${dur}ms.")
+                    doOrErr(i){r =>
+                      doOrErr(inputs){inp =>
+                        timeIt{tryAll{printer(olim(r(inp)))}} match{
+                          case (flg, rdr) => flg match{
+                            case Success(_) => println(s"\nProgram completed in ${rdr}ms")
+                            case Failure(e) => println(s"\nError: $e\nProgram failed in ${rdr}ms")}}}}}}}}}}
     
     state}
 }
 
 object TranslateHandler extends InterfaceHandler{
-  override val nam: String = "translate"
-  override val helpStr: String = "<-sl :sourceLanguage, -tl :targetLanguage, -s :sourceFileName:> {-o :targetFileName:}"
+  val nam: String = "translate"
+  val helpStr: String = "<-sl :sourceLanguage, -tl :targetLanguage, -s :sourceFileName:> {-o :targetFileName:}"
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val ext = MapExtractor(args)
     
     def printer(str: String): Unit = args.get("o") match{
@@ -194,10 +189,10 @@ object TranslateHandler extends InterfaceHandler{
 }
 
 object TranspileHandler extends InterfaceHandler{
-  override val nam: String = "transpile"
-  override val helpStr: String = "<-sl :sourceLanguage, -tl :targetLanguage, -s :sourceFileName:> {-o :targetFileName:}"
+  val nam: String = "transpile"
+  val helpStr: String = "<-sl :sourceLanguage, -tl :targetLanguage, -s :sourceFileName:> {-o :targetFileName:}"
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val ext = MapExtractor(args)
     
     def printer(str: String): Unit = args.get("o") match{
@@ -216,32 +211,35 @@ object TranspileHandler extends InterfaceHandler{
               case (lout, tout) =>
                 doOrErr(readFile(s)){progRaw =>
                   doOrErr(tin(progRaw)){prog1 =>
-                    doOrErr(state.gens((lin, lout))(state.config)(prog1)){prog2 =>
-                      doOrErr(tout(prog2)){prog3 =>
-                        printer(prog3)}}}}}}
+                    timeIt(state.gens((lin, lout))(state.config)(prog1)) match{
+                      case (transTry, dur) =>
+                        doOrErr(transTry){prog2 =>
+                          println(s"Program transpiled in ${dur}ms")
+                          doOrErr(tout(prog2)){prog3 =>
+                            printer(prog3)}}}}}}}
       case _ => println("Error: Not Enough Arguments")}
     
     state}
 }
 
 object DefineBFLangHandler extends InterfaceHandler{
-  override val nam: String = "defineBFLang"
-  override val helpStr: String = ""
+  val nam: String = "defineBFLang"
+  val helpStr: String = ""
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val nam = StdIn.readLine("Name: ")
     val syn = Vector("[", "]", "<", ">", "+", "-", ",", ".") map{c => (c, StdIn.readLine(s"$c => "))}
     state.addTrans(GenBFT(nam, syn))}
 }
 
 object LoadBFLangsHandler extends InterfaceHandler{
-  override val nam: String = "loadBFLangs"
-  override val helpStr: String = "{-f :fileName:}"
+  val nam: String = "loadBFLangs"
+  val helpStr: String = "{-f :fileName:}"
   
   private val bfNamReg = raw"""(?s)[^\#]*\#(\V*)(.*)\z""".r
   private val bfBindReg = raw"""(?s)[^\[\]\+\-\<\>\,\.]*([\[\]\+\-\<\>\,\.])\=\>(\V*)\z""".r
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     @tailrec
     def cdo(src: Vector[Char], ac: Vector[(String, String)] = Vector()): (Vector[(String, String)], String) = src match{
       case c +: '=' +: '>' +: cs if "[]<>+-,.".contains(c) && ac.sizeIs < 8 =>
@@ -271,10 +269,10 @@ object LoadBFLangsHandler extends InterfaceHandler{
 }
 
 object SaveBFLangsHandler extends InterfaceHandler{
-  override val nam: String = "saveBFLangs"
-  override val helpStr: String = "{-f :fileName:}"
+  val nam: String = "saveBFLangs"
+  val helpStr: String = "{-f :fileName:}"
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val fnam = args.get("f") match{
       case Some(str) => str
       case None => EsoDefaults.defBFLFile}
@@ -291,10 +289,10 @@ object SaveBFLangsHandler extends InterfaceHandler{
 }
 
 object ShowSyntaxHandler extends InterfaceHandler{
-  override val nam: String = "syntax"
-  override val helpStr: String = "{-l :language:}"
+  val nam: String = "syntax"
+  val helpStr: String = "{-l :language:}"
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val str = args.get("l") match{
       case Some(lang) => state.trans.toVector.collectFirst{
         case (_, t: BFTranslator) if t.name == lang => t} match{
@@ -307,17 +305,17 @@ object ShowSyntaxHandler extends InterfaceHandler{
 }
 
 object ClearBindingsHandler extends InterfaceHandler{
-  override val nam: String = "clrBindings"
-  override val helpStr: String = ""
+  val nam: String = "clrBindings"
+  val helpStr: String = ""
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = state.clearBinds
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = state.clearBinds
 }
 
 object LoadBindingsHandler extends InterfaceHandler{
-  override val nam: String = "loadBindings"
-  override val helpStr: String = "{-f :fileName:}"
+  val nam: String = "loadBindings"
+  val helpStr: String = "{-f :fileName:}"
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val breg = raw"""(\S+) (.*)\z""".r
     val fnam = args.get("f") match{
       case Some(str) => str
@@ -335,10 +333,10 @@ object LoadBindingsHandler extends InterfaceHandler{
 }
 
 object SaveBindingsHandler extends InterfaceHandler{
-  override val nam: String = "saveBindings"
-  override val helpStr: String = "{-f :fileName:}"
+  val nam: String = "saveBindings"
+  val helpStr: String = "{-f :fileName:}"
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val fnam = args.get("f") match{
       case Some(str) => str
       case None => EsoDefaults.defBindFile}
@@ -350,10 +348,10 @@ object SaveBindingsHandler extends InterfaceHandler{
 }
 
 object ListBindingsHandler extends InterfaceHandler{
-  override val nam: String = "listBindings"
-  override val helpStr: String = ""
+  val nam: String = "listBindings"
+  val helpStr: String = ""
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val bindStr = state.binds.toVector
       .map{case (k, v) => s"- $k => $v"}
       .sorted
@@ -369,24 +367,24 @@ object ListBindingsHandler extends InterfaceHandler{
 }
 
 object SetVarHandler extends InterfaceHandler{
-  override val nam: String = "set"
-  override val helpStr: String = "{-:varName: :value:}*"
+  val nam: String = "set"
+  val helpStr: String = "{-:varName: :value:}*"
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = args.toVector.foldLeft(state){case (s, (k, v)) => s.setVar(k, v)}
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = args.toVector.foldLeft(state){case (s, (k, v)) => s.setVar(k, v)}
 }
 
 object SetDefaultsHandler extends InterfaceHandler{
-  override val nam: String = "defaults"
-  override val helpStr: String = ""
+  val nam: String = "defaults"
+  val helpStr: String = ""
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = EsoRunState.default
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = EsoRunState.default
 }
 
 object ListLangsHandler extends InterfaceHandler{
-  override val nam: String = "listLangs"
-  override val helpStr: String = ""
+  val nam: String = "listLangs"
+  val helpStr: String = ""
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val str =
       f"""|Languages...
           |${state.interps.values.map(i => s"- $i").toVector.sorted.mkString("\n")}
@@ -403,10 +401,10 @@ object ListLangsHandler extends InterfaceHandler{
 }
 
 object ListVarsHandler extends InterfaceHandler{
-  override val nam: String = "listVars"
-  override val helpStr: String = ""
+  val nam: String = "listVars"
+  val helpStr: String = ""
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val boolVec = state.bools.toVector.sortBy(_._1)
     val numVec = state.nums.toVector.sortBy(_._1)
     val pairs = (boolVec ++ numVec).map{case (id, d) => (id, d.toString)}
@@ -423,10 +421,10 @@ object ListVarsHandler extends InterfaceHandler{
 }
 
 object ListFileAssociationsHandler extends InterfaceHandler{
-  override val nam: String = "listFileAssociations"
-  override val helpStr: String = ""
+  val nam: String = "listFileAssociations"
+  val helpStr: String = ""
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val fStr = EsoDefaults.fileExtensionsVec.map{case (f, l) => s"- .$f => $l"}.mkString("\n")
     val str =
       s"""|File Associations...
@@ -437,8 +435,8 @@ object ListFileAssociationsHandler extends InterfaceHandler{
 }
 
 object ExitHandler extends InterfaceHandler{
-  override val nam: String = "exit"
-  override val helpStr: String = ""
+  val nam: String = "exit"
+  val helpStr: String = ""
   
-  override def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = EsoHalt
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = EsoHalt
 }

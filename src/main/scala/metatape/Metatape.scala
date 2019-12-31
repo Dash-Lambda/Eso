@@ -5,64 +5,28 @@ import common.{Config, Interpreter}
 import scala.annotation.tailrec
 import scala.collection.immutable
 import scala.util.matching.Regex
-import scala.util.{Random, Success, Try}
+import scala.util.{Random, Try}
 
 object Metatape extends Interpreter{
   val name: String = "Metatape"
+  val comReg: Regex = raw"""(?m)(?s)(?://[^\n]*$$|/\*.*\*/)""".r
+  val namReg: Regex = raw"""^ ?((?:\S|\S.*\S)) ?\z""".r
   
-  private val pnam: Regex = raw"""(?s)([^@]*)@([^\{\}/]*)(.*)""".r
-  private val namreg1: Regex = raw"""\s*(\S)\s*(.*)\z""".r
-  private val namreg2: Regex = raw"""^\s*\{([^\{\}/]*)\}(.*)\z""".r
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{optimize(progRaw)} map{
+    case (prog, subs) => runProg(prog, subs, config.rand, config.num("mtCharWidth"))}
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Success{parse(progRaw)} map {
-    case (prog, subs) => mtRun(prog, subs, config.rand, config.num("mtCharWidth"))}
-  
-  def mtRun(prog: Vector[Char], subs: immutable.HashMap[String, Vector[Char]], rand: Random, padLen: Int): Seq[Char] => LazyList[Char] = {
-    val initIP = MIP(0, MTape(immutable.HashMap[Int, MCell](), 0, MNull))
-    val initCont = RunCont(prog, Vector(), FinCont)
-    def initEnv(inputs: Seq[Char]): MEnv = MEnv(rand, bitInp(inputs, padLen), Vector(), padLen, subs)
-    
+  def runProg(prog: Vector[MTOP], subVec: Vector[MSub], rand: Random, padLen: Int): Seq[Char] => LazyList[Char] = {
+    val subs = mkMap(subVec.map{case MSub(nam, sub) => (nam, sub)})
+    val initIP = MDP(0, MTape(immutable.HashMap(), 0, MNull))
     @tailrec
     def rdo(state: State): Option[(Char, State)] = state match{
       case HaltState => None
       case PrintState(c, nxt) => Some((c, nxt))
       case _ => rdo(state.step())}
     
-    inputs => LazyList.unfold(RunState(initIP, initEnv(inputs), initCont): State)(rdo)}
-  
-  def parse(progRaw: String): (Vector[Char], immutable.HashMap[String, Vector[Char]]) = {
-    @tailrec
-    def pdos(src: String, ac: String = "", mac: immutable.HashMap[String, String] = immutable.HashMap[String, String]()): (Vector[Char], immutable.HashMap[String, Vector[Char]]) = src match{
-      case pnam(hd, nm, tl) => blockStr(tl) match{
-        case (blk, prg) => pdos(prg, ac ++ hd, mac + ((nm, blk)))}
-      case _ => ((ac ++ src).toVector, conditionSubs(mac))}
-    
-    def blockStr(src: String): (String, String) = {
-      @tailrec
-      def bdo(i: Int, n: Int = 0): Int = src(i) match{
-        case '{' => bdo(i + 1, n + 1)
-        case '}' =>
-          if(n == 1) i
-          else bdo(i + 1, n - 1)
-        case _ => bdo(i + 1, n)}
-      
-      val start = src.indexOf('{')
-      val end = bdo(start)
-      (src.slice(start + 1, end), src.drop(end + 1))}
-    
-    def conditionSubs(mac: immutable.HashMap[String, String]): immutable.HashMap[String, Vector[Char]] = mac.map{case (k, v) => (k.dropWhile(_ == ' ').reverse.dropWhile(_ == ' ').reverse, v.toVector)}
-    
-    @tailrec
-    def uncomment(src: Vector[Char], ac: Vector[Char] = Vector(), blk: Boolean = false): String = src match{
-      case '/' +: '*' +: cs => uncomment(cs, ac, blk=true)
-      case '*' +: '/' +: cs if blk => uncomment(cs, ac)
-      case '/' +: '/' +: cs => uncomment(cs.dropWhile(_ != '\n').drop(1), ac, blk)
-      case c +: cs =>
-        if(blk) uncomment(cs, ac, blk)
-        else uncomment(cs, ac :+ c, blk)
-      case _ => ac.mkString}
-    
-    pdos(uncomment(progRaw.toVector).replaceAll("""[ \t\r\n]+""", " "))}
+    inputs => {
+      val initEnv = MEnv(rand, bitInp(inputs, padLen), Vector(), padLen, subs)
+      LazyList.unfold(RunState(initIP, initEnv, RunCont(0, prog, FinCont)): State)(rdo)}}
   
   def bitInp(cinp: Seq[Char], padLen: Int): LazyList[Int] = {
     def binStr(c: Char): Vector[Int] = c.toBinaryString
@@ -74,102 +38,152 @@ object Metatape extends Interpreter{
       .reverse
     cinp.to(LazyList).flatMap(binStr)}
   
+  trait MTOP
+  case class MMove(n: Int) extends MTOP
+  case class MEnter(n: Int) extends MTOP
+  case class MExit(n: Int) extends MTOP
+  object MSetNull extends MTOP
+  case class MRand(n: Int) extends MTOP
+  case class MIf(ind: Int) extends MTOP
+  case class MElse(ind: Int) extends MTOP
+  case class MLoop(ind: Int) extends MTOP
+  object MInp extends MTOP
+  object MOut extends MTOP
+  object MHalt extends MTOP
+  case class MCall(nam: String) extends MTOP
+  case class MFork(prog: Vector[MTOP]) extends MTOP
+  case class MBlock(prog: Vector[MTOP]) extends MTOP
+  
   trait State{
     def step(): State
   }
   trait Cont{
-    def apply(ip: MIP, env: MEnv): State
+    def apply(ip: MDP, env: MEnv): State
   }
   
   object HaltState extends State{
     def step(): State = HaltState
   }
-  case class RunState(ip: MIP, env: MEnv, cc: Cont) extends State{
-    override def toString: String = s"RUNSTATE:\n - IP: $ip\n - CC: $cc"
-    def step(): State = cc(ip, env)
+  case class RunState(tape: MDP, env: MEnv, cc: Cont) extends State{
+    def step(): State = cc(tape, env)
   }
   case class PrintState(c: Char, nxt: State) extends State{
     def step(): State = nxt
   }
   
   object FinCont extends Cont{
-    override def toString: String = s"FINCONT"
-    def apply(ip: MIP, env: MEnv): State = HaltState
+    def apply(ip: MDP, env: MEnv): State = HaltState
   }
-  case class SkipCont(prog: Vector[Char], cnt: Int, lcnt: Int, loops: Vector[Vector[Char]], cc: Cont) extends Cont{
-    override def toString: String = s"SKIPCONT(${prog.mkString}, $cc)"
-    def apply(ip: MIP, env: MEnv): State = prog match{
-      case op +: ops => op match{
-        case '(' => RunState(ip, env, SkipCont(ops, cnt + 1, lcnt, loops, cc))
-        case '|' | ')' if cnt == 0 => RunState(ip, env, RunCont(ops, loops, cc))
-        case ')' => RunState(ip, env, SkipCont(ops, cnt - 1, lcnt, loops, cc))
-        case '[' => RunState(ip, env, SkipCont(ops, cnt, lcnt + 1, loops, cc))
-        case ']' =>
-          if(lcnt == 0) RunState(ip, env, SkipCont(ops, cnt, lcnt, loops.tail, cc))
-          else RunState(ip, env, SkipCont(ops, cnt, lcnt - 1, loops, cc))
-        case _ => RunState(ip, env, SkipCont(ops, cnt, lcnt, loops, cc))}}
+  case class ForkCont(saveTape: MDP, cc: Cont) extends Cont{
+    def apply(ip: MDP, env: MEnv): State = cc(saveTape.set(ip.cur), env)
   }
-  case class ForkCont(sip: MIP, cc: Cont) extends Cont{
-    override def toString: String = s"FORKCONT($cc)"
-    def apply(ip: MIP, env: MEnv): State = cc(sip.set(ip.cur), env)
-  }
-  case class BlockCont(loops: Vector[Vector[Char]], cc: Cont) extends Cont{
-    def apply(ip: MIP, env: MEnv): State = HaltState
-  }
-  case class RunCont(prog: Vector[Char], loops: Vector[Vector[Char]], cc: Cont) extends Cont{
-    override def toString: String = s"RunCont(${prog.mkString}, $cc)"
-    def apply(ip: MIP, env: MEnv): State = prog match{
-      case op +: ops => op match{
-        case '.' => RunState(ip, env, RunCont(ops, loops, cc))
-        case '<' => RunState(ip.moveLeft, env, RunCont(ops, loops, cc))
-        case '>' => RunState(ip.moveRight, env, RunCont(ops, loops, cc))
-        case 'n' => RunState(ip.set(MNull), env, RunCont(ops, loops, cc))
-        case 'e' => RunState(ip.enter, env, RunCont(ops, loops, cc))
-        case 'x' => RunState(ip.exit, env, RunCont(ops, loops, cc))
-        case '(' =>
-          if(ip.curCheck) RunState(ip, env, RunCont(ops, loops, cc))
-          else RunState(ip, env, SkipCont(ops, 0, 0, loops, cc))
-        case '|' => RunState(ip, env, SkipCont(ops, 0, 0, loops, cc))
-        case ')' => RunState(ip, env, RunCont(ops, loops, cc))
-        case '[' => RunState(ip, env, RunCont(ops, ops +: loops, cc))
-        case ']' => RunState(ip, env, RunCont(loops.head, loops, cc))
-        case '{' => RunState(ip, env, RunCont(ops, Vector(), BlockCont(loops, cc)))
-        case '}' => cc match{
-          case BlockCont(lp2, c2) => RunState(ip, env, RunCont(ops, lp2, c2))}
-        case '?' =>
-          if(env.rand.nextInt(2) == 0) RunState(ip.set(MNull), env, RunCont(ops, loops, cc))
-          else RunState(ip, env, RunCont(ops, loops, cc))
-        case 'i' => env.read match{
-          case (0, nenv) => RunState(ip.set(MNull), nenv, RunCont(ops, loops, cc))
-          case (_, nenv) => RunState(ip, nenv, RunCont(ops, loops, cc))}
-        case 'o' => env.write(if(ip.curCheck) 1 else 0) match{
+  case class RunCont(i: Int, prog: Vector[MTOP], cc: Cont) extends Cont{
+    def apply(tape: MDP, env: MEnv): State = prog.lift(i) match{
+      case None => RunState(tape, env, cc)
+      case Some(op) => op match{
+        case MMove(n) => RunState(tape.move(n), env, RunCont(i + 1, prog, cc))
+        case MEnter(n) => RunState((0 until n).foldLeft(tape){case (mip, _) => mip.enter}, env, RunCont(i + 1, prog, cc))
+        case MExit(n) => RunState((0 until n).foldLeft(tape){case (mip, _) => mip.exit}, env, RunCont(i + 1, prog, cc))
+        case MSetNull => RunState(tape.set(MNull), env, RunCont(i + 1, prog, cc))
+        case MRand(n) =>
+          val nip = if(Vector.fill(n)(env.rand.nextInt(2)).contains(0)) tape.set(MNull) else tape
+          RunState(nip, env, RunCont(i + 1, prog, cc))
+        case MIf(ind) =>
+          val ni = if(tape.curCheck) i + 1 else ind
+          RunState(tape, env, RunCont(ni, prog, cc))
+        case MElse(ind) => RunState(tape, env, RunCont(ind, prog, cc))
+        case MLoop(ind) => RunState(tape, env, RunCont(ind, prog, cc))
+        case MInp => env.read match{
+          case (0, nenv) => RunState(tape.set(MNull), nenv, RunCont(i + 1, prog, cc))
+          case (_, nenv) => RunState(tape, nenv, RunCont(i + 1, prog, cc))}
+        case MOut => env.write(if(tape.curCheck) 1 else 0) match{
           case (cop, nenv) => cop match{
-            case Some(c) => PrintState(c, RunState(ip, nenv, RunCont(ops, loops, cc)))
-            case None => RunState(ip, nenv, RunCont(ops, loops, cc))}}
-        case '!' => chompName(ops) match{
-          case (nam, tl) => RunState(ip, env, RunCont(env.subs(nam), loops, RunCont(tl, loops, cc)))}
-        case 'f' => chompFork(ops) match{
-          case (frk, prg) => RunState(ip, env, RunCont(frk, loops, ForkCont(ip, RunCont(prg, loops, cc))))}
-        case ' ' => RunState(ip, env, RunCont(ops, loops, cc))
-        case 'h' => HaltState}
-      case _ => RunState(ip, env, cc)}
-    
-    def chompFork(src: Vector[Char], ac: Vector[Char] = Vector(), cnt: Int = 0): (Vector[Char], Vector[Char]) = src match{
-      case c +: cs => c match{
-        case '{' =>
-          if(cnt == 0) chompFork(cs, ac, cnt + 1)
-          else chompFork(cs, ac :+ c, cnt + 1)
-        case '}' =>
-          if(cnt == 1) (ac, cs)
-          else chompFork(cs, ac :+ c, cnt - 1)
-        case _ => chompFork(cs, ac :+ c, cnt)}}
-    
-    def chompName(src: Vector[Char]): (String, Vector[Char]) = src.mkString match{
-      case namreg2(nam, tl) => (nam.replaceAll("""\s+""", " "), tl.toVector)
-      case namreg1(nam, tl) => (nam.toString, tl.toVector)}
+            case Some(c) => PrintState(c, RunState(tape, nenv, RunCont(i + 1, prog, cc)))
+            case None => RunState(tape, nenv, RunCont(i + 1, prog, cc))}}
+        case MHalt => HaltState
+        case MCall(nam: String) => RunState(tape, env, RunCont(0, env.subs(nam), RunCont(i + 1, prog, cc)))
+        case MFork(blk) => RunState(tape, env, RunCont(0, blk, ForkCont(tape, RunCont(i + 1, prog, cc))))
+        case MBlock(blk) => RunState(tape, env, RunCont(0, blk, RunCont(i + 1, prog, cc)))}}
   }
   
-  case class MEnv(rand: Random, inp: LazyList[Int], buf: Vector[Int], wid: Int, subs: immutable.HashMap[String, Vector[Char]]){
+  
+  case class MSub(nam: String, prog: Vector[MTOP])
+  
+  def optimize(progRaw: String): (Vector[MTOP], Vector[MSub]) = {
+    val prog = comReg.replaceAllIn(progRaw, "").replaceAll("""\s+""", " ").toVector
+    val oneMap = immutable.HashMap(
+      '>' -> MMove(1),
+      '<' -> MMove(-1),
+      'e' -> MEnter(1),
+      'x' -> MExit(1),
+      'n' -> MSetNull,
+      '?' -> MRand(1),
+      'i' -> MInp,
+      'o' -> MOut,
+      'h' -> MHalt)
+    
+    def setJump(ac: Vector[MTOP], i: Int, j: Int): Vector[MTOP] = ac(i) match{
+      case MIf(_) => ac.updated(i, MIf(j))
+      case MElse(_) => ac.updated(i, MElse(j))}
+    def subName(ind: Int, call: Boolean = false): (String, Int) = {
+      @tailrec
+      def cdo(i: Int, ac: Vector[Char] = Vector()): (String, Int) = prog(i) match{
+        case '}' | '{' => ac.mkString match{
+          case namReg(nam) => (nam, i + 1)}
+        case c => cdo(i + 1, ac :+ c)}
+      prog(ind) match{
+        case '{' => cdo(ind + 1)
+        case c if call => (c.toString, ind + 1)
+        case _ => cdo(ind)}}
+    def chompSub(ind: Int): (MSub, Int) = subName(ind) match{
+      case (nam, i1) => odoRecur(i1) match{
+        case (blk, _, i2) => (MSub(nam, blk), i2)}}
+    
+    def odoRecur(ind: Int): (Vector[MTOP], Vector[MSub], Int) = odo(i = ind)
+    @tailrec
+    def odo(i: Int = 0, j: Int = 0, n: Int = 0, cur: Char = ' ', ac: Vector[MTOP] = Vector(), lstk: Vector[Int] = Vector(), istk: Vector[Int] = Vector(), subs: Vector[MSub] = Vector()): (Vector[MTOP], Vector[MSub], Int) = prog.lift(i) match{
+      case None => (ac, subs, i)
+      case Some(c) =>
+        lazy val op = cur match{
+          case '>' => MMove(n)
+          case '<' => MMove(-n)
+          case 'e' => MEnter(n)
+          case 'x' => MExit(n)
+          case '?' => MRand(n)}
+        lazy val nxtAc = if(n == 0) ac else ac :+ op
+        lazy val jinc = if(n == 0) j else j + 1
+        
+        c match{
+          case '.' | ' ' => odo(i + 1, j, n, cur, ac, lstk, istk, subs)
+          case 'n' if cur == c => odo(i + 1, j, 0, c, ac, lstk, istk, subs)
+          case '(' => odo(i + 1, jinc + 1, 0, c, nxtAc :+ MIf(0), lstk, jinc +: istk, subs)
+          case '|' => istk match{
+            case k +: ks => odo(i + 1, jinc + 1, 0, c, setJump(nxtAc, k, jinc + 1) :+ MElse(0), lstk, jinc +: ks, subs)
+            case _ => odo(i + 1, jinc + 1, 0, c, nxtAc :+ MElse(0), lstk, jinc +: istk, subs)}
+          case ')' => odo(i + 1, jinc, 0, c, setJump(nxtAc, istk.head, jinc), lstk, istk.tail, subs)
+          case '[' => odo(i + 1, jinc, 0, c, nxtAc, jinc +: lstk, istk, subs)
+          case ']' => odo(i + 1, jinc + 1, 0, c, nxtAc :+ MLoop(lstk.head), lstk.tail, istk, subs)
+          case '{' => odoRecur(i + 1) match{
+            case (blk, nsubs, ni) => odo(ni, jinc + 1, 0, c, nxtAc :+ MBlock(blk), lstk, istk, subs ++ nsubs)}
+          case '}' => (nxtAc, subs, i + 1)
+          case 'f' => prog(i + 1) match{
+            case '{' => odoRecur(i + 2) match{
+              case (blk, nsubs, ni) => odo(ni, jinc + 1, 0, c, nxtAc :+ MFork(blk), lstk, istk, subs ++ nsubs)}
+            case c2 => odo(i + 2, jinc + 1, 0, c, nxtAc :+ MFork(Vector(oneMap(c2))), lstk, istk, subs)}
+          case '!' => subName(i + 1, call = true) match{
+            case (nam, ni) => odo(ni, jinc + 1, 0, c, nxtAc :+ MCall(nam), lstk, istk, subs)}
+          case '@' => chompSub(i + 1) match{
+            case (sub, ni) => odo(ni, jinc, 0, c, nxtAc, lstk, istk, subs :+ sub)}
+          case 'h' | 'i' | 'o' | 'n' => odo(i + 1, jinc + 1, 0, c, nxtAc :+ oneMap(c), lstk, istk, subs)
+          case _ =>
+            if(c == cur) odo(i + 1, j, n + 1, cur, ac, lstk, istk, subs)
+            else if(n == 0) odo(i + 1, j, 1, c, ac, lstk, istk, subs)
+            else odo(i + 1, j + 1, 1, c, ac :+ op, lstk, istk, subs)}}
+    
+    odo() match{
+      case (ops, subs, _) => (ops, subs)}}
+  
+  case class MEnv(rand: Random, inp: LazyList[Int], buf: Vector[Int], wid: Int, subs: immutable.HashMap[String, Vector[MTOP]]){
     def read: (Int, MEnv) = inp match{
       case n +: ns => (n, MEnv(rand, ns, buf, wid, subs))}
     
@@ -181,51 +195,38 @@ object Metatape extends Interpreter{
     def vecToChar(vec: Vector[Int]): Char = BigInt(vec.mkString, 2).toChar
   }
   
-  case class MIP(tp: Int, tape: MTape){
+  case class MDP(tp: Int, tape: MTape){
     def cur: MCell = tape(tp)
     def curCheck: Boolean = cur != MNull
     
-    def set(c: MCell): MIP = MIP(tp, tape.set(tp, c))
+    def set(c: MCell): MDP = MDP(tp, tape.set(tp, c))
     
-    def enter: MIP = {
+    def enter: MDP = {
       val ntap = tape.enter(tp)
-      MIP(ntap.cur, ntap)}
-    def exit: MIP = {
+      MDP(ntap.cur, ntap)}
+    def exit: MDP = {
       val ntap = tape.exit(tp)
-      MIP(ntap.cur, ntap)}
+      MDP(ntap.cur, ntap)}
     
-    def moveLeft: MIP = MIP(tp - 1, tape)
-    def moveRight: MIP = MIP(tp + 1, tape)
+    def move(n: Int): MDP = MDP(tp + n, tape)
   }
   
   trait MCell{
     def set(c: MCell): MTape
+    def setActive(nrt: MTape): MTape
   }
   object MNull extends MCell{
-    override def toString: String = "X"
-    def init(root: MCell): MTape = MTape(immutable.HashMap[Int, MCell](), 0, root)
     def set(c: MCell): MTape = MTape(immutable.HashMap(0 -> c), 0, MNull)
+    def setActive(nrt: MTape): MTape = MTape(immutable.HashMap[Int, MCell](), 0, nrt)
   }
   case class MTape(tape: immutable.HashMap[Int, MCell], cur: Int, root: MCell) extends MCell{
-    override def toString: String = {
-      val mini = if(tape.nonEmpty) tape.keys.min else 0
-      val maxi = if(tape.nonEmpty) tape.keys.max else 0
-      LazyList.range(mini, maxi + 1).map(apply).mkString("[", "", "]")
-    }
-    def apply(i: Int): MCell = tape.get(i) match{
-      case Some(c) => c
-      case None => MNull}
+    def apply(i: Int): MCell = tape.getOrElse(i, MNull)
     
     def set(c: MCell): MTape = MTape(tape + ((cur, c)), cur, root)
     def set(i: Int, c: MCell): MTape = MTape(tape + ((i, c)), i, root)
+    def setActive(nrt: MTape): MTape = MTape(tape, cur, nrt)
     
-    def enter(i: Int): MTape = {
-      val nrt = MTape(tape, i, root)
-      tape.get(i) match{
-        case Some(c) => c match{
-          case MNull => MNull.init(nrt)
-          case MTape(ctp, ccr, _) => MTape(ctp, ccr, nrt)}
-        case None => MNull.init(nrt)}}
+    def enter(i: Int): MTape = apply(i).setActive(MTape(tape, i, root))
     def exit(i: Int): MTape = root.set(MTape(tape, i, root))
   }
 }
