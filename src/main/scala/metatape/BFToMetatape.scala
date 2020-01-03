@@ -25,14 +25,9 @@ object BFToMetatape extends Transpiler{
       '_' -> "n")
     
     @tailrec
-    def tdo2(src: Vector[Char] = prog, ac: String = ""): String = src match{
-      case c +: cs => tdo2(cs, ac ++ opMap(c))
-      case _ => ac}
-    @tailrec
     def tdo(i: Int = 0, ac: String = ""): String = prog.lift(i) match{
       case Some(c) => tdo(i + 1, ac ++ opMap(c))
-      case None => ac
-    }
+      case None => ac}
     
     def strFill(n: Int)(str: String): String = Vector.fill(n)(str).mkString
     
