@@ -12,12 +12,12 @@ object Metatape extends Interpreter{
   val comReg: Regex = raw"""(?m)(?s)(?://[^\n]*$$|/\*.*\*/)""".r
   val namReg: Regex = raw"""^ ?((?:\S|\S.*\S)) ?\z""".r
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{optimize(progRaw)} map{
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{parse(progRaw)} map{
     case (prog, subs) => runProg(prog, subs, config.rand, config.num("mtCharWidth"))}
   
   def runProg(prog: Vector[MTOP], subVec: Vector[MSub], rand: Random, padLen: Int): Seq[Char] => LazyList[Char] = {
     val subs = mkMap(subVec.map{case MSub(nam, sub) => (nam, sub)})
-    val initIP = MDP(0, MTape(immutable.HashMap(), 0, MNull))
+    val initIP = MDP(0, MTape(None, None, Vector(), Vector()))
     @tailrec
     def rdo(state: State): Option[(Char, State)] = state match{
       case HaltState => None
@@ -84,9 +84,9 @@ object Metatape extends Interpreter{
         case MMove(n) => RunState(tape.move(n), env, RunCont(i + 1, prog, cc))
         case MEnter(n) => RunState((0 until n).foldLeft(tape){case (mip, _) => mip.enter}, env, RunCont(i + 1, prog, cc))
         case MExit(n) => RunState((0 until n).foldLeft(tape){case (mip, _) => mip.exit}, env, RunCont(i + 1, prog, cc))
-        case MSetNull => RunState(tape.set(MNull), env, RunCont(i + 1, prog, cc))
+        case MSetNull => RunState(tape.set(None), env, RunCont(i + 1, prog, cc))
         case MRand(n) =>
-          val nip = if(Vector.fill(n)(env.rand.nextInt(2)).contains(0)) tape.set(MNull) else tape
+          val nip = if(Vector.fill(n)(env.rand.nextInt(2)).contains(0)) tape.set(None) else tape
           RunState(nip, env, RunCont(i + 1, prog, cc))
         case MIf(ind) =>
           val ni = if(tape.curCheck) i + 1 else ind
@@ -94,7 +94,7 @@ object Metatape extends Interpreter{
         case MElse(ind) => RunState(tape, env, RunCont(ind, prog, cc))
         case MLoop(ind) => RunState(tape, env, RunCont(ind, prog, cc))
         case MInp => env.read match{
-          case (0, nenv) => RunState(tape.set(MNull), nenv, RunCont(i + 1, prog, cc))
+          case (0, nenv) => RunState(tape.set(None), nenv, RunCont(i + 1, prog, cc))
           case (_, nenv) => RunState(tape, nenv, RunCont(i + 1, prog, cc))}
         case MOut => env.write(if(tape.curCheck) 1 else 0) match{
           case (cop, nenv) => cop match{
@@ -109,7 +109,7 @@ object Metatape extends Interpreter{
   
   case class MSub(nam: String, prog: Vector[MTOP])
   
-  def optimize(progRaw: String): (Vector[MTOP], Vector[MSub]) = {
+  def parse(progRaw: String): (Vector[MTOP], Vector[MSub]) = {
     val prog = comReg.replaceAllIn(progRaw, "").replaceAll("""\s+""", " ").toVector
     val oneMap = immutable.HashMap(
       '>' -> MMove(1),
@@ -141,44 +141,44 @@ object Metatape extends Interpreter{
     
     def odoRecur(ind: Int): (Vector[MTOP], Vector[MSub], Int) = odo(i = ind)
     @tailrec
-    def odo(i: Int = 0, j: Int = 0, n: Int = 0, cur: Char = ' ', ac: Vector[MTOP] = Vector(), lstk: Vector[Int] = Vector(), istk: Vector[Int] = Vector(), subs: Vector[MSub] = Vector()): (Vector[MTOP], Vector[MSub], Int) = prog.lift(i) match{
-      case None => (ac, subs, i)
-      case Some(c) =>
-        lazy val op = cur match{
-          case '>' => MMove(n)
-          case '<' => MMove(-n)
-          case 'e' => MEnter(n)
-          case 'x' => MExit(n)
-          case '?' => MRand(n)}
-        lazy val nxtAc = if(n == 0) ac else ac :+ op
-        lazy val jinc = if(n == 0) j else j + 1
-        
-        c match{
-          case '.' | ' ' => odo(i + 1, j, n, cur, ac, lstk, istk, subs)
-          case 'n' if cur == c => odo(i + 1, j, 0, c, ac, lstk, istk, subs)
-          case '(' => odo(i + 1, jinc + 1, 0, c, nxtAc :+ MIf(0), lstk, jinc +: istk, subs)
-          case '|' => istk match{
-            case k +: ks => odo(i + 1, jinc + 1, 0, c, setJump(nxtAc, k, jinc + 1) :+ MElse(0), lstk, jinc +: ks, subs)
-            case _ => odo(i + 1, jinc + 1, 0, c, nxtAc :+ MElse(0), lstk, jinc +: istk, subs)}
-          case ')' => odo(i + 1, jinc, 0, c, setJump(nxtAc, istk.head, jinc), lstk, istk.tail, subs)
-          case '[' => odo(i + 1, jinc, 0, c, nxtAc, jinc +: lstk, istk, subs)
-          case ']' => odo(i + 1, jinc + 1, 0, c, nxtAc :+ MLoop(lstk.head), lstk.tail, istk, subs)
-          case '{' => odoRecur(i + 1) match{
-            case (blk, nsubs, ni) => odo(ni, jinc + 1, 0, c, nxtAc :+ MBlock(blk), lstk, istk, subs ++ nsubs)}
-          case '}' => (nxtAc, subs, i + 1)
-          case 'f' => prog(i + 1) match{
-            case '{' => odoRecur(i + 2) match{
-              case (blk, nsubs, ni) => odo(ni, jinc + 1, 0, c, nxtAc :+ MFork(blk), lstk, istk, subs ++ nsubs)}
-            case c2 => odo(i + 2, jinc + 1, 0, c, nxtAc :+ MFork(Vector(oneMap(c2))), lstk, istk, subs)}
-          case '!' => subName(i + 1, call = true) match{
-            case (nam, ni) => odo(ni, jinc + 1, 0, c, nxtAc :+ MCall(nam), lstk, istk, subs)}
-          case '@' => chompSub(i + 1) match{
-            case (sub, ni) => odo(ni, jinc, 0, c, nxtAc, lstk, istk, subs :+ sub)}
-          case 'h' | 'i' | 'o' | 'n' => odo(i + 1, jinc + 1, 0, c, nxtAc :+ oneMap(c), lstk, istk, subs)
-          case _ =>
-            if(c == cur) odo(i + 1, j, n + 1, cur, ac, lstk, istk, subs)
-            else if(n == 0) odo(i + 1, j, 1, c, ac, lstk, istk, subs)
-            else odo(i + 1, j + 1, 1, c, ac :+ op, lstk, istk, subs)}}
+    def odo(i: Int = 0, j: Int = 0, n: Int = 0, cur: Char = ' ', ac: Vector[MTOP] = Vector(), lstk: Vector[Int] = Vector(), istk: Vector[Int] = Vector(), subs: Vector[MSub] = Vector()): (Vector[MTOP], Vector[MSub], Int) = {
+      lazy val op = cur match{
+        case '>' => MMove(n)
+        case '<' => MMove(-n)
+        case 'e' => MEnter(n)
+        case 'x' => MExit(n)
+        case '?' => MRand(n)}
+      lazy val nxtAc = if(n == 0) ac else ac :+ op
+      lazy val jinc = if(n == 0) j else j + 1
+      prog.lift(i) match{
+        case None => (nxtAc, subs, i)
+        case Some(c) =>
+          c match{
+            case '.' | ' ' => odo(i + 1, j, n, cur, ac, lstk, istk, subs)
+            case 'n' if cur == c => odo(i + 1, j, 0, c, ac, lstk, istk, subs)
+            case '(' => odo(i + 1, jinc + 1, 0, c, nxtAc :+ MIf(0), lstk, jinc +: istk, subs)
+            case '|' => istk match{
+              case k +: ks => odo(i + 1, jinc + 1, 0, c, setJump(nxtAc, k, jinc + 1) :+ MElse(0), lstk, jinc +: ks, subs)
+              case _ => odo(i + 1, jinc + 1, 0, c, nxtAc :+ MElse(0), lstk, jinc +: istk, subs)}
+            case ')' => odo(i + 1, jinc, 0, c, setJump(nxtAc, istk.head, jinc), lstk, istk.tail, subs)
+            case '[' => odo(i + 1, jinc, 0, c, nxtAc, jinc +: lstk, istk, subs)
+            case ']' => odo(i + 1, jinc + 1, 0, c, nxtAc :+ MLoop(lstk.head), lstk.tail, istk, subs)
+            case '{' => odoRecur(i + 1) match{
+              case (blk, nsubs, ni) => odo(ni, jinc + 1, 0, c, nxtAc :+ MBlock(blk), lstk, istk, subs ++ nsubs)}
+            case '}' => (nxtAc, subs, i + 1)
+            case 'f' => prog(i + 1) match{
+              case '{' => odoRecur(i + 2) match{
+                case (blk, nsubs, ni) => odo(ni, jinc + 1, 0, c, nxtAc :+ MFork(blk), lstk, istk, subs ++ nsubs)}
+              case c2 => odo(i + 2, jinc + 1, 0, c, nxtAc :+ MFork(Vector(oneMap(c2))), lstk, istk, subs)}
+            case '!' => subName(i + 1, call = true) match{
+              case (nam, ni) => odo(ni, jinc + 1, 0, c, nxtAc :+ MCall(nam), lstk, istk, subs)}
+            case '@' => chompSub(i + 1) match{
+              case (sub, ni) => odo(ni, jinc, 0, c, nxtAc, lstk, istk, subs :+ sub)}
+            case 'h' | 'i' | 'o' | 'n' => odo(i + 1, jinc + 1, 0, c, nxtAc :+ oneMap(c), lstk, istk, subs)
+            case _ =>
+              if(c == cur) odo(i + 1, j, n + 1, cur, ac, lstk, istk, subs)
+              else if(n == 0) odo(i + 1, j, 1, c, ac, lstk, istk, subs)
+              else odo(i + 1, j + 1, 1, c, ac :+ op, lstk, istk, subs)}}}
     
     odo() match{
       case (ops, subs, _) => (ops, subs)}}
@@ -195,38 +195,52 @@ object Metatape extends Interpreter{
     def vecToChar(vec: Vector[Int]): Char = BigInt(vec.mkString, 2).toChar
   }
   
-  case class MDP(tp: Int, tape: MTape){
-    def cur: MCell = tape(tp)
-    def curCheck: Boolean = cur != MNull
+  case class MDP(dp: Int, tape: MTape){
+    def cur: Option[MCell] = tape(dp)
+    def curCheck: Boolean = cur.isDefined
     
-    def set(c: MCell): MDP = MDP(tp, tape.set(tp, c))
+    def set(c: Option[MCell]): MDP = MDP(dp, tape.set(dp, c))
     
-    def enter: MDP = {
-      val ntap = tape.enter(tp)
-      MDP(ntap.cur, ntap)}
-    def exit: MDP = {
-      val ntap = tape.exit(tp)
-      MDP(ntap.cur, ntap)}
+    def enter: MDP = MDP(0, tape.move(dp).enter)
+    def exit: MDP = MDP(0, tape.move(dp).exit)
     
-    def move(n: Int): MDP = MDP(tp + n, tape)
+    def move(n: Int): MDP = MDP(dp + n, tape)
   }
   
-  trait MCell{
-    def set(c: MCell): MTape
-    def setActive(nrt: MTape): MTape
-  }
-  object MNull extends MCell{
-    def set(c: MCell): MTape = MTape(immutable.HashMap(0 -> c), 0, MNull)
-    def setActive(nrt: MTape): MTape = MTape(immutable.HashMap[Int, MCell](), 0, nrt)
-  }
-  case class MTape(tape: immutable.HashMap[Int, MCell], cur: Int, root: MCell) extends MCell{
-    def apply(i: Int): MCell = tape.getOrElse(i, MNull)
+  case class MCell(child: Option[MCell], left: Vector[Option[MCell]], right: Vector[Option[MCell]])
+  case class MTape(parent: Option[MCell], child: Option[MCell], left: Vector[Option[MCell]], right: Vector[Option[MCell]]){
+    def apply(i: Int): Option[MCell] = {
+      if(i > 0) right.lift(i - 1).flatten
+      else if(i < 0) left.lift(-i - 1).flatten
+      else child}
     
-    def set(c: MCell): MTape = MTape(tape + ((cur, c)), cur, root)
-    def set(i: Int, c: MCell): MTape = MTape(tape + ((i, c)), i, root)
-    def setActive(nrt: MTape): MTape = MTape(tape, cur, nrt)
+    def set(i: Int, c: Option[MCell]): MTape = {
+      if(i > 0){
+        if(right.isDefinedAt(i - 1)) MTape(parent, child, left, right.updated(i - 1, c))
+        else MTape(parent, child, left, right.padTo(i - 1, None) :+ c)}
+      else if(i < 0){
+        if(left.isDefinedAt(-i - 1)) MTape(parent, child, left.updated(-i - 1, c), right)
+        else MTape(parent, child, left.padTo(-i, None) :+ c, right)}
+      else MTape(parent, c, left, right)}
     
-    def enter(i: Int): MTape = apply(i).setActive(MTape(tape, i, root))
-    def exit(i: Int): MTape = root.set(MTape(tape, i, root))
+    def move(i: Int): MTape = {
+      if(i > 0){
+        if(right.isDefinedAt(i - 1)) MTape(parent, right(i - 1), right.take(i - 1).reverse ++: child +: left, right.drop(i))
+        else MTape(parent, None, right.padTo(i - 1, None).reverse ++: child +: left, Vector())}
+      else if(i < 0){
+        if(left.isDefinedAt(-i - 1)) MTape(parent, left(-i - 1), left.drop(-i), left.take(-i - 1).reverse ++: child +: right)
+        else MTape(parent, None, Vector(), left.padTo(-i - 1, None).reverse ++: child +: right)}
+      else this}
+    
+    def enter: MTape = {
+      val nparent = {
+        if(parent.isDefined || left.nonEmpty || right.nonEmpty) Some(MCell(parent, left, right))
+        else None}
+      child match{
+        case Some(MCell(nchild, nleft, nright)) => MTape(nparent, nchild, nleft, nright)
+        case _ => MTape(nparent, None, Vector(), Vector())}}
+    def exit: MTape = parent match{
+      case Some(MCell(nparent, nleft, nright)) => MTape(nparent, Some(MCell(child, left, right)), nleft, nright)
+      case None => MTape(None, Some(MCell(child, left, right)), Vector(), Vector())}
   }
 }
