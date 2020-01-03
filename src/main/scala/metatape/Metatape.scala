@@ -7,6 +7,8 @@ import scala.collection.immutable
 import scala.util.matching.Regex
 import scala.util.{Random, Try}
 
+import spire.implicits._
+
 object Metatape extends Interpreter{
   val name: String = "Metatape"
   val comReg: Regex = raw"""(?m)(?s)(?://[^\n]*$$|/\*.*\*/)""".r
@@ -82,28 +84,24 @@ object Metatape extends Interpreter{
       case None => RunState(tape, env, cc)
       case Some(op) => op match{
         case MMove(n) => RunState(tape.move(n), env, RunCont(i + 1, prog, cc))
-        case MEnter(n) => RunState((0 until n).foldLeft(tape){case (mip, _) => mip.enter}, env, RunCont(i + 1, prog, cc))
-        case MExit(n) => RunState((0 until n).foldLeft(tape){case (mip, _) => mip.exit}, env, RunCont(i + 1, prog, cc))
+        case MEnter(n) => RunState(tape.enter(n), env, RunCont(i + 1, prog, cc))
+        case MExit(n) => RunState(tape.exit(n), env, RunCont(i + 1, prog, cc))
         case MSetNull => RunState(tape.set(None), env, RunCont(i + 1, prog, cc))
-        case MRand(n) =>
-          val nip = if(Vector.fill(n)(env.rand.nextInt(2)).contains(0)) tape.set(None) else tape
-          RunState(nip, env, RunCont(i + 1, prog, cc))
-        case MIf(ind) =>
-          val ni = if(tape.curCheck) i + 1 else ind
-          RunState(tape, env, RunCont(ni, prog, cc))
+        case MRand(n) => RunState(if(env.rand.nextInt(n) == 0) tape.set(None) else tape, env, RunCont(i + 1, prog, cc))
+        case MIf(ind) => RunState(tape, env, RunCont(if(tape.curCheck) i + 1 else ind, prog, cc))
         case MElse(ind) => RunState(tape, env, RunCont(ind, prog, cc))
         case MLoop(ind) => RunState(tape, env, RunCont(ind, prog, cc))
+        case MHalt => HaltState
+        case MCall(nam: String) => RunState(tape, env, RunCont(0, env.subs(nam), RunCont(i + 1, prog, cc)))
+        case MFork(blk) => RunState(tape, env, RunCont(0, blk, ForkCont(tape, RunCont(i + 1, prog, cc))))
+        case MBlock(blk) => RunState(tape, env, RunCont(0, blk, RunCont(i + 1, prog, cc)))
         case MInp => env.read match{
           case (0, nenv) => RunState(tape.set(None), nenv, RunCont(i + 1, prog, cc))
           case (_, nenv) => RunState(tape, nenv, RunCont(i + 1, prog, cc))}
         case MOut => env.write(if(tape.curCheck) 1 else 0) match{
           case (cop, nenv) => cop match{
             case Some(c) => PrintState(c, RunState(tape, nenv, RunCont(i + 1, prog, cc)))
-            case None => RunState(tape, nenv, RunCont(i + 1, prog, cc))}}
-        case MHalt => HaltState
-        case MCall(nam: String) => RunState(tape, env, RunCont(0, env.subs(nam), RunCont(i + 1, prog, cc)))
-        case MFork(blk) => RunState(tape, env, RunCont(0, blk, ForkCont(tape, RunCont(i + 1, prog, cc))))
-        case MBlock(blk) => RunState(tape, env, RunCont(0, blk, RunCont(i + 1, prog, cc)))}}
+            case None => RunState(tape, nenv, RunCont(i + 1, prog, cc))}}}}
   }
   
   
@@ -147,7 +145,7 @@ object Metatape extends Interpreter{
         case '<' => MMove(-n)
         case 'e' => MEnter(n)
         case 'x' => MExit(n)
-        case '?' => MRand(n)}
+        case '?' => MRand(2 ** n)}
       lazy val nxtAc = if(n == 0) ac else ac :+ op
       lazy val jinc = if(n == 0) j else j + 1
       prog.lift(i) match{
@@ -201,8 +199,19 @@ object Metatape extends Interpreter{
     
     def set(c: Option[MCell]): MDP = MDP(dp, tape.set(dp, c))
     
-    def enter: MDP = MDP(0, tape.move(dp).enter)
-    def exit: MDP = MDP(0, tape.move(dp).exit)
+    def enter(num: Int): MDP = {
+      @tailrec
+      def edo(n: Int, t: MTape): MTape = {
+        if(n == 0) t
+        else edo(n - 1, t.enter)}
+      MDP(0, edo(num, tape.move(dp)))}
+    
+    def exit(num: Int): MDP = {
+      @tailrec
+      def edo(n: Int, t: MTape): MTape = {
+        if(n == 0) t
+        else edo(n - 1, t.exit)}
+      MDP(0, edo(num, tape.move(dp)))}
     
     def move(n: Int): MDP = MDP(dp + n, tape)
   }
