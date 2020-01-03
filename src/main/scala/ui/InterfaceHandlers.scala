@@ -55,7 +55,7 @@ trait InterfaceHandler extends EsoObj{
   
   def readFile(fnam: String, enc: String): Try[String] = Try{
     val src = Source.fromFile(fnam, enc)
-    val res = src.mkString
+    val res = src.mkString.replaceAllLiterally("\r\n", "\n")
     src.close()
     res}
   
@@ -121,12 +121,14 @@ object RunProgHandler extends InterfaceHandler{
   
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val printNum = state.bools("printNum")
+    val logFlg = state.bools("log")
+    val timeFlg = state.bools("logTime")
     def olim(res: LazyList[Char]): LazyList[Char] = state.nums("olen") match{
       case -1 => res
       case n => res.take(n)}
     
     def inputs: Try[LazyList[Char]] = args.get("i") match{
-      case Some(fnam) => readFile(fnam) map (_.to(LazyList) :+ state.nums("fileEOF").toChar)
+      case Some(fnam) => readFile(fnam) map (s => (s + state.nums("fileEOF").toChar).to(LazyList).map{c => print(c); c})
       case None => Success(LazyList.continually(StdIn.readLine + '\n').flatten)}
     
     def printer(out: Seq[Char]): Unit = args.get("o") match{
@@ -147,19 +149,27 @@ object RunProgHandler extends InterfaceHandler{
           case _ => None}
         case l => l}
       doOrOp(langOp, "Unrecognized Language or File Extension"){lang =>
+        if(logFlg) print("Searching for translator path... ")
         doOrOp(findTransPath(state, lang, state.interpNames), "Language Not Recognized"){
           case (inam, t) =>
+            if(logFlg) print("Done.\nRetrieving program from file... ")
             doOrErr(readFile(src)){progRaw =>
-              print("Building Interpreter... ")
+              if(logFlg) print(s"Done.\n$progRaw\nTranslating program... ")
               doOrErr(t(progRaw)){prog =>
+                if(logFlg) print("Done.\nInitializing interpreter... ")
                 timeIt(state.interps(inam)(state.config)(prog)) match{
-                  case (i, dur) => println(s"Done in ${dur}ms.")
+                  case (i, dur) =>
+                    if(logFlg) println(s"Done in ${dur}ms.\nRunning program...")
                     doOrErr(i){r =>
                       doOrErr(inputs){inp =>
                         timeIt{tryAll{printer(olim(r(inp)))}} match{
                           case (flg, rdr) => flg match{
-                            case Success(_) => println(s"\nProgram completed in ${rdr}ms")
-                            case Failure(e) => println(s"\nError: $e\nProgram failed in ${rdr}ms")}}}}}}}}}}
+                            case Failure(e) =>
+                              if(timeFlg) println(s"\nError: $e\nProgram failed in ${rdr}ms")
+                              else println(s"\nError: $e")
+                            case Success(_) =>
+                              if(timeFlg) println(s"\nProgram completed in ${rdr}ms")
+                              else println("\nProgram successfully completed")}}}}}}}}}}
     
     state}
 }
@@ -169,19 +179,24 @@ object TranslateHandler extends InterfaceHandler{
   val helpStr: String = "<-sl :sourceLanguage, -tl :targetLanguage, -s :sourceFileName:> {-o :targetFileName:}"
   
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+    val logFlg = state.bools("log")
     val ext = MapExtractor(args)
     
     def printer(str: String): Unit = args.get("o") match{
       case Some(onam) =>
         writeFile(onam, str)
-        println(s"Translation saved to $onam.")
+        if(logFlg) println(s"Translation saved to $onam.")
       case None => println(str)}
     
     Vector("sl", "tl", "s") match{
       case ext(sl, tl, i) =>
+        if(logFlg) print("Searching for translation path... ")
         doOrOp(buildTrans(state)(sl, tl), "No Applicable Translation Path"){t =>
+          if(logFlg) print("Done.\nRetrieving program from file... ")
           doOrErr(readFile(i)){progRaw =>
+            if(logFlg) print("Done.\nTranslating... ")
             doOrErr(t(progRaw)){prog =>
+              if(logFlg) println("Done.")
               printer(prog)}}}
       case _ => println("Error: Not Enough Arguments")}
     
@@ -193,29 +208,36 @@ object TranspileHandler extends InterfaceHandler{
   val helpStr: String = "<-sl :sourceLanguage, -tl :targetLanguage, -s :sourceFileName:> {-o :targetFileName:}"
   
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+    val logFlg = state.bools("log")
     val ext = MapExtractor(args)
     
     def printer(str: String): Unit = args.get("o") match{
       case Some(onam) =>
         writeFile(onam, str)
-        println(s"Transpiled program saved to $onam.")
+        if(logFlg) println(s"Transpiled program saved to $onam.")
       case None => println(str)}
     
     Vector("sl", "tl", "s") match{
       case ext(sl, tl, s) =>
         val ins = state.genNames.map(_._1)
         val links = state.genLinks
+        if(logFlg) print("Searching for source translator path... ")
         doOrOp(findTransPath(state, sl, ins), "No Applicable Translation Path"){
           case (lin, tin) =>
+            if(logFlg) print("Done.\nSearching for target translator path... ")
             doOrOp(findTransPath(state, links(lin), tl), "No Applicable Translation Path"){
               case (lout, tout) =>
+                if(logFlg) print("Done.\nRetrieving program from file... ")
                 doOrErr(readFile(s)){progRaw =>
+                  if(logFlg) print("Done.\nTranslating from source... ")
                   doOrErr(tin(progRaw)){prog1 =>
+                    if(logFlg) print("Done.\nTranspiling... ")
                     timeIt(state.gens((lin, lout))(state.config)(prog1)) match{
                       case (transTry, dur) =>
                         doOrErr(transTry){prog2 =>
-                          println(s"Program transpiled in ${dur}ms")
+                          if(logFlg) print(s"Done in ${dur}ms.\nTranslating to target... ")
                           doOrErr(tout(prog2)){prog3 =>
+                            if(logFlg) println("Done.")
                             printer(prog3)}}}}}}}
       case _ => println("Error: Not Enough Arguments")}
     
@@ -237,9 +259,10 @@ object LoadBFLangsHandler extends InterfaceHandler{
   val helpStr: String = "{-f :fileName:}"
   
   private val bfNamReg = raw"""(?s)[^\#]*\#(\V*)(.*)\z""".r
-  private val bfBindReg = raw"""(?s)[^\[\]\+\-\<\>\,\.]*([\[\]\+\-\<\>\,\.])\=\>(\V*)\z""".r
   
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+    val logFlg = state.bools("log")
+    
     @tailrec
     def cdo(src: Vector[Char], ac: Vector[(String, String)] = Vector()): (Vector[(String, String)], String) = src match{
       case c +: '=' +: '>' +: cs if "[]<>+-,.".contains(c) && ac.sizeIs < 8 =>
@@ -261,11 +284,20 @@ object LoadBFLangsHandler extends InterfaceHandler{
       case Some(str) => str
       case None => EsoDefaults.defBFLFile}
     
-    doOrErr(readFile(fnam))(mkTrans(_)) match{
+    if(logFlg) print("Retrieving lang file... ")
+    val transVec = doOrErr(readFile(fnam)){langFile =>
+      if(logFlg) print("Done.\nParsing translators... ")
+      val tv = mkTrans(langFile)
+      if(logFlg) println("Done.")
+      tv}
+    
+    transVec match{
       case Some(bfts) =>
-        println(s"Loaded BF Langs:\n${bfts.map(t => s"- ${t.name}").mkString("\n")}")
+        if(logFlg) println(s"Loaded BF Langs:\n${bfts.map(t => s"- ${t.name}").mkString("\n")}")
         state.addAllTrans(bfts)
-      case None => state}}
+      case None =>
+        if(logFlg) println(s"Failed to load BF Langs")
+        state}}
 }
 
 object SaveBFLangsHandler extends InterfaceHandler{
@@ -284,6 +316,7 @@ object SaveBFLangsHandler extends InterfaceHandler{
       .mkString("\n")
     
     writeFile(fnam, bfStr)
+    if(state.bools("log")) println(s"Translators saved to $fnam.")
     
     state}
 }
