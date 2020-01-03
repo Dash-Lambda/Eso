@@ -154,7 +154,7 @@ object RunProgHandler extends InterfaceHandler{
           case (inam, t) =>
             if(logFlg) print("Done.\nRetrieving program from file... ")
             doOrErr(readFile(src)){progRaw =>
-              if(logFlg) print(s"Done.\n$progRaw\nTranslating program... ")
+              if(logFlg) print(s"Done.\nTranslating program... ")
               doOrErr(t(progRaw)){prog =>
                 if(logFlg) print("Done.\nInitializing interpreter... ")
                 timeIt(state.interps(inam)(state.config)(prog)) match{
