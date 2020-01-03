@@ -26,15 +26,32 @@ object BFToMetatape extends Transpiler{
     
     @tailrec
     def tdo(i: Int = 0, ac: String = ""): String = prog.lift(i) match{
-      case Some(c) => tdo(i + 1, ac ++ opMap(c))
+      case Some(c) => c match{
+        case '+' => cnt(c, i) match{
+          case (num, ni) =>
+            val bits = num.toBinaryString.reverse.toVector.zipWithIndex.collect{case ('1', i) => i + 1}
+            val strs = bits.map(i => s"${strFill(i)(">")}!+").mkString
+            tdo(ni, ac ++ s"eeexx${strs}x")}
+        case '-' => cnt(c, i) match{
+          case (num, ni) =>
+            val bits = num.toBinaryString.reverse.toVector.zipWithIndex.collect{case ('1', i) => i}
+            val strs = bits.map(i => s"!m${strFill(i)(">")}!-").mkString
+            tdo(ni, ac ++ s"eeexx${strs}x")}
+        case _ => tdo(i + 1, ac ++ opMap(c))}
       case None => ac}
+    
+    @tailrec
+    def cnt(c: Char, i: Int, n: Int = 0): (Int, Int) = prog.lift(i) match{
+      case Some(`c`) => cnt(c, i + 1, n + 1)
+      case _ => (n, i)}
     
     def strFill(n: Int)(str: String): String = Vector.fill(n)(str).mkString
     
     val mtProg =
       s"""|@r{[[(e(|x<])|<])x}
-          |@+{eeexx>[(n>]|ex)!rx}
-          |@-{eeexx${strFill(wid)(">")}>ex${strFill(wid)("<")}[(n|ex>])!rx}
+          |@+{[(n>]|ex)!r}
+          |@m{${strFill(wid + 1)(">")}ex${strFill(wid)("<")}}
+          |@-{[(n|ex>])!r}
           |@,{eeexx${strFill(wid)(">")}${strFill(wid)("exi<")}x}
           |@.{e${strFill(wid)(">")}${strFill(wid)("o<")}x}
           |@f{!re>ex<x}
