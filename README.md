@@ -41,7 +41,7 @@ Ultimately, what functional programming accomplishes is highly modular, testable
 ### State of the Project
 
 #### Supported Languages
-Current native language support (in chronological order):
+Current native language support (mostly in chronological order):
 * [Brainfuck](https://esolangs.org/wiki/Brainfuck)
 * [Fluffle Puff](https://github.com/juju2143/flufflepuff)
 * [Ook](https://esolangs.org/wiki/Ook!)
