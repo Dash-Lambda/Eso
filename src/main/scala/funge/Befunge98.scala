@@ -20,20 +20,14 @@ object Befunge98 extends Interpreter{
           case FIPOut(str, nProg, nInp, nFip) => Some((str, (ips :+ nFip, nProg, nInp, idCnt, halt)))
           case FIPHalt(ret) => ret match{
             case Some(r) => if(config.bool("bfRetCode")) Some((s"\nReturn: $r", (Vector(), prog, Seq(), 0, true))) else None
-            case None => bdo(ips, prog, inp, idCnt, halt)
-          }
-        }
-        case _ => None
-      }
-    }
+            case None => bdo(ips, prog, inp, idCnt, halt)}}
+        case _ => None}}
     
     val initPos = Vec2D(-1, 0)
     val initDt = Vec2D(1, 0)
     
-    Try{BF98Prog(progRaw.filter(_ != '\f'), config.cal, config.bool("bfDiv"))} map {prog =>
-      inputs => LazyList.unfold((Vector(FIP(0, prog.getNextInd(initPos, initDt), initDt, Vec2D(0, 0), bs=false, Vector(LazyList.continually(0)), immutable.HashMap())), prog, inputs, 1: Int, false: Boolean)){
-        case (fips, prg, in, id, halt) => bdo(fips, prg, in, id, halt)
-      }.flatten
-    }
-  }
+    Try{BF98Prog(progRaw.filter(_ != '\f'), config.cal, config.rand, config.bool("bfDiv"))} map {prog =>
+      inputs => LazyList.unfold((Vector(FIP(0, prog.getNextInd(initPos, initDt), initDt, Vec2D(0, 0), bs=false, Vector(FungeStack(Vector())), immutable.HashMap())), prog, inputs, 1: Int, false: Boolean)){
+        case (fips, prg, in, id, halt) => bdo(fips, prg, in, id, halt)}
+        .flatten}}
 }

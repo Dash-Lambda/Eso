@@ -79,12 +79,12 @@ y claims all of the following:
 	That the offset of the IP was ( 0 0 )
 	That the least point containing a non-space cell is ( -3 -2 )
 	That the greatest point, relative to that point, is ( 183 911 )
-	That the day of the month is 12 
-	That the month is 12 
-	That the year is 2019 
-	That the time is 10 : 02 : 21 
+	That the day of the month is 4 
+	That the month is 1 
+	That the year is 2020 
+	That the time is 07 : 25 : 35 
 	That the size of the stack stack is 1 
-	That the stack sizes are [ -1 ] from top to bottom
+	That the stack sizes are [ 0 ] from top to bottom
 	That the command-line arguments were: [ null ]
 	That the environment variables are:
 Best that the above claims are manually verified to be correct.
@@ -115,10 +115,10 @@ GOOD: "a  b" takes 5 ticks
 
 Done testing concurrent execution.
 
-BAD: 0y pushes wrong stack size
+GOOD: y acts as pick instruction if given large enough argument
 GOOD: ] turns flying IP right
-BAD: : on empty stack doesn't make stack size 2, says y
-BAD: \ on empty stack doesn't make stack size 2, says y
+GOOD: : on empty stack makes stack size 2 according to y
+GOOD: \ on empty stack makes stack size 2 according to y
 
 GOOD: ( pops correctly
 GOOD: ) pops correctly

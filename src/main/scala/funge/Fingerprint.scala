@@ -1,6 +1,6 @@
 package funge
 
-import common.{Config, EsoObj}
+import common.EsoObj
 
 import scala.collection.immutable
 
@@ -18,28 +18,22 @@ trait Fingerprint {
   val binds: Vector[(Char, (BF98Prog, Seq[Char], FIP) => FIPRet)]
   
   def push(n: Int)(prog: BF98Prog, inp: Seq[Char], fip: FIP): FIPRet = fip match{
-    case FIP(id, ip, dt, so, bs, stk, binds) => FIPCont(prog, inp, FIP(id, prog.getNextInd(ip, dt), dt, so, bs, (n +: fip.TOSS) +: stk.tail, binds))
-  }
-  def tossOp(f: LazyList[Int] => LazyList[Int])(prog: BF98Prog, inp: Seq[Char], fip: FIP): FIPRet = fip match{
-    case FIP(id, ip, dt, so, bs, stk, binds) => FIPCont(prog, inp, FIP(id, prog.getNextInd(ip, dt), dt, so, bs, f(fip.TOSS) +: stk.tail, binds))
-  }
+    case FIP(id, ip, dt, so, bs, stk, binds) => FIPCont(prog, inp, FIP(id, prog.getNextInd(ip, dt), dt, so, bs, (n +: fip.TOSS) +: stk.tail, binds))}
+  def tossOp(f: FungeStack => FungeStack)(prog: BF98Prog, inp: Seq[Char], fip: FIP): FIPRet = fip match{
+    case FIP(id, ip, dt, so, bs, stk, binds) => FIPCont(prog, inp, FIP(id, prog.getNextInd(ip, dt), dt, so, bs, f(fip.TOSS) +: stk.tail, binds))}
 }
 
 object BOOL extends Fingerprint{
   val name: String = "BOOL"
   
-  def AND(lst: LazyList[Int]): LazyList[Int] = lst match{
-    case b +: a +: ns => (a&b) +: ns
-  }
-  def NOT(lst: LazyList[Int]): LazyList[Int] = lst match{
-    case n +: ns => (~n) +: ns
-  }
-  def OR(lst: LazyList[Int]): LazyList[Int] = lst match{
-    case b +: a +: ns => (a|b) +: ns
-  }
-  def XOR(lst: LazyList[Int]): LazyList[Int] = lst match{
-    case b +: a +: ns => (a^b) +: ns
-  }
+  def AND(lst: FungeStack): FungeStack = lst match{
+    case b #-: a #-: ns => (a&b) +: ns}
+  def NOT(lst: FungeStack): FungeStack = lst match{
+    case n #-: ns => (~n) +: ns}
+  def OR(lst: FungeStack): FungeStack = lst match{
+    case b #-: a #-: ns => (a|b) +: ns}
+  def XOR(lst: FungeStack): FungeStack = lst match{
+    case b #-: a #-: ns => (a^b) +: ns}
   
   val binds: Vector[(Char, (BF98Prog, Seq[Char], FIP) => FIPRet)] = Vector(
     'A' -> tossOp(AND),
@@ -64,17 +58,14 @@ object ROMA extends Fingerprint{
 object MODU extends Fingerprint{
   val name: String = "MODU"
   
-  def tossOpDiv(f: (Boolean, LazyList[Int]) => LazyList[Int]): (BF98Prog, Seq[Char], FIP) => FIPRet = (prog, seq, fip) => tossOp(f(prog.bDiv, _))(prog, seq, fip)
+  def tossOpDiv(f: (Boolean, FungeStack) => FungeStack): (BF98Prog, Seq[Char], FIP) => FIPRet = (prog, seq, fip) => tossOp(f(prog.bDiv, _))(prog, seq, fip)
   
-  def MMod(bDiv: Boolean, lst: LazyList[Int]): LazyList[Int] = lst match{
-    case b +: a +: ns => (if(b == 0 && bDiv) 0 else (a%b + b)%b) +: ns
-  }
-  def UMod(bDiv: Boolean, lst: LazyList[Int]): LazyList[Int] = lst match{
-    case b +: a +: ns => (if(b == 0 && bDiv) 0 else a%b).abs +: ns
-  }
-  def RMod(bDiv: Boolean, lst: LazyList[Int]): LazyList[Int] = lst match{
-    case b +: a +: ns => (if(b == 0 && bDiv) 0 else a%b) +: ns
-  }
+  def MMod(bDiv: Boolean, lst: FungeStack): FungeStack = lst match{
+    case b #-: a #-: ns => (if(b == 0 && bDiv) 0 else (a%b + b)%b) +: ns}
+  def UMod(bDiv: Boolean, lst: FungeStack): FungeStack = lst match{
+    case b #-: a #-: ns => (if(b == 0 && bDiv) 0 else a%b).abs +: ns}
+  def RMod(bDiv: Boolean, lst: FungeStack): FungeStack = lst match{
+    case b #-: a #-: ns => (if(b == 0 && bDiv) 0 else a%b) +: ns}
   
   val binds: Vector[(Char, (BF98Prog, Seq[Char], FIP) => FIPRet)] = Vector(
     'M' -> tossOpDiv(MMod),

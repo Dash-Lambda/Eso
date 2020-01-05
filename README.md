@@ -262,11 +262,11 @@ A
 ```
 
 #### On the Befunge-98 Interpreter
-You'll notice in the Mycology report that there is one thing Eso's Funge-98 interpreter fails at: Reporting stack size.
+This is by far the biggest, most complex, and most difficult to get right interpreter in Eso, as it will likely remain for some time.
 
-The stack size is reported weird because Funge's stacks are bottomless. When you try to pop an empty stack, instead of throwing an error, it returns a 0; Eso's implementation handles this quite naturally with LazyLists, treating each stack on the stack-stack as an endless list of 0s. This means the size is always infinite, so Eso reports the size as -1.
+For a while, there was a glaring issue in the Mycology report: Eso didn't report stack size correctly. There was a very simple reason for this; the Befunge-93 interpreter handles bottomless stacks with LazyLists, meaning the stack listerally is an endless list of 0s. Moving this over to Befunge-98 posed an issue, because Funge-98 adds the ability to query stack sizes, which is always infinite with the LazyList approach.
 
-I'm looking into solutions for this, but I don't currently see it as a large problem.
+My first approach to resolve this was just to report the stack size as -1, but that obviously wasn't expected behavior. Eventually, I ended up writing a new collection type that keeps a finite Vector of elements but behaves like a bottomless list when elements are extracted. 
 
 Of course, the Funge-98 interpreter also does not support file I/O or the system.exec instruction, as this would break the functional style. Thankfully, these features are actually optional in the spec. 
 
