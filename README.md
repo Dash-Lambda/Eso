@@ -80,6 +80,9 @@ Current native language support (mostly in chronological order):
     * BOOL
     * MODU
     * ROMA
+    * NULL
+    * HRTI
+    * REFC
 
 #### WIP:
 * Automatic method breakup for user-facing BrainFuck=>Scala transpiler (already done in internal one)
@@ -136,7 +139,7 @@ The command is just a string, while the arguments are read as a list of name-val
 To make bindings relatively seamless, the bind/unbind commands as well as any active bindings are intercepted before reaching the parser. The bind and unbind commands are instead parsed as "bind \<token\> \<command\>" and "unbind \<token\>", and any active bindings are replaced with the bound command then sent to the parser.
 
 ##### States and Configurations
-Many of the languages supported by Eso have configurable options or parts of their environment, like optional dynamic tape size, random number generators, or even calendars. Rather than using simple global values, which would severely impact modularity and disregard the functional style, Eso wraps all these into a data structure to pass down to components.
+Many of the languages supported by Eso have configurable options or parts of their environment, like optional dynamic tape size, random number generators, or even timers. Rather than using simple global values, which would severely impact modularity and disregard the functional style, Eso wraps all these into a data structure to pass down to components.
 
 There are two structures used for this:
 * States: These hold all the active language components, parameters, bindings, and anything else used by the interface.
@@ -267,6 +270,12 @@ This is by far the biggest, most complex, and most difficult to get right interp
 For a while, there was a glaring issue in the Mycology report: Eso didn't report stack size correctly. There was a very simple reason for this; the Befunge-93 interpreter handles bottomless stacks with LazyLists, meaning the stack listerally is an endless list of 0s. Moving this over to Befunge-98 posed an issue, because Funge-98 adds the ability to query stack sizes, which is always infinite with the LazyList approach.
 
 My first approach to resolve this was just to report the stack size as -1, but that obviously wasn't expected behavior. Eventually, I ended up writing a new collection type that keeps a finite Vector of elements but behaves like a bottomless list when elements are extracted. 
+
+Another difficulty comes from the fact that Funge-98 allows the program to query a clock/timer.
+
+\*long, shaky sigh\*
+
+Ultimately, I settled on a design where clock reads are handled similarly to user input, where it's an immutable LazyList of clock reads that is evaluated as it is used.
 
 Of course, the Funge-98 interpreter also does not support file I/O or the system.exec instruction, as this would break the functional style. Thankfully, these features are actually optional in the spec. 
 

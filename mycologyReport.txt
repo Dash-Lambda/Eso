@@ -82,7 +82,7 @@ y claims all of the following:
 	That the day of the month is 4 
 	That the month is 1 
 	That the year is 2020 
-	That the time is 07 : 25 : 35 
+	That the time is 10 : 24 : 52 
 	That the size of the stack stack is 1 
 	That the stack sizes are [ 0 ] from top to bottom
 	That the command-line arguments were: [ null ]
@@ -142,8 +142,16 @@ A line (consider it UNDEF, though not marked as such) will be emitted for each f
 If the interpreter loads the fingerprint, subsequent lines will be GOOD or BAD depending on whether the interpreter behaves according to the fingerprint's specification.
 Fingerprints will be unloaded after being tested. If ) does not work, it will fail silently.
 
-Testing fingerprint NULL... not loaded.
-Testing fingerprint HRTI... not loaded.
+Testing fingerprint NULL... loaded.
+GOOD: all of A-Z reflected
+
+Testing fingerprint HRTI... loaded.
+UNDEF: G gives clock granularity as 1000 microseconds
+GOOD: T reflected when called before M
+UNDEF: S pushed 642000 
+UNDEF: T after M pushed 2000 and a second T, after 675 ys, pushed 7808000 
+GOOD: ET reflected
+
 Testing fingerprint MODE... not loaded.
 Testing fingerprint MODU... loaded.
 GOOD: a04-M pushes -2
@@ -154,7 +162,13 @@ GOOD: 0a-04-U pushes 2
 
 Testing fingerprint ORTH... not loaded.
 Testing fingerprint PERL... not loaded.
-Testing fingerprint REFC... not loaded.
+Testing fingerprint REFC... loaded.
+UNDEF: 12R34R56R pushed the scalars [ 0 1 2 ]
+GOOD: D returned first vector
+GOOD: D returned second vector
+GOOD: D returned third vector
+GOOD: D returned first vector the second time
+
 Testing fingerprint ROMA... loaded.
 GOOD: I pushes 1 
 GOOD: V pushes 5 

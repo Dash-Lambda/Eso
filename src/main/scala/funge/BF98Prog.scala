@@ -1,13 +1,10 @@
 package funge
 
-import java.util.Calendar
-import scala.util.Random
-
 import common.{EsoObj, Matrix, Vec2D}
 
 import scala.annotation.tailrec
 
-case class BF98Prog(prog: Matrix[Int], origin: Vec2D[Int], cal: Calendar, rand: Random, bDiv: Boolean) extends EsoObj{
+case class BF98Prog(prog: Matrix[Int], origin: Vec2D[Int], bDiv: Boolean) extends EsoObj{
   def apply(p: Vec2D[Int]): Int = prog.getOrElse(p + origin)(32)
   def get(p: Vec2D[Int]): Option[Int] = prog.get(p + origin)
   
@@ -25,7 +22,7 @@ case class BF98Prog(prog: Matrix[Int], origin: Vec2D[Int], cal: Calendar, rand: 
     (npos, this.apply(npos))}
   
   def updated(p: Vec2D[Int], e: Int): BF98Prog = padToMat(p) match{
-    case (pprog, norg) => BF98Prog(pprog.updated(norg + p, e), norg, cal, rand, bDiv)}
+    case (pprog, norg) => BF98Prog(pprog.updated(norg + p, e), norg, bDiv)}
   
   def skipTill(pos: Vec2D[Int], dt: Vec2D[Int], e: Int): Vec2D[Int] = {
     @tailrec def sdo(p: Vec2D[Int]): Vec2D[Int] = get(p) match{
@@ -76,7 +73,7 @@ case class BF98Prog(prog: Matrix[Int], origin: Vec2D[Int], cal: Calendar, rand: 
     
     (prog.padWith(x0, x1, y0, y1, 32), origin + Vec2D[Int](x0, y0))}
   def padTo(p: Vec2D[Int]): BF98Prog = padToMat(p) match{
-    case (nprog, norg) => BF98Prog(nprog, norg, cal, rand, bDiv)}
+    case (nprog, norg) => BF98Prog(nprog, norg, bDiv)}
   
   def getBounds: (Vec2D[Int], Vec2D[Int]) = {
     val vecs = prog.vec.grouped(prog.xdim).toVector
@@ -92,5 +89,5 @@ case class BF98Prog(prog: Matrix[Int], origin: Vec2D[Int], cal: Calendar, rand: 
     (least - origin, Vec2D(x1, y1) - least)}
 }
 object BF98Prog extends EsoObj{
-  def apply(progRaw: String, cal: Calendar, rand: Random, bDiv: Boolean): BF98Prog = new BF98Prog(Matrix(StringToRect(progRaw)), Vec2D(0, 0), cal, rand, bDiv)
+  def apply(progRaw: String, bDiv: Boolean): BF98Prog = new BF98Prog(Matrix(StringToRect(progRaw)), Vec2D(0, 0), bDiv)
 }

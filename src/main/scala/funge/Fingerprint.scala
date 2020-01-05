@@ -4,8 +4,9 @@ import common.EsoObj
 
 import scala.collection.immutable
 
+
 object BF98Lib extends EsoObj{
-  val fpvec: Vector[Fingerprint] = Vector[Fingerprint](BOOL, ROMA, MODU)
+  val fpvec: Vector[Fingerprint] = Vector[Fingerprint](BOOL, ROMA, MODU, NULL, HRTI, REFC)
   val lib: immutable.HashMap[Int, Fingerprint] = mkMap(fpvec.map(fp => (fp.id, fp)))
   
   def apply(id: Int): Fingerprint = lib(id)
@@ -15,12 +16,26 @@ object BF98Lib extends EsoObj{
 trait Fingerprint {
   val name: String
   lazy val id: Int = name.toVector.map(_.toInt).foldLeft(0: Int){case (ac, n) => (ac*256) + n}
-  val binds: Vector[(Char, (BF98Prog, Seq[Char], FIP) => FIPRet)]
+  val binds: Vector[(Char, (BF98Prog, BF98State, FIP) => FIPRet)]
   
-  def push(n: Int)(prog: BF98Prog, inp: Seq[Char], fip: FIP): FIPRet = fip match{
-    case FIP(id, ip, dt, so, bs, stk, binds) => FIPCont(prog, inp, FIP(id, prog.getNextInd(ip, dt), dt, so, bs, (n +: fip.TOSS) +: stk.tail, binds))}
-  def tossOp(f: FungeStack => FungeStack)(prog: BF98Prog, inp: Seq[Char], fip: FIP): FIPRet = fip match{
-    case FIP(id, ip, dt, so, bs, stk, binds) => FIPCont(prog, inp, FIP(id, prog.getNextInd(ip, dt), dt, so, bs, f(fip.TOSS) +: stk.tail, binds))}
+  def pushToToss(fip: FIP)(ns: Int*): FIP = fip match{
+    case FIP(fid, ip, dt, so, bs, stk, binds) => stk match{
+      case toss +: ss => FIP(fid, ip, dt, so, bs, (ns ++: toss) +: ss, binds)}}
+  def pushToToss(stk: Vector[FungeStack])(ns: Int*): Vector[FungeStack] = stk match{
+    case toss +: tl => (ns ++: toss) +: tl}
+  
+  def reflect(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = fip match{
+    case FIP(fid, ip, dt, so, bs, stk, binds) => FIPCont(prog, dat, FIP(fid, prog.getNextInd(ip, -dt), -dt, so, bs, stk, binds))}
+  
+  def push(n: Int)(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = fip match{
+    case FIP(id, ip, dt, so, bs, stk, binds) => FIPCont(prog, dat, FIP(id, prog.getNextInd(ip, dt), dt, so, bs, (n +: fip.TOSS) +: stk.tail, binds))}
+  def tossOp(f: FungeStack => FungeStack)(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = fip match{
+    case FIP(id, ip, dt, so, bs, stk, binds) => FIPCont(prog, dat, FIP(id, prog.getNextInd(ip, dt), dt, so, bs, f(fip.TOSS) +: stk.tail, binds))}
+  def fpDatOp(f: BF98FPData => BF98FPData)(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = dat match{
+    case BF98State(times, inp, rand, fpDat) => FIPCont(prog, BF98State(times, inp, rand, f(fpDat)), fip.step(prog))}
+  def progOp(f: BF98Prog => BF98Prog)(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = {
+    val nprog = f(prog)
+    FIPCont(nprog, dat, fip.step(nprog))}
 }
 
 object BOOL extends Fingerprint{
@@ -35,7 +50,7 @@ object BOOL extends Fingerprint{
   def XOR(lst: FungeStack): FungeStack = lst match{
     case b #-: a #-: ns => (a^b) +: ns}
   
-  val binds: Vector[(Char, (BF98Prog, Seq[Char], FIP) => FIPRet)] = Vector(
+  val binds: Vector[(Char, (BF98Prog, BF98State, FIP) => FIPRet)] = Vector(
     'A' -> tossOp(AND),
     'N' -> tossOp(NOT),
     'O' -> tossOp(OR),
@@ -45,7 +60,7 @@ object BOOL extends Fingerprint{
 object ROMA extends Fingerprint{
   val name: String = "ROMA"
   
-  val binds: Vector[(Char, (BF98Prog, Seq[Char], FIP) => FIPRet)] = Vector(
+  val binds: Vector[(Char, (BF98Prog, BF98State, FIP) => FIPRet)] = Vector(
     'C' -> push(100),
     'D' -> push(500),
     'I' -> push(1),
@@ -58,7 +73,7 @@ object ROMA extends Fingerprint{
 object MODU extends Fingerprint{
   val name: String = "MODU"
   
-  def tossOpDiv(f: (Boolean, FungeStack) => FungeStack): (BF98Prog, Seq[Char], FIP) => FIPRet = (prog, seq, fip) => tossOp(f(prog.bDiv, _))(prog, seq, fip)
+  def tossOpDiv(f: (Boolean, FungeStack) => FungeStack): (BF98Prog, BF98State, FIP) => FIPRet = (prog, seq, fip) => tossOp(f(prog.bDiv, _))(prog, seq, fip)
   
   def MMod(bDiv: Boolean, lst: FungeStack): FungeStack = lst match{
     case b #-: a #-: ns => (if(b == 0 && bDiv) 0 else (a%b + b)%b) +: ns}
@@ -67,8 +82,58 @@ object MODU extends Fingerprint{
   def RMod(bDiv: Boolean, lst: FungeStack): FungeStack = lst match{
     case b #-: a #-: ns => (if(b == 0 && bDiv) 0 else a%b) +: ns}
   
-  val binds: Vector[(Char, (BF98Prog, Seq[Char], FIP) => FIPRet)] = Vector(
+  val binds: Vector[(Char, (BF98Prog, BF98State, FIP) => FIPRet)] = Vector(
     'M' -> tossOpDiv(MMod),
     'U' -> tossOpDiv(UMod),
     'R' -> tossOpDiv(RMod))
+}
+
+object NULL extends Fingerprint{
+  val name: String = "NULL"
+  override lazy val id: Int = 0x4e554c4c
+  
+  val binds: Vector[(Char, (BF98Prog, BF98State, FIP) => FIPRet)] = ('A' to 'Z').toVector.map(c => (c, reflect))
+}
+
+object HRTI extends Fingerprint{
+  val name: String = "HRTI"
+  
+  def gran(stk: FungeStack): FungeStack = 1000 +: stk
+  def mark(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = dat.readTime match{
+    case (t, ndat) => fpDatOp(_.markTime(fip.id, t))(prog, ndat, fip)}
+  def timer(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = dat.fpDat.hrtiMarks.get(fip.id) match{
+    case None => reflect(prog, dat, fip)
+    case Some(t0) => dat.readTime match{
+      case (t1, ndat) => FIPCont(prog, ndat, pushToToss(fip)(((t1 - t0)*1000).toInt).step(prog))}}
+  def unmark(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = fpDatOp(_.unMarkTime(fip.id))(prog, dat, fip)
+  def seconds(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = dat.readTime match{
+    case (t, ndat) => FIPCont(prog, ndat, pushToToss(fip)(((t%1000)*1000).toInt).step(prog))}
+  
+  val binds: Vector[(Char, (BF98Prog, BF98State, FIP) => FIPRet)] = Vector(
+    'G' -> tossOp(gran),
+    'M' -> mark,
+    'T' -> timer,
+    'E' -> unmark,
+    'S' -> seconds)
+}
+
+object REFC extends Fingerprint{
+  val name: String = "REFC"
+  
+  def ref(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = fip match{
+    case FIP(fid, ip, dt, so, bs, stk, binds) => dat match{
+      case BF98State(times, inp, rand, fpDat) => stk match{
+        case toss +: ss => toss match{
+          case y #-: x #-: ns => fpDat.pushRef(y, x) match{
+            case (i, nfpd) => FIPCont(prog, BF98State(times, inp, rand, nfpd), FIP(fid, ip, dt, so, bs, (i +: ns) +: ss, binds).step(prog))}}}}}
+  
+  def deref(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = fip match{
+    case FIP(fid, ip, dt, so, bs, stk, binds) => stk match{
+      case toss +: ss => toss match{
+        case n #-: ns => dat.fpDat.vecRefs(n) match{
+          case (x, y) => FIPCont(prog, dat, FIP(fid, ip, dt, so, bs, (y +: x +: ns) +: ss, binds).step(prog))}}}}
+  
+  val binds: Vector[(Char, (BF98Prog, BF98State, FIP) => FIPRet)] = Vector(
+    'R' -> ref,
+    'D' -> deref)
 }
