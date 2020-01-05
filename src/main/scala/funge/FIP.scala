@@ -175,38 +175,39 @@ case class FIP(id: Int, ip: Vec2D[Int], dt: Vec2D[Int], so: Vec2D[Int], bs: Bool
       case '~' => dat.readInt match{
         case (n, ndat) => FIPCont(prog, ndat, FIP(id, npos, dt, so, bs, (n +: TOSS) +: stk.tail, binds))}
       case 'y' => dat.readTime match{
-        case (t, ndat) =>
-          import SysInf._
-          val (low, high) = prog.getBounds
-          val cal = CalendarOps.getCal(t)
-          val date = cal.get(Calendar.DATE)
-          val year = cal.get(Calendar.YEAR)
-          val month = cal.get(Calendar.MONTH) + 1
-          val hour = cal.get(Calendar.HOUR)
-          val minute = cal.get(Calendar.MINUTE)
-          val second = cal.get(Calendar.SECOND)
-          val ymd = ((year - 1900)*256*256) + (month*256) + date
-          val hms = (hour*256*256) + (minute*256) + second
-  
-          val flags = Vector(tFlg, iFlg, oFlg, eqFlg, bufFlg).zipWithIndex.foldLeft(0: Int){case (s, (f, n)) => s + (f*(2**n))}
-          val global = Vector(flags, bytesPerCell, handPrint, version, paradigm, pathSep.toInt, dims)
-          val local = Vector(id, 0, ip.y, ip.x, dt.y, dt.x, so.y, so.x)
-          val env = Vector(low.y, low.x, high.y, high.x, ymd, hms)
-          val stkInf = stk.size +: TOSS.tail.size +: stk.tail.map(_.size)
-          val args = Vector.fill(4)(0)
-  
-          val infoStk = (global ++ local ++ env ++ stkInf ++ args).to(LazyList)
-          TOSS match{
-            case n #-: ns =>
+        case (t, ndat) => TOSS match{
+          case n #-: ns =>
+            if(n > 26 + stk.size) FIPCont(prog, dat.popTime, FIP(id, npos, dt, so, bs, (ns(n - 27 - stk.size) +: ns) +: stk.tail, binds))
+            else{
+              import SysInf._
+              val (low, high) = prog.getBounds
+              val cal = CalendarOps.getCal(t)
+              val date = cal.get(Calendar.DATE)
+              val year = cal.get(Calendar.YEAR)
+              val month = cal.get(Calendar.MONTH) + 1
+              val hour = cal.get(Calendar.HOUR)
+              val minute = cal.get(Calendar.MINUTE)
+              val second = cal.get(Calendar.SECOND)
+              val ymd = ((year - 1900)*256*256) + (month*256) + date
+              val hms = (hour*256*256) + (minute*256) + second
+              
+              val flags = Vector(tFlg, iFlg, oFlg, eqFlg, bufFlg).zipWithIndex.foldLeft(0: Int){case (s, (f, n)) => s + (f*(2**n))}
+              val global = Vector(flags, bytesPerCell, handPrint, version, paradigm, pathSep.toInt, dims)
+              val local = Vector(id, 0, ip.y, ip.x, dt.y, dt.x, so.y, so.x)
+              val env = Vector(low.y, low.x, high.y, high.x, ymd, hms)
+              val stkInf = stk.size +: TOSS.tail.size +: stk.tail.map(_.size)
+              val args = Vector.fill(4)(0)
+              
+              val infoStk = (global ++ local ++ env ++ stkInf ++ args).to(LazyList)
               if(n <= 0) FIPCont(prog, ndat, FIP(id, npos, dt, so, bs, (infoStk ++: ns) +: stk.tail, binds))
               else{
                 val tmpToss = infoStk ++: ns
                 val pick = tmpToss(n - 1)
-                FIPCont(prog, ndat, FIP(id, npos, dt, so, bs, (pick +: ns) +: stk.tail, binds))}}}
+                FIPCont(prog, ndat, FIP(id, npos, dt, so, bs, (pick +: ns) +: stk.tail, binds))}}}}
       case c if binds.isDefinedAt(c) && binds(c).nonEmpty => binds(c).head(prog, dat, this)
       case '(' => TOSS match{
         case n #-: ns =>
-          val id = ns.take(n).foldLeft(0){case (ac, m) => (ac*256) + m}
+          val id = chompID(ns.take(n))
           BF98Lib.get(id) match{
             case Some(fp) =>
               val nBind = fp.binds.foldLeft(binds){
@@ -219,7 +220,7 @@ case class FIP(id: Int, ip: Vec2D[Int], dt: Vec2D[Int], so: Vec2D[Int], bs: Bool
             case None => FIPCont(prog, dat, FIP(id, prog.getNextInd(ip, -dt), -dt, so, bs, ns.drop(n) +: stk.tail, binds))}}
       case ')' => TOSS match{
         case n #-: ns =>
-          val id = ns.take(n).foldLeft(0){case (ac, m) => (ac*256) + m}
+          val id = chompID(ns.take(n))
           BF98Lib.get(id) match{
             case Some(fp) =>
               val nBind = fp.binds.foldLeft(binds){
@@ -235,7 +236,7 @@ case class FIP(id: Int, ip: Vec2D[Int], dt: Vec2D[Int], so: Vec2D[Int], bs: Bool
       case 'l' => FIPCont(prog, dat, FIP(id, prog.getNextInd(ip, -dt), -dt, so, bs, stk, binds))
       case _ => FIPCont(prog, dat, FIP(id, prog.getNextInd(ip, -dt), -dt, so, bs, stk, binds))}}
   
-  //def chomp(inp: Seq[Char]): (String, Seq[Char]) = inp.splitAt(inp.indexOf('\n')) match{case (hd, tl) => (hd.mkString, tl.tail)}
+  def chompID(lst: Vector[Int]): Int = lst.foldLeft(0){case (ac, m) => (ac*256) + m}
   
   def TOSS: FungeStack = stk.head
   def SOSS: FungeStack = stk(1)
