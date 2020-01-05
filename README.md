@@ -199,8 +199,6 @@ The optimizing BrainFuck interpreter translates the program into an intermediate
 4. Copy/multiply loops are replaced with a single instruction.
 5. Brackets are assigned the index of their partner to eliminate scrubbing.
 
-This is all done using LazyLists, so every pass is performed in a single traversal.
-
 #### User Defined BrainFuck Translators
 There are two ways to define your own BF language:
 * Use the console prompt, which will ask you for the language name and syntax then handle the rest.

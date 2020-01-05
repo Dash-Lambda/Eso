@@ -25,7 +25,7 @@ object BFToScalaIntern extends BFTranspiler{
                   |${vec.mkString("\n")}
                   |}""".stripMargin
           }
-        val calls = (0 until groups.length).map{i => s"${fnam}s$i()${if(olen >= 0) "\nif(end) return ()" else ""}"}
+        val calls = groups.indices.map{i => s"${fnam}s$i()${if(olen >= 0) "\nif(end) return ()" else ""}"}
         val mf = block.head +: (calls.toVector :+ "}")
         seg(mf) ++ funcs.toVector
       }else Vector(block.mkString("\n"))
