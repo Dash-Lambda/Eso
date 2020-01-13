@@ -1,6 +1,7 @@
 package brainfuck
 
 import common.Config
+import org.typelevel.jawn.ast.{JObject, JValue}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -30,5 +31,9 @@ object GenBFT{
   
   def apply(name: String, pairs: IndexedSeq[(String, String)]): GenBFT = {
     new GenBFT(name, "BrainFuck", pairs.toVector)
+  }
+  
+  def apply(name: String, jVal: JValue): GenBFT = {
+    new GenBFT(name, "BrainFuck", "[]<>+-,.".toVector.map(c => (c.toString, jVal.get(c.toString).asString)))
   }
 }

@@ -1,6 +1,7 @@
 package brainfuck
 
 import common.Translator
+import org.typelevel.jawn.ast.{JObject, JString}
 
 trait BFTranslator extends Translator{
   val kvPairs: Vector[(String, String)]
@@ -10,4 +11,6 @@ trait BFTranslator extends Translator{
   
   final lazy val syntax = mkMap(keys, vals)
   final lazy val revSyntax = mkMap(vals, keys)
+  
+  def toJObject: JObject = JObject.fromSeq(kvPairs.map{case (k, v) => (k, JString(v))})
 }

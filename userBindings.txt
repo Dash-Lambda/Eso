@@ -1,1 +1,0 @@
-testMycology run -l Befunge-98 -s mycology.b98

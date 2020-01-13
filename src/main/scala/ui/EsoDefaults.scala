@@ -26,6 +26,8 @@ object EsoDefaults extends EsoObj{
     """|Welcome to Eso, the functional esoteric language interpreter!
        |Type "help" for a list of commands.""".stripMargin
   
+  val defBFLFile: String = "BFLangs.json"
+  val defBindFile: String = "userBindings.json"
   val fileExtensionsVec: Vector[(String, String)] = Vector(
     ("slash", "///"),
     ("b93", "Befunge-93"),
@@ -50,8 +52,6 @@ object EsoDefaults extends EsoObj{
     ("mt", "Metatape"))
   val fileExtensionMap: immutable.HashMap[String, String] = mkMap(fileExtensionsVec)
   
-  val defBFLFile: String = "BFLangs.txt"
-  val defBindFile: String = "userBindings.txt"
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](
     BFManaged,
     WhiteSpace,
@@ -84,7 +84,7 @@ object EsoDefaults extends EsoObj{
     ("bfDiv", true, "toggle whether or not divison by 0 evaluates to 0 in Befunge-98 (not yet implemented)"),
     ("bfRetCode", false, "toggle whether or not the Befunge-98 return code is displayed"),
     ("printNum", false, "print output as numerical values rather than characters"),
-    ("logTime", true, "print program duration on completion"))
+    ("time", true, "print program duration on completion"))
   val defNumVec: Vector[(String, Int, String)] = Vector[(String, Int, String)](
     ("bfOpt", 2, "BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled"),
     ("init", 40000, "initial tape size for interpreters with a data tape"),

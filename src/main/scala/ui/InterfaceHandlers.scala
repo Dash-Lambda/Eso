@@ -4,8 +4,9 @@ import java.io.{File, PrintWriter}
 
 import brainfuck.{BFTranslator, GenBFT}
 import common.{EsoExcep, EsoObj, MapExtractor}
+import org.typelevel.jawn.Parser
+import org.typelevel.jawn.ast.{JArray, JNull, JObject, JString, JValue}
 
-import scala.annotation.tailrec
 import scala.collection.immutable
 import scala.collection.immutable.HashMap
 import scala.io.{Source, StdIn}
@@ -71,12 +72,19 @@ trait InterfaceHandler extends EsoObj{
         case EsoExcep(info) => println(s"Error: common.EsoExcep ($info)")
         case _ => println(s"Error: $e")}
       None}
-  
   def doOrOp[A, B](inp: Option[A], err: String)(act: A => B): Option[B] = inp match{
     case Some(_) => inp map act
     case None =>
       println(s"Error: $err")
       None}
+  def doOrNull[B](inp: JValue, err: String)(act: JValue => B): Option[B] = inp match{
+    case JNull =>
+      println(s"Error: $err")
+      None
+    case _ => Some(act(inp))}
+  def doOrElse[A](default: A)(act: => Option[A]): A = act match{
+    case Some(x) => x
+    case None => default}
   
   def timeIt[T](thing: => T): (T, Long) = {
     val t = System.currentTimeMillis
@@ -248,56 +256,38 @@ object DefineBFLangHandler extends InterfaceHandler{
   val nam: String = "defineBFLang"
   val helpStr: String = ""
   
-  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
-    val nam = StdIn.readLine("Name: ")
-    val syn = Vector("[", "]", "<", ">", "+", "-", ",", ".") map{c => (c, StdIn.readLine(s"$c => "))}
-    state.addTrans(GenBFT(nam, syn))}
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = StdIn.readLine("Name: ") match{
+    case "names" =>
+      println("""Error: Name Cannot Be "names"""")
+      state
+    case nam =>
+      val syn = Vector("[", "]", "<", ">", "+", "-", ",", ".") map{c => (c, StdIn.readLine(s"$c => "))}
+      state.addTrans(GenBFT(nam, syn))}
 }
 
 object LoadBFLangsHandler extends InterfaceHandler{
   val nam: String = "loadBFLangs"
   val helpStr: String = "{-f :fileName:}"
   
-  private val bfNamReg = raw"""(?s)[^\#]*\#(\V*)(.*)\z""".r
-  
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val logFlg = state.bools("log")
     
-    @tailrec
-    def cdo(src: Vector[Char], ac: Vector[(String, String)] = Vector()): (Vector[(String, String)], String) = src match{
-      case c +: '=' +: '>' +: cs if "[]<>+-,.".contains(c) && ac.sizeIs < 8 =>
-        val bind = cs.takeWhile(_ != '\n')
-        val tl = cs.dropWhile(_ != '\n').drop(1)
-        cdo(tl, ac :+ (c.toString, bind.mkString))
-      case _ +: cs if ac.sizeIs < 8 => cdo(cs, ac)
-      case _ => (ac, src.mkString)}
-    
-    @tailrec
-    def mkTrans(str: String, ac: Vector[BFTranslator] = Vector()): Vector[BFTranslator] = str match{
-      case bfNamReg(nam, bod) =>
-        cdo(bod.toVector) match{
-          case (vec, tl) if "[]<>+-,.".forall(c => vec.map(_._1).contains(c.toString)) => mkTrans(tl, ac :+ GenBFT(nam, vec))
-          case _ => mkTrans(bod, ac)}
-      case _ => ac}
-    
-    val fnam = args.get("f") match{
-      case Some(str) => str
-      case None => EsoDefaults.defBFLFile}
-    
     if(logFlg) print("Retrieving lang file... ")
-    val transVec = doOrErr(readFile(fnam)){langFile =>
-      if(logFlg) print("Done.\nParsing translators... ")
-      val tv = mkTrans(langFile)
-      if(logFlg) println("Done.")
-      tv}
-    
-    transVec match{
-      case Some(bfts) =>
-        if(logFlg) println(s"Loaded BF Langs:\n${bfts.map(t => s"- ${t.name}").mkString("\n")}")
-        state.addAllTrans(bfts)
-      case None =>
-        if(logFlg) println(s"Failed to load BF Langs")
-        state}}
+    doOrElse(state){
+      doOrErr(readFile(args.getOrElse("f", EsoDefaults.defBFLFile))){langFile =>
+        if(logFlg) print("Done.\nParsing file... ")
+        doOrErr(Parser.parseFromString[JValue](langFile)){jsv =>
+          doOrNull(jsv, "Parsed To Null"){jso =>
+            if(logFlg) print(s"Done.\nBuilding translators... ")
+            doOrNull(jso.get("names"), "Missing Names Array"){namsJS =>
+              val tv = LazyList.from(0)
+                .map(i => namsJS.get(i))
+                .takeWhile(_ != JNull)
+                .map(_.asString)
+                .map(k => GenBFT(k, jso.get(k)))
+                .toVector
+              println(s"Done.\nLoaded BF Langs:\n${tv.map(t => s"- ${t.name}").mkString("\n")}")
+              state.addAllTrans(tv)}}}}.flatten.flatten.flatten}}
 }
 
 object SaveBFLangsHandler extends InterfaceHandler{
@@ -305,17 +295,15 @@ object SaveBFLangsHandler extends InterfaceHandler{
   val helpStr: String = "{-f :fileName:}"
   
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
-    val fnam = args.get("f") match{
-      case Some(str) => str
-      case None => EsoDefaults.defBFLFile}
+    val fnam = args.getOrElse("f", EsoDefaults.defBFLFile)
     val ignore = EsoDefaults.defTransVec.map(_.id)
-    val bfStr = state.trans.collect{
-      case (id, bft: BFTranslator) if !ignore.contains(id) =>
-        s"""|#${bft.name}
-            |${bft.syntax.map{case (k, v) => s"$k=>$v"}.mkString("\n")}""".stripMargin}
-      .mkString("\n")
     
-    writeFile(fnam, bfStr)
+    val jsoVec = state.trans.toVector.collect{
+      case (id, bft: BFTranslator) if !ignore.contains(id) => (bft.name, bft.toJObject)}
+    val namVec = jsoVec.map{case (k, _) => JString(k)}
+    val jsObj = JObject.fromSeq(jsoVec :+ ("names", JArray.fromSeq(namVec)))
+    
+    writeFile(fnam, jsObj.render)
     if(state.bools("log")) println(s"Translators saved to $fnam.")
     
     state}
@@ -349,20 +337,18 @@ object LoadBindingsHandler extends InterfaceHandler{
   val helpStr: String = "{-f :fileName:}"
   
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
-    val breg = raw"""(\S+) (.*)\z""".r
-    val fnam = args.get("f") match{
-      case Some(str) => str
-      case None => EsoDefaults.defBindFile}
-    
-    doOrErr(readFile(fnam)){str =>
-      str
-        .linesIterator
-        .collect{
-          case breg(t, b) => (t, b)}
-        .foldLeft(state){
-          case (s, (t, b)) => s.addBind(t, b)}} match{
-      case Some(s) => s
-      case None => state}}
+    val fnam = args.getOrElse("f", EsoDefaults.defBindFile)
+    doOrElse(state){
+      doOrErr(readFile(fnam)){str =>
+        doOrErr(Parser.parseFromString[JValue](str)){jVal =>
+          doOrNull(jVal.get("names"), "Missing Name List"){jNams =>
+            LazyList.from(0)
+              .map(jNams.get)
+              .takeWhile(_ != JNull)
+              .map(_.asString)
+              .map(k => (k, jVal.get(k).asString))
+              .foldLeft(state){
+                case (s, (t, b)) => s.addBind(t, b)}}}}.flatten.flatten}}
 }
 
 object SaveBindingsHandler extends InterfaceHandler{
@@ -370,11 +356,13 @@ object SaveBindingsHandler extends InterfaceHandler{
   val helpStr: String = "{-f :fileName:}"
   
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
-    val fnam = args.get("f") match{
-      case Some(str) => str
-      case None => EsoDefaults.defBindFile}
+    val fnam = args.getOrElse("f", "userBindings.json")
     
-    val bindStr = state.binds.toVector.map{case (k, v) => s"$k $v"}.mkString("\n")
+    val bindVec = state.binds.toVector
+    val nams = bindVec.map{case (k, _) => JString(k)}
+    val jsoPairs = bindVec.map{case (k, v) => (k, JString(v))} :+ ("names", JArray.fromSeq(nams))
+    val bindStr = JObject.fromSeq(jsoPairs).render
+    
     writeFile(fnam, bindStr)
     
     state}
