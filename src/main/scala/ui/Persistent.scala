@@ -12,9 +12,9 @@ object Persistent extends EsoObj{
   val bindReg: Regex = raw"""bind (\w+) (.*)\z""".r
   val unbindReg: Regex = raw"""unbind (.*)\z""".r
   
-  def start(): Unit = {
+  def start(state: EsoRunState = EsoRunState.default): Unit = {
     println(EsoDefaults.defWelcome)
-    run(LoadBindingsHandler(EsoRunState.default)(immutable.HashMap()))}
+    run(LoadBindingsHandler(state)(immutable.HashMap()))}
   
   @tailrec
   def run(state: EsoState = EsoRunState.default): Unit = state match{

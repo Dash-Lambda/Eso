@@ -84,7 +84,7 @@ object EsoDefaults extends EsoObj{
     ("bfDiv", true, "toggle whether or not divison by 0 evaluates to 0 in Befunge-98 (not yet implemented)"),
     ("bfRetCode", false, "toggle whether or not the Befunge-98 return code is displayed"),
     ("printNum", false, "print output as numerical values rather than characters"),
-    ("time", true, "print program duration on completion"))
+    ("time", false, "print program duration on completion"))
   val defNumVec: Vector[(String, Int, String)] = Vector[(String, Int, String)](
     ("bfOpt", 2, "BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled"),
     ("init", 40000, "initial tape size for interpreters with a data tape"),

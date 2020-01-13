@@ -72,7 +72,10 @@ case class EsoRunState(interps: immutable.HashMap[String, Interpreter],
   }
 }
 object EsoRunState extends EsoObj{
-  val opReg: Regex = raw"""[^-]*-(\w+) (\w+)(.*)\z""".r
+  val numReg: Regex = raw"""[^-]*-(\w+) (-?\d+)(.*)\z""".r
+  val boolReg: Regex = raw"""[^-]*-(\w+) ((?:true|false))(.*)\z""".r
+  val flagReg: Regex = raw"""[^-]*-(\w+)(.*)\z""".r
+  val biteReg: Regex = raw"""[^-]*-(.*)\z""".r
   
   val default: EsoRunState = EsoRunState(
     mkMap(EsoDefaults.defInterpVec.map(i => (i.name, i))),
@@ -84,6 +87,9 @@ object EsoRunState extends EsoObj{
   
   @tailrec
   def withOps(str: String, state: EsoRunState = default): EsoRunState = str match{
-    case opReg(k, v, ops) => withOps(ops, state.setVar(k, v))
+    case numReg(k, v, ops) if state.nums.isDefinedAt(k) => withOps(ops, state.setVar(k, v))
+    case boolReg(k, v, ops) if state.bools.isDefinedAt(k) => withOps(ops, state.setVar(k, v))
+    case flagReg(k, ops) if state.bools.isDefinedAt(k) => withOps(ops, state.setVar(k, "true"))
+    case biteReg(ops) => withOps(ops, state)
     case _ => state}
 }

@@ -129,14 +129,16 @@ Transpiled program saves to lostKingdom.cpp.
 ...
 ```
 
-If the non-persistent interface receives either no arguments or the command "persistent", it starts the persistent interface. This interface takes over the console, so you cannot use other tools in the same terminal while it's running. The advantage of this is that it can maintain environment variables, such as runtime parameters, bindings, and user-defined translators.
+If the non-persistent interface receives either no arguments or the command `persistent`, it starts the persistent interface. This interface takes over the console, so you cannot use other tools in the same terminal while it's running. The advantage of this is that it can maintain environment variables, such as runtime parameters, bindings, and user-defined translators.
+
+If you supply `persistent` with arguments, the persistent interface initializes the corresponding environment variables to the provided values.
 
 ##### The Parser
 Eso parses each line of input into two components: A command and an argument list
 
-The command is just a string, while the arguments are read as a list of name-value pairs in the form "-name1 value1 -name2 value2 ...", then stored in a hash map.
+The command is just a string, while the arguments are read as a list of name-value pairs in the form `command -name1 value1 -name2 value2 ...`, then stored in a hash map. Boolean options listed without a value default to true.
 
-To make bindings relatively seamless, the bind/unbind commands as well as any active bindings are intercepted before reaching the parser. The bind and unbind commands are instead parsed as "bind \<token\> \<command\>" and "unbind \<token\>", and any active bindings are replaced with the bound command then sent to the parser.
+To make bindings relatively seamless, the bind/unbind commands as well as any active bindings are intercepted before reaching the parser. The bind and unbind commands are instead parsed as `bind <token> <command>` and `unbind <token>`, and any active bindings are replaced with the bound command then sent to the parser.
 
 ##### States and Configurations
 Many of the languages supported by Eso have configurable options or parts of their environment, like optional dynamic tape size, random number generators, or even timers. Rather than using simple global values, which would severely impact modularity and disregard the functional style, Eso wraps all these into a data structure to pass down to components.

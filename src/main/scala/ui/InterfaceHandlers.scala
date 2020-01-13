@@ -130,7 +130,7 @@ object RunProgHandler extends InterfaceHandler{
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val printNum = state.bools("printNum")
     val logFlg = state.bools("log")
-    val timeFlg = state.bools("logTime")
+    val timeFlg = state.bools("time")
     def olim(res: LazyList[Char]): LazyList[Char] = state.nums("olen") match{
       case -1 => res
       case n => res.take(n)}
@@ -176,8 +176,7 @@ object RunProgHandler extends InterfaceHandler{
                               if(timeFlg) println(s"\nError: $e\nProgram failed in ${rdr}ms")
                               else println(s"\nError: $e")
                             case Success(_) =>
-                              if(timeFlg) println(s"\nProgram completed in ${rdr}ms")
-                              else println("\nProgram successfully completed")}}}}}}}}}}
+                              if(timeFlg) println(s"\nProgram completed in ${rdr}ms")}}}}}}}}}}
     
     state}
 }
