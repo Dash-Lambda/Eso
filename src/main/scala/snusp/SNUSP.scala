@@ -10,9 +10,7 @@ object SNUSP extends Interpreter{
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
     Try{Matrix.fromString(progRaw)} map{prog =>
-      snuRun(prog, config.num("init"), config.rand)
-    }
-  }
+      snuRun(prog, config.num("init"), config.rand)}}
   
   def snuRun(prog: Matrix[Char], tapeSize: Int, rand: Random): Seq[Char] => LazyList[Char] = {
     @tailrec
@@ -22,51 +20,40 @@ object SNUSP extends Interpreter{
         case SNOUT(c, nxt) => Some((c, (state, tl :+ nxt)))
         case SNLIT(ip1, ip2) => sdo(state, ip2 +: (tl :+ ip1))
         case snip: SNIP => snip(prog, state, rand) match{
-          case (state, nxt) => sdo(state, tl :+ nxt)
-        }
-      }
-      case _ => None
-    }
+          case (state, nxt) => sdo(state, tl :+ nxt)}}
+      case _ => None}
     
     val initIP = prog.coordOf('$') match{
       case Some(v) => SNIP(v, Vec2D(1, 0), Vec2D(0, 0), Vector())
-      case None => SNIP(Vec2D(0, 0), Vec2D(1, 0), Vec2D(0, 0), Vector())
-    }
+      case None => SNIP(Vec2D(0, 0), Vec2D(1, 0), Vec2D(0, 0), Vector())}
     
     inputs => LazyList.unfold((State(Matrix.fill(tapeSize, 1)(0), inputs, dyn = true): State, Vector(initIP): Vector[SNOB])){
-      case (state, sip) => sdo(state, sip)
-    }
-  }
+      case (state, sip) => sdo(state, sip)}}
   
   case class State(data: Matrix[Int], inp: Seq[Char], dyn: Boolean){
     def padded(v: Vec2D[Int]): Matrix[Int] = data.padToAbs(v + Vec2D(1, 1), 0)
     
     def apply(v: Vec2D[Int]): Int = {
       if(!data.isDefinedAt(v) && dyn) 0
-      else data(v)
-    }
+      else data(v)}
     
     def set(v: Vec2D[Int], n: Int): State = {
       if(!data.isDefinedAt(v) && dyn) State(padded(v).updated(v, n), inp, dyn)
-      else State(data.updated(v, n), inp, dyn)
-    }
+      else State(data.updated(v, n), inp, dyn)}
     
     def inc(v: Vec2D[Int], n: Int): State = {
       if(!data.isDefinedAt(v) && dyn){
         val ndat = padded(v)
         State(ndat.updated(v, ndat(v) + n), inp, dyn)}
-      else State(data.updated(v, data(v) + n), inp, dyn)
-    }
+      else State(data.updated(v, data(v) + n), inp, dyn)}
     
     def read(v: Vec2D[Int]): State = {
       if(!data.isDefinedAt(v) && dyn) State(padded(v).updated(v, inp.head), inp.tail, dyn)
-      else State(data.updated(v, inp.head), inp.tail, dyn)
-    }
+      else State(data.updated(v, inp.head), inp.tail, dyn)}
     
     def out(v: Vec2D[Int]): Char = {
       if(!data.isDefinedAt(v) && dyn) 0.toChar
-      else data(v).toChar
-    }
+      else data(v).toChar}
   }
   
   trait SNOB
@@ -99,8 +86,6 @@ object SNUSP extends Interpreter{
           case (nip, ndt) +: cs => (state, SNIP(nip + ndt*2, ndt, dp, cs))
           case _ => (state, SNOP)}
         case '&' => (state, SNLIT(SNIP(ip + dt*2, dt, dp, calls), stp(dt)))
-        case _ => (state, stp(dt))
-      }
-    }
+        case _ => (state, stp(dt))}}
   }
 }

@@ -18,6 +18,8 @@
         - [Command Handlers](#command-handlers)
         - [Interpreter I/O](#interpreter-io)
         - [How Translators are Used](#how-translators-are-used)
+    - [Environment Variables](#environment-variables)
+    - [Config Environment](#config-environment)
 * [Notes](#notes)
     - [BrainFuck Optimization Strategy](#brainFuck-optimization-strategy)
     - [User-Defined BrainFuck Translators](#user-defined-brainFuck-translators)
@@ -189,6 +191,36 @@ When you you a command, Eso searches for a chain from the source language to the
 The transpile handler searches for the shortest chain from the source language to a known transpiler to the target language; bear in mind that it will only use a single transpiler.
 
 Eso can do this with translators because they are guaranteed to be invertible and to preserve the structure of a program. In essence, no matter how many times you translate it, the program is guaranteed to be the same program. Transpilers can freely change how a program works (they just need to preserve the behavior), which means they're more flexible in terms of functionality but less flexible in terms of how they can be manipulated.
+
+#### Environment Variables
+The environment maintained by Eso has collected quite a few parameters, detailed here:
+* Booleans
+    * bfDiv: A flag dictating what to do when Funge-98 encounters division by zero. The spec allows it to either error out or return 0, most interpreters prompt the user at runtime but in Eso it's just an environment flag. True returns 0.
+    * bfRetCode: True prints the Funge-98 return code at the end of execution, right above the "program complete" message if you have that on.
+    * dfChar: DeadFish, which I believe is the first non-Turing-complete language in Eso, only prints numbers -it cannot print characters. Setting this flag to true interprets DeadFish output as characters anyway.
+    * dyn: This flag controls dynamic tape size where applicable. True simulates an infinite memory tape, false, is fixed size. Currently used by BrainFuck, PATH, and SNUSP.
+    * fPtr: P\'\' doesn't have output commands, so I had to improvise -at the end of the program, the tape is printed. This flag controls the direction: True starts at the read head and goes right, false starts at the origin and goes left.
+    * indent: For curly-bracket languages, this flag controls whether transpilers neatly indent everything or don't indent at all.
+    * log: Toggle detailed logging, which just means Eso will tell you what it's doing and when it's done.
+    * pNull: Toggle whether or not to print the null character for P\'\' output.
+    * printNum: Toggle whether or not to convert the character stream to integers. If true, the output is a list of the ASCII codes of the characters rather than the characters.
+    * sHead: Toggle which end of the tape the head starts on for P\'\'. True means right.
+    * time: Toggle whether or not to print how long a program took to run.
+* Numbers
+    * bfOpt: BrainFuck optimization level. 0 is no optimization (naive), 1 is optimizing, and 2 is compiling.
+    * fileEOF: The ASCII code of the character Eso sticks at the end of file input. Most languages expect 0, but sometimes it needs to be something else.
+    * init: Initial length of memory tape, where applicable.
+    * methSize: The maximum number of blocks allowed in a method when breaking up generated code to fit in the JVM's nonsensical limits.
+    * mtCharWidth: Bit-width of characters used by Metatape.
+    * olen: Maximum number of characters to print. This is primarily useful for non-terminating programs. Some transpilers ignore this. 
+
+#### Config Environment
+As mentioned earlier, one thing that was necessary to maintain a functional design was to make the environment an input, thus Eso hands off a Config object to language components.
+
+The Config object currently holds:
+* All of the main environment variables above
+* A pseudorandom number generator
+* A LazyList of times, handled the same way as user input.
 
 ### Notes
 

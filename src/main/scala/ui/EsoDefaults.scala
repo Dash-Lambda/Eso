@@ -81,7 +81,7 @@ object EsoDefaults extends EsoObj{
     ("pNull", false, "toggle whether to print the null/empty character in the output of P'' programs"),
     ("indent", false, "toggle whether or not to neatly indent generated Scala code"),
     ("dfChar", true, "toggle whether or not to print Deadfish output as char values"),
-    ("bfDiv", true, "toggle whether or not divison by 0 evaluates to 0 in Befunge-98 (not yet implemented)"),
+    ("bfDiv", true, "toggle whether or not divison by 0 evaluates to 0 in Befunge-98"),
     ("bfRetCode", false, "toggle whether or not the Befunge-98 return code is displayed"),
     ("printNum", false, "print output as numerical values rather than characters"),
     ("time", false, "print program duration on completion"))
