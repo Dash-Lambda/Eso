@@ -85,7 +85,6 @@ Current native language support (mostly in chronological order):
     * REFC
 
 #### WIP:
-* Automatic method breakup for user-facing BrainFuck=>Scala transpiler (already done in internal one)
 * REPL mode
 * Multiline bindings
 * Automated testing
@@ -103,7 +102,7 @@ This is not an exhaustive list, but here are some of the languages I've consider
 ### Design of Eso
 Eso actually started out as a simple, single functional-style BrainFuck interpreter. Since then it's gotten... Complicated. Though I prefer the word "sophisticated".
 
-To clarify what is meant by "Functional Esoteric Language Interpreter": All of the language components are purely functional. The user interface is not purely functional, but its structure borrows a lot from functional style.
+To clarify what is meant by "Functional Esoteric Language Interpreter": All of the language components (with the sole exception of the Scala component) are purely functional. The user interface is not purely functional, but its structure borrows a lot from functional style.
 
 #### Language Components
 Languages supported by Eso can currently have 3 types of components:
