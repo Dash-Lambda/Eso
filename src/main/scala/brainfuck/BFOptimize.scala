@@ -6,15 +6,13 @@ import scala.annotation.tailrec
 import scala.util.Try
 
 case class BlkOp(ops: Vector[(Int, Option[Int])], shift: Int) extends EsoObj{
-  lazy val maxShift: Int = math.max(shift, ops.map(_._1).max)
-  lazy val (ind, inc) = ops.head
-  
-  def incStr(n: Int): String = s"${if(n < 0) "-" else "+"}= ${n.abs}"
+  def maxShift: Int = math.max(shift, ops.map(_._1).max)
   def isLoop: Boolean = (shift == 0) && !ops.contains((0, None)) && (ops.collect{case (0, Some(n)) => n}.sum == -1)
   def isMove: Boolean = ops.isEmpty
   
-  override def toString: String = s"{$shift; ${ops.map{case (i, arg) => s"$i -> ${arg match{case Some(n) => n.toString; case None => "_"}}"}.mkString(", ")}}"
-  
+  def doOp(p: Int, dat: MemTape[Int]): MemTape[Int] = ops.foldLeft(dat){
+    case (ac, (i, Some(n))) => ac.inc(p + i, n)
+    case (ac, (i, None)) => ac.set(p + i, 0)}
   def doLoop(p: Int, dat: MemTape[Int]): MemTape[Int] = {
     val num = dat(p)
     if(num == 0) dat
@@ -22,27 +20,7 @@ case class BlkOp(ops: Vector[(Int, Option[Int])], shift: Int) extends EsoObj{
       case (ac, (i, Some(n))) => ac.inc(p + i, num*n)
       case (ac, (i, None)) => ac.set(p + i, 0)}}
   
-  def doOp(p: Int, dat: MemTape[Int]): MemTape[Int] = ops.foldLeft(dat){
-    case (ac, (i, Some(n))) => ac.inc(p + i, n)
-    case (ac, (i, None)) => ac.set(p + i, 0)}
-  
-  def opStr: String = {
-    val opstr = ops.map{
-      case (0, Some(n)) => s"tape(p) ${incStr(n)}"
-      case (i, Some(n)) => s"tape(p + $i) ${incStr(n)}"
-      case (i, None) => s"tape(p + $i) = 0"}
-    s"${opstr.mkString("\n")}${if(shift != 0) s"\np ${incStr(shift)}" else ""}"}
-  def lopStr: String = {
-    val opstr = ops
-      .filter(_._1 != 0)
-      .map{
-        case (i, Some(n)) => s"tape(p + $i) ${incStr(n)}*tmp"
-        case (i, None) => s"tape(p + $i) = 0"}
-    s"""|if(tape(p) != 0){
-        |val tmp = tape(p)
-        |${opstr.mkString("\n")}
-        |tape(p) = 0
-        |}""".stripMargin}
+  override def toString: String = s"{$shift; ${ops.map{case (i, arg) => s"$i -> ${arg match{case Some(n) => n.toString; case None => "_"}}"}.mkString(", ")}}"
 }
 
 object BFOptimize extends EsoObj{
@@ -50,7 +28,6 @@ object BFOptimize extends EsoObj{
   val opts: Vector[Char] = Vector('<', '>', '+', '-')
   
   def apply(progRaw: String): Try[Vector[(Char, Either[Int, BlkOp])]] = Try{optFull(progRaw)}
-  def compOpt(progRaw: String): Try[LazyList[(Char, Either[Int, BlkOp])]] = Try{optFull(progRaw).to(LazyList)}
   
   def optFull(progRaw: String): Vector[(Char, Either[Int, BlkOp])] = {
     def contract(src: String): Vector[(Char, Int)] = {
@@ -91,6 +68,7 @@ object BFOptimize extends EsoObj{
     def setLoops(srcRaw: Vector[(Char, Either[Int, BlkOp])]): Vector[(Char, Either[Int, BlkOp])] = {
       @tailrec
       def ldo(ac: Vector[(Char, Either[Int, BlkOp])], src: Vector[(Char, Either[Int, BlkOp])]): Vector[(Char, Either[Int, BlkOp])] = src match{
+        case ('[', _) +: ('m', arg) +: (']', _) +: ops => ldo(ac :+ ('/', arg), ops)
         case ('[', _) +: ('u', Right(bop)) +: (']', _) +: ops =>
           if(bop.isMove) ldo(ac :+ ('/', Left(bop.shift)), ops)
           else if(bop.isLoop) ldo(ac :+ ('l', Right(bop)), ops)

@@ -12,15 +12,13 @@ trait Transpiler {
   
   def indent(prog: String): String = {
     @tailrec
-    def ido(ind: Int, ac: String, src: LazyList[String]): String = src match{
+    def ido(ind: Int, ac: Vector[String], src: LazyList[String]): String = src match{
       case l +: ls =>
         val s = l.count(_ == '{') - l.count(_ == '}')
-        if(l.startsWith("}")) ido(ind + s, ac ++ s"${"\t"*(ind - 1)}$l\n", ls)
-        else ido(ind + s, ac ++ s"${"\t"*ind}$l\n", ls)
-      case _ => ac
-    }
+        if(l.startsWith("}")) ido(ind + s, ac :+ s"${"  "*(ind - 1)}$l", ls)
+        else ido(ind + s, ac :+ s"${"  "*ind}$l", ls)
+      case _ => ac.mkString("\n")}
     
-    val lines = prog.split("(\r\n|\r|\n)").to(LazyList).map(_.dropWhile("\t ".contains(_)))
-    ido(0, "", lines)
-  }
+    val lines = prog.linesIterator.to(LazyList).map(_.dropWhile("\t ".contains(_)))
+    ido(0, Vector(), lines)}
 }
