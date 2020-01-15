@@ -9,7 +9,7 @@ trait BFTranspiler extends Transpiler{
   val src: String = "BrainFuck"
   val fSig: Regex = raw"""def (.*)\(\).*""".r
   
-  def genProg(init: Int, olen: Int, dyn: Boolean, methSize: Int, prog: Vector[(Char, Either[Int, BlkOp])]): String
+  def genProg(init: Int, olen: Int, dyn: Boolean, methSize: Int, prog: Vector[BFOp]): String
   
   def apply(config: Config)(progRaw: String): Try[String] = Try{(config.num("init"), config.num("olen"), config.num("methSize"), config.bool("dyn"), config.bool("indent"))} flatMap{
     case (init, olen, methSize, dyn, ind) =>
@@ -20,14 +20,14 @@ trait BFTranspiler extends Transpiler{
   
   def incStr(n: Int): String = s"${if(n < 0) "-" else "+"}= ${n.abs}"
   def shiftStr(n: Int): String = s"${if (n < 0) "-" else "+"} ${n.abs}"
-  def opStr(bop: BlkOp): String = {
+  def opStr(bop: SingOp): String = {
     val opstr = bop.ops map{
       case (i, Some(n)) => i match{
         case 0 => s"tape(p) ${incStr(n)}"
         case _ => s"tape(p ${shiftStr(i)}) ${incStr(n)}"}
       case (i, None) => s"tape(p ${shiftStr(i)}) = 0"}
     s"${opstr.mkString("\n")}${if(bop.shift != 0) s"\np ${incStr(bop.shift)}" else ""}"}
-  def lopStr(bop: BlkOp): String = {
+  def lopStr(bop: LoopOp): String = {
     val opstr = bop.ops
       .filter(_._1 != 0)
       .map {

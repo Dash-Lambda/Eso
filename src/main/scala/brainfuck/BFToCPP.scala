@@ -4,8 +4,8 @@ package brainfuck
 object BFToCPP extends BFTranspiler{
   val dst: String = "C++"
   
-  def genProg(init: Int, olen: Int, dyn: Boolean, methSize: Int, prog: Vector[(Char, Either[Int, BlkOp])]): String = {
-    def copStr(bop: BlkOp): String = {
+  def genProg(init: Int, olen: Int, dyn: Boolean, methSize: Int, prog: Vector[BFOp]): String = {
+    def copStr(bop: SingOp): String = {
       val opstr = bop.ops map {
         case (i, Some(n)) =>
           if(i == 0) s"tape[p] ${incStr(n)};"
@@ -13,7 +13,7 @@ object BFToCPP extends BFTranspiler{
         case (i, None) => s"tape[p ${shiftStr(i)}] = 0;"}
       s"${opstr.mkString("\n")}${if (bop.shift != 0) s"\np ${incStr(bop.shift)};" else ""}"}
   
-    def clopStr(bop: BlkOp): String = {
+    def clopStr(bop: LoopOp): String = {
       val opstr = bop.ops
         .filter(_._1 != 0)
         .map {
@@ -26,18 +26,15 @@ object BFToCPP extends BFTranspiler{
           |}""".stripMargin}
     
     val toProg = prog map{
-      case (op, arg) => arg match{
-        case Left(num) => op match{
-          case 'm' => s"p ${incStr(num)};"
-          case '/' => s"while(tape[p] != 0){p ${incStr(num)};}"
-          case '[' => "while(tape[p] != 0){"
-          case ']' => "}"
-          case ',' => "tape[p] = getchar();"
-          case '.' => "putchar(tape[p]);"
-          case 'e' => ""}
-        case Right(bop) => op match{
-          case 'u' | 'a' => copStr(bop)
-          case 'l' => clopStr(bop)}}}
+      case BFMove(n) => s"p ${incStr(n)};"
+      case BFScan(n) => s"while(tape[p] != 0){p ${incStr(n)};}"
+      case BFOpenLoop(i) => "while(tape[p] != 0){"
+      case BFCloseLoop(i) => "}"
+      case BFOut => "putchar(tape[p]);"
+      case BFIn => "tape[p] = getchar();"
+      case BFEnd => ""
+      case bop: SingOp => copStr(bop)
+      case bop: LoopOp => clopStr(bop)}
   
     s"""|#include <stdio.h>
         |

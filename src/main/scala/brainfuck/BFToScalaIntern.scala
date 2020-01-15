@@ -5,35 +5,33 @@ import scala.annotation.tailrec
 object BFToScalaIntern extends BFTranspiler{
   val dst: String = "Scala"
   
-  def genProg(init: Int, olen: Int, dyn: Boolean, methSize: Int, prog: Vector[(Char, Either[Int, BlkOp])]): String = {
+  def genProg(init: Int, olen: Int, dyn: Boolean, methSize: Int, prog: Vector[BFOp]): String = {
     @tailrec
     def tdo(ac: Vector[String] = Vector(), stk: Vector[Vector[String]] = Vector(), tmp: Vector[String] = Vector("def f0(): Unit = {"), fnum: Int = 1, i: Int = 0): String = prog.lift(i) match{
-      case Some((op, arg)) => op match{
-        case '[' =>
+      case Some(op) => op match{
+        case BFOpenLoop(_) =>
           val call = s"f$fnum()${if(olen >= 0) "\nif(end) return ()" else ""}"
           val sig = s"def f$fnum(): Unit = while(tape(p) != 0){"
           tdo(ac, (tmp :+ call) +: stk, Vector(sig), fnum + 1, i + 1)
-        case ']' => tdo(segScala(tmp :+ "}", methSize).mkString("\n") +: ac, stk.tail, stk.head, fnum, i + 1)
-        case 'e' => (segScala(tmp :+ "}", methSize).mkString("\n") +: ac).mkString("\n")
+        case BFCloseLoop(_) => tdo(segScala(tmp :+ "}", methSize).mkString("\n") +: ac, stk.tail, stk.head, fnum, i + 1)
+        case BFEnd => (segScala(tmp :+ "}", methSize).mkString("\n") +: ac).mkString("\n")
         case _ =>
-          val block = arg match{
-            case Right(bop) => op match{
-              case 'u' | 'a' => s"${if(dyn) s"chkInd(${bop.maxShift})\n" else ""}${opStr(bop)}"
-              case 'l' => s"${if(dyn) s"chkInd(${bop.maxShift})\n" else ""}${lopStr(bop)}"}
-            case Left(num) => op match{
-              case 'm' => s"p ${incStr(num)}"
-              case '/' =>
-                if (num == 1) "p = tape.indexOf(0, p)"
-                else if (num == -1) "p = tape.lastIndexOf(0, p)"
-                else if(dyn) s"while(p < len && tape(p) != 0){p ${incStr(num)}}"
-                else s"while(tape(p) != 0){p ${incStr(num)}}"
-              case ',' => "tape(p) = inp.head.toInt\ninp = inp.tail"
-              case '.' =>
-                val limStr =
-                  s"""|
+          val block = op match{
+            case bop: SingOp => s"${if(dyn) s"chkInd(${bop.maxShift})\n" else ""}${opStr(bop)}"
+            case bop: LoopOp => s"${if(dyn) s"chkInd(${bop.maxShift})\n" else ""}${lopStr(bop)}"
+            case BFMove(n) => s"p ${incStr(n)}"
+            case BFScan(n) =>
+              if (n == 1) "p = tape.indexOf(0, p)"
+              else if (n == -1) "p = tape.lastIndexOf(0, p)"
+              else if(dyn) s"while(p < len && tape(p) != 0){p ${incStr(n)}}"
+              else s"while(tape(p) != 0){p ${incStr(n)}}"
+            case BFIn => "tape(p) = inp.head.toInt\ninp = inp.tail"
+            case BFOut =>
+              val limStr =
+                s"""|
                       |resLen += 1
-                      |if(resLen >= $olen){end = true; return ()}""".stripMargin
-                s"queue.put(Some(Success(tape(p).toChar)))${if(olen >= 0) limStr else ""}"}}
+                    |if(resLen >= $olen){end = true; return ()}""".stripMargin
+              s"queue.put(Some(Success(tape(p).toChar)))${if(olen >= 0) limStr else ""}"}
           val block2 = if(dyn && "m/".contains(op)) s"$block\nchkInd()" else block
           tdo(ac, stk, tmp :+ block2, fnum, i + 1)}
       case _ => ac.mkString("\n")}
