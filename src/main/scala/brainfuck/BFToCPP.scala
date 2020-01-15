@@ -28,8 +28,8 @@ object BFToCPP extends BFTranspiler{
     val toProg = prog map{
       case BFMove(n) => s"p ${incStr(n)};"
       case BFScan(n) => s"while(tape[p] != 0){p ${incStr(n)};}"
-      case BFOpenLoop(i) => "while(tape[p] != 0){"
-      case BFCloseLoop(i) => "}"
+      case BFOpenLoop(_) => "while(tape[p] != 0){"
+      case BFCloseLoop(_) => "}"
       case BFOut => "putchar(tape[p]);"
       case BFIn => "tape[p] = getchar();"
       case BFEnd => ""

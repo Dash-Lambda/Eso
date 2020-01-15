@@ -73,7 +73,7 @@ object BFOptimize extends EsoObj{
       
       @tailrec
       def cdo(i: Int, ac: Vector[BFOp]): Vector[BFOp] = src.lift(i) match{
-        case Some((c, n)) => c match{
+        case Some((c, _)) => c match{
           case '+' | '-' | '<' | '>' | '_' => bdo(i, Vector(), 0) match{
             case (vec, s, i1) =>
               if(vec.nonEmpty) cdo(i1, ac :+ SingOp(vec, s))

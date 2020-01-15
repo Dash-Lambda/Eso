@@ -3,7 +3,7 @@ package brainfuck
 import common.{Config, Interpreter, MemTape}
 
 import scala.annotation.tailrec
-import scala.util.{Either, Try}
+import scala.util.Try
 
 object BFOpt extends Interpreter{
   val name: String = "bfOpt"
