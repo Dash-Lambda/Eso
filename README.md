@@ -186,7 +186,7 @@ Aside from directly translating a program using the command, Eso uses translator
 
 For the translate command, Eso doesn't just look for a translator between the two specified languages; it instead looks for the shortest chain of translators that can get it from the source language to the target language, then composes the chain into a single function. So, if you translate a program from Ook to FlufflePuff, Eso is actually translating Ook>BrainFuck>FlufflePuff.
 
-When you you a command, Eso searches for a chain from the source language to the nearest (i.e. shortest translation path) available interpreter. If it finds one, it automatically translates.
+When you use the run command, Eso searches for a chain from the source language to the nearest (i.e. shortest translation path) available interpreter. If it finds one, it automatically translates.
 
 The transpile handler searches for the shortest chain from the source language to a known transpiler to the target language; bear in mind that it will only use a single transpiler.
 
@@ -195,10 +195,12 @@ Eso can do this with translators because they are guaranteed to be invertible an
 #### Environment Variables
 The environment maintained by Eso has collected quite a few parameters, detailed here:
 * Booleans
+    * appendInp: Toggle whether or not to append console input to file input. Primarily for self-interpreters who expect both the program and user input from the same sourc.
     * bfDiv: A flag dictating what to do when Funge-98 encounters division by zero. The spec allows it to either error out or return 0, most interpreters prompt the user at runtime but in Eso it's just an environment flag. True returns 0.
     * bfRetCode: True prints the Funge-98 return code at the end of execution, right above the "program complete" message if you have that on.
     * dfChar: DeadFish, which I believe is the first non-Turing-complete language in Eso, only prints numbers -it cannot print characters. Setting this flag to true interprets DeadFish output as characters anyway.
     * dyn: This flag controls dynamic tape size where applicable. True simulates an infinite memory tape, false, is fixed size. Currently used by BrainFuck, PATH, and SNUSP.
+    * echoFileInp: Toggle whether or not to echo file input to the console. This will print file input as if it were user input.
     * fPtr: P\'\' doesn't have output commands, so I had to improvise -at the end of the program, the tape is printed. This flag controls the direction: True starts at the read head and goes right, false starts at the origin and goes left.
     * indent: For curly-bracket languages, this flag controls whether transpilers neatly indent everything or don't indent at all.
     * log: Toggle detailed logging, which just means Eso will tell you what it's doing and when it's done.
@@ -208,11 +210,17 @@ The environment maintained by Eso has collected quite a few parameters, detailed
     * time: Toggle whether or not to print how long a program took to run.
 * Numbers
     * bfOpt: BrainFuck optimization level. 0 is no optimization (naive), 1 is optimizing, and 2 is compiling.
-    * fileEOF: The ASCII code of the character Eso sticks at the end of file input. Most languages expect 0, but sometimes it needs to be something else.
+    * fileEOF: The ASCII code of the character Eso sticks at the end of file input. Most languages expect 0, but sometimes it needs to be something else. For instance, cgbfi.b expects a program terminated by `!`, and anything following is considered input.  
     * init: Initial length of memory tape, where applicable.
     * methSize: The maximum number of blocks allowed in a method when breaking up generated code to fit in the JVM's nonsensical limits.
     * mtCharWidth: Bit-width of characters used by Metatape.
     * olen: Maximum number of characters to print. This is primarily useful for non-terminating programs. Some transpilers ignore this. 
+
+Boolean values can be set to true with an argument matching the regex `(true|yes|t|y|[1-9])` and false matching `(false|no|f|n|0)`, both case-insensitive.
+
+Numeric values may be set either with a numeric argument or with a character in single quotes `'c'` (in which case it will be set to that character's ASCII code).
+
+For the moment, set commands with invalid input are silently ignored. 
 
 #### Config Environment
 As mentioned earlier, one thing that was necessary to maintain a functional design was to make the environment an input, thus Eso hands off a Config object to language components.

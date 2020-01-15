@@ -10,7 +10,7 @@ case class EsoExecutor(cmds: Vector[InterfaceHandler]) extends EsoObj{
   val handlers: immutable.HashMap[String, InterfaceHandler] = mkMap(cmds map (h => (h.nam, h)))
   
   def apply(state: EsoRunState)(inp: String): EsoState = parse(state.binds)(inp) match{
-    case EsoCmd("help", args) =>
+    case EsoCmd("help", _) =>
       showHelp()
       state
     case EsoCmd(cmd, args) => handlers.get(cmd) match{
@@ -34,6 +34,7 @@ case class EsoExecutor(cmds: Vector[InterfaceHandler]) extends EsoObj{
           |
           |Syntax:
           |<expr>: Required
+          |(expr): At Least One
           |{expr}: Optional
           |expr*: Repeated any number of times
           |""".stripMargin

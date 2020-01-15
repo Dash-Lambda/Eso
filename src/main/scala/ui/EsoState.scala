@@ -5,7 +5,7 @@ import common.{Config, EsoObj, Interpreter, Translator, Transpiler}
 import scala.annotation.tailrec
 import scala.collection.immutable
 import scala.util.matching.Regex
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 trait EsoState extends EsoObj
 object EsoHalt extends EsoState
@@ -15,6 +15,7 @@ case class EsoRunState(interps: immutable.HashMap[String, Interpreter],
                        bools: immutable.HashMap[String, Boolean],
                        nums: immutable.HashMap[String, Int],
                        binds: immutable.HashMap[String, String]) extends EsoState{
+  import EsoRunState.{trueReg, falseReg, charReg, intReg}
   
   def addInterp(intp: Interpreter): EsoRunState = EsoRunState(interps + ((intp.name, intp)), gens, trans, bools, nums, binds)
   def addGen(gen: Transpiler): EsoRunState = EsoRunState(interps, gens + ((gen.id, gen)), trans, bools, nums, binds)
@@ -40,42 +41,36 @@ case class EsoRunState(interps: immutable.HashMap[String, Interpreter],
       case Some(t) => Some(t.unapply)
       case None => None}}
   
-  def setVar(k: String, v: String): EsoRunState = {
-    if(bools.isDefinedAt(k) && (v == "true" || v == "false")) addBool(k, v == "true")
-    else if(nums.isDefinedAt(k)) Try{addNum(k, v.toInt)} match{
-      case Success(st) => st
-      case _ => this}
-    else this
-  }
+  def setVar(k: String, v: String): EsoRunState = v match{
+    case trueReg() if bools.isDefinedAt(k) => addBool(k, bool=true)
+    case falseReg() if bools.isDefinedAt(k) => addBool(k, bool=false)
+    case intReg() if nums.isDefinedAt(k) => addNum(k, v.toInt)
+    case charReg(c) if nums.isDefinedAt(k) => addNum(k, c(0).toInt)
+    case _ => this}
   
   def config: Config = Config(bools, nums)
   def interpNames: Vector[String] = interps.keys.toVector
   def genNames: Vector[(String, String)] = gens.keys.toVector
-  def genLinks: immutable.HashMap[String, Vector[String]] = {
+  def genLinks: immutable.HashMap[String, Vector[String]] = linkUp(gens.keys.toVector)
+  def transLinks: immutable.HashMap[String, Vector[String]] = linkUp((trans.keys ++ trans.keys.map{case (k, v) => (v, k)}).toVector)
+  def linkUp(links: Vector[(String, String)]): immutable.HashMap[String, Vector[String]] = {
     @tailrec
     def ldo(src: Vector[(String, String)], lnk: immutable.HashMap[String, Vector[String]]): immutable.HashMap[String, Vector[String]] = src match{
       case (k, v) +: ps => lnk.get(k) match{
         case Some(vec) => ldo(ps, lnk + ((k, vec :+ v)))
         case None => ldo(ps, lnk + ((k, Vector(v))))}
       case _ => lnk}
-    ldo(gens.keys.toVector, immutable.HashMap[String, Vector[String]]())
-  }
-  def transLinks: immutable.HashMap[String, Vector[String]] = {
-    @tailrec
-    def ldo(src: Vector[(String, String)], lnk: immutable.HashMap[String, Vector[String]]): immutable.HashMap[String, Vector[String]] = src match{
-      case (k, v) +: ps => lnk.get(k) match{
-        case Some(vec) => ldo(ps, lnk + ((k, vec :+ v)))
-        case None => ldo(ps, lnk + ((k, Vector(v))))}
-      case _ => lnk}
-    val ids = trans.keys ++ trans.keys.map{case (k, v) => (v, k)}
-    ldo(ids.toVector, immutable.HashMap[String, Vector[String]]())
-  }
+    ldo(links, immutable.HashMap())}
 }
 object EsoRunState extends EsoObj{
   val numReg: Regex = raw"""[^-]*-(\w+) (-?\d+)(.*)\z""".r
   val boolReg: Regex = raw"""[^-]*-(\w+) ((?:true|false))(.*)\z""".r
   val flagReg: Regex = raw"""[^-]*-(\w+)(.*)\z""".r
   val biteReg: Regex = raw"""[^-]*-(.*)\z""".r
+  val trueReg: Regex = raw"""(?i)(?:true|yes|t|y|[1-9])""".r
+  val falseReg: Regex = raw"""(?i)(?:false|no|f|n|0)""".r
+  val charReg: Regex = raw"""'(.)'""".r
+  val intReg: Regex = raw"""-?\d+""".r
   
   val default: EsoRunState = EsoRunState(
     mkMap(EsoDefaults.defInterpVec.map(i => (i.name, i))),
