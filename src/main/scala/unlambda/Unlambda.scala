@@ -118,8 +118,7 @@ object Unlambda extends Interpreter{
   case class ExprCont(y: Expr, cc: Cont) extends Cont{
     def apply(f: Func, env: Env): State = f match{
       case D => cc(D1(y), env)
-      case _ => EvalState(y, FuncCont(f, cc), env)
-    }
+      case _ => EvalState(y, FuncCont(f, cc), env)}
   }
   case class DCont(y: Func, cc: Cont) extends Cont{
     def apply(f: Func, env: Env): State = AppState(f, y, cc, env)
@@ -151,8 +150,7 @@ object Unlambda extends Interpreter{
           AppExpr(
             FuncExpr(y),
             FuncExpr(f))),
-        cc, env)
-    }
+        cc, env)}
   }
   case class S1(x: Func) extends Func{
     def apply(f: Func, cc: Cont, env: Env): State = cc(S2(x, f), env)
@@ -180,8 +178,7 @@ object Unlambda extends Interpreter{
       val nEnv = env.read
       env.cur match{
         case None => AppState(f, V, cc, nEnv)
-        case _ => AppState(f, I, cc, nEnv)}
-    }
+        case _ => AppState(f, I, cc, nEnv)}}
   }
   case class QUES(c: Char) extends Func{
     def apply(f: Func, cc: Cont, env: Env): State = env.cur match{

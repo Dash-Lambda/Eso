@@ -62,7 +62,6 @@ object BFOptimize extends EsoObj{
               else cdo(i1, ac :+ ('m', Left(s)))}
           case _ => cdo(i + 1, ac :+ (c, Left(n)))}
         case _ => ac}
-      
       cdo(0, Vector())}
     
     def setLoops(srcRaw: Vector[(Char, Either[Int, BlkOp])]): Vector[(Char, Either[Int, BlkOp])] = {
@@ -70,13 +69,9 @@ object BFOptimize extends EsoObj{
       def ldo(ac: Vector[(Char, Either[Int, BlkOp])], src: Vector[(Char, Either[Int, BlkOp])]): Vector[(Char, Either[Int, BlkOp])] = src match{
         case ('[', _) +: ('m', arg) +: (']', _) +: ops => ldo(ac :+ ('/', arg), ops)
         case ('[', _) +: ('u', Right(bop)) +: (']', _) +: ops =>
-          if(bop.isMove) ldo(ac :+ ('/', Left(bop.shift)), ops)
-          else if(bop.isLoop) ldo(ac :+ ('l', Right(bop)), ops)
+          if(bop.isLoop) ldo(ac :+ ('l', Right(bop)), ops)
           else ldo(ac :+ ('[', Left(0)), ('u', Right(bop)) +: (']', Left(0)) +: ops)
-        case op +: ops => op match{
-          case ('u', Right(bop)) if bop.isMove => ldo(ac :+ ('m', Left(bop.shift)), ops)
-          case _ => ldo(ac :+ op, ops)
-        }
+        case op +: ops => ldo(ac :+ op, ops)
         case _ => ac}
       ldo(Vector(), srcRaw)}
     

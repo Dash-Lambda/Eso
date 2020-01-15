@@ -33,8 +33,8 @@ object BFToScala extends BFTranspiler{
     val dynFunc: String =
       """|
          |def chkInd(shift: Int = 0): Unit = {
-         |  if(p == -1){p = len; len += 1; tape = tape.padTo(len, 0)}
-         |  else if(p + shift >= len){len = p + shift + 1; tape = tape.padTo(len, 0)}
+         |if(p == -1){p = len; len += 1; tape = tape.padTo(len, 0)}
+         |else if(p + shift >= len){len = p + shift + 1; tape = tape.padTo(len, 0)}
          |}
          |""".stripMargin
     

@@ -15,8 +15,7 @@ object WhiteSpaceToScala extends Transpiler{
   def apply(config: Config)(progRaw: String): Try[String] = Try{condition(progRaw)} map{prog =>
     val progStr = genProg(prog, getCalls(prog))
     if(config.bool("indent")) indent(progStr)
-    else progStr
-  }
+    else progStr}
   
   def genProg(prog: Vector[(String, SafeLong)], calls: immutable.HashMap[SafeLong, Int]): String = {
     @tailrec
@@ -51,17 +50,13 @@ object WhiteSpaceToScala extends Transpiler{
           case "endProg" =>
             if(sub && ops.isEmpty) "endProg = true\n}"
             else if(sub) "endProg = true\nreturn"
-            else "endProg = true"
-        }
-        
+            else "endProg = true"}
         val nSub = s match{
           case "label" => true
           case "return" => false
-          case _ => sub
-        }
+          case _ => sub}
         gpo(ac :+ str, ops, nSub, count + 1)
-      case _ => ac.mkString("\n")
-    }
+      case _ => ac.mkString("\n")}
     
     val dupStr = "def dup(): Unit = {val tmp = stack.pop; stack.push(tmp); stack.push(tmp)}"
     val swapStr = "def swap(): Unit = {val a = stack.pop; val b = stack.pop; stack.push(a); stack.push(b)}"
@@ -98,6 +93,5 @@ object WhiteSpaceToScala extends Transpiler{
         |
         |def main(args: Array[String]): Unit = {
         |$progStr
-        |}""".stripMargin
-  }
+        |}""".stripMargin}
 }

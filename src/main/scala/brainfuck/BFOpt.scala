@@ -13,7 +13,7 @@ object BFOpt extends Interpreter{
       .flatMap{case (dyn, init) => BFOptimize(progRaw) map bfRun(init, dyn)}}
   
   def bfRun(init: Int, dyn: Boolean)(prog: Vector[(Char, Either[Int, BlkOp])]): Seq[Char] => LazyList[Char] = {
-    @tailrec def scan(dat: MemTape[Int], stp: Int, ind: Int): Int = if (dat(ind) != 0) scan(dat, stp, ind + stp) else ind
+    @tailrec def scan(dat: MemTape[Int], stp: Int, ind: Int): Int = if(dat(ind) != 0) scan(dat, stp, ind + stp) else ind
     
     @tailrec
     def nxt(pc: Int, dc: Int, tape: MemTape[Int], inp: Seq[Char]): Option[(Char, (Int, Int, MemTape[Int], Seq[Char]))] = prog(pc) match{

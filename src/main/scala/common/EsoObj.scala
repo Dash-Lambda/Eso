@@ -12,12 +12,10 @@ trait EsoObj {
   def mkMap[A, B](vec: Vector[(A, B)]): immutable.HashMap[A, B] = {
     val builder = immutable.HashMap.newBuilder[A, B]
     builder ++= vec
-    builder.result
-  }
+    builder.result}
   
   def StringToRect(str: String): Vector[Vector[Int]] = {
     val lines = str.linesIterator.map(_.toVector.map(_.toInt)).toVector
     val xdim = lines.map(_.size).max
-    lines.map(v => v.padTo(xdim, 32))
-  }
+    lines.map(v => v.padTo(xdim, 32))}
 }

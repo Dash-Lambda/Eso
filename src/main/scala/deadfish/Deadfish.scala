@@ -11,8 +11,7 @@ object Deadfish extends Interpreter{
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{config.bool("dfChar")} map{
     dfc =>
       if(dfc) _ => dfRun(progRaw).map(_.toChar)
-      else _ => dfRun(progRaw).flatMap(_.toString)
-  }
+      else _ => dfRun(progRaw).flatMap(_.toString)}
   
   def dfRun(progRaw: String): LazyList[Int] = {
     val prog = progRaw.filter("isdo".contains(_)).toVector
@@ -25,11 +24,7 @@ object Deadfish extends Interpreter{
         case 'i' => dfi(bound(n + 1), cs)
         case 'd' => dfi(bound(n - 1), cs)
         case 's' => dfi(bound(n*n), cs)
-        case 'o' => Some((n, (n, cs)))
-      }
-      case _ => None
-    }
-    
-    LazyList.unfold((0: Int, prog)){case (n, src) => dfi(n, src)}
-  }
+        case 'o' => Some((n, (n, cs)))}
+      case _ => None}
+    LazyList.unfold((0: Int, prog)){case (n, src) => dfi(n, src)}}
 }

@@ -21,28 +21,24 @@ object WSAssembly extends Translator{
           case Some(key) =>
             if(op.exists(_.isDigit)){
               val assembled = revMap(key) ++ binNum(SafeLong(BigInt(op.drop(key.length))))
-              ado(ac ++ assembled, ops)
-            }else Failure(EsoExcep(s"Not Enough Arguments ($op)"))
-          case None => Failure(EsoExcep(s"Operation Not Recognized ($op)"))
-        }
+              ado(ac ++ assembled, ops)}
+            else Failure(EsoExcep(s"Not Enough Arguments ($op)"))
+          case None => Failure(EsoExcep(s"Operation Not Recognized ($op)"))}
       case _ =>
         val noted = ac.toVector.flatMap{
           case '\t' => "T\t"
           case '\n' => "L\n"
           case ' ' => "S "}
-        Success(noted.mkString)
-    }
+        Success(noted.mkString)}
     
     val cleaned = prog.split("\n")
       .map(_.replaceAll("[\t\r\n ]", ""))
       .filter(_.nonEmpty)
       .toVector
-    ado("", cleaned)
-  }
+    ado("", cleaned)}
   def unapply(config: Config)(prog: String): Try[String] = {
     val res = condition(prog)
       .map{case (tag, num) => s"$tag${if(argOps.contains(tag)) s" $num" else ""}"}
       .mkString("\n")
-    Success(res)
-  }
+    Success(res)}
 }

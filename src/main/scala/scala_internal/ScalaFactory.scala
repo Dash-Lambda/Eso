@@ -11,6 +11,5 @@ object ScalaFactory extends (String => Try[(BlockingQueue[Option[Try[Char]]], Se
     val toolbox = currentMirror.mkToolBox()
     val tree = toolbox.parse(prog)
     val compiled = toolbox.compile(tree)
-    compiled().asInstanceOf[(BlockingQueue[Option[Try[Char]]], Seq[Char]) => Runnable]
-  }
+    compiled().asInstanceOf[(BlockingQueue[Option[Try[Char]]], Seq[Char]) => Runnable]}
 }

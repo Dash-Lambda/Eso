@@ -49,7 +49,8 @@ object EsoDefaults extends EsoObj{
     ("fl", "FlufflePuff"),
     ("ook", "Ook"),
     ("wsa", "WSAssembly"),
-    ("mt", "Metatape"))
+    ("mt", "Metatape"),
+    ("cpp", "C++"))
   val fileExtensionMap: immutable.HashMap[String, String] = mkMap(fileExtensionsVec)
   
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](

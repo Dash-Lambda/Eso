@@ -21,6 +21,5 @@ object ScalaRun extends Interpreter{
     
     import toolbox.u._
     val sym = toolbox.define(tree.asInstanceOf[ImplDef])
-    args => toolbox.eval(q"$sym.main(Array(${args.mkString(", ")}))")
-  }
+    args => toolbox.eval(q"$sym.main(Array(${args.mkString(", ")}))")}
 }

@@ -40,10 +40,10 @@ object BFToScalaIntern extends BFTranspiler{
     
     val dynFunc: String =
       s"""|
-          |    def chkInd(shift: Int = 0): Unit = {
-          |      if(p == -1){p = len; len += 1; tape = tape.padTo(len, 0)}
-          |      else if(p + shift >= len){len = p + shift + 1; tape = tape.padTo(len, 0)}
-          |    }
+          |def chkInd(shift: Int = 0): Unit = {
+          |if(p == -1){p = len; len += 1; tape = tape.padTo(len, 0)}
+          |else if(p + shift >= len){len = p + shift + 1; tape = tape.padTo(len, 0)}
+          |}
           |""".stripMargin
     
     val methStr = tdo()
@@ -51,22 +51,23 @@ object BFToScalaIntern extends BFTranspiler{
     s"""|import java.util.concurrent.{BlockingQueue, SynchronousQueue}
         |import scala.util.{Try, Success, Failure}
         |new Function2[BlockingQueue[Option[Try[Char]]], Seq[Char], Runnable]{
-        |  def apply(queue: BlockingQueue[Option[Try[Char]]], inputs: Seq[Char]): Runnable = Stepper(queue, inputs)
-        |  case class Stepper(queue: BlockingQueue[Option[Try[Char]]], inputs: Seq[Char]) extends Runnable{
-        |    var tape = Array[Int]()${if(dyn) s"\nvar len = 0" else ""}
-        |    var p = 0
-        |    var inp = Seq[Char]()${if(olen >= 0) s"\nvar resLen = 0\nvar end = false" else ""}${if(dyn) dynFunc else ""}
-        |    def run(): Unit = {
-        |      inp = inputs
-        |      tape = Array.fill($init)(0)${if(dyn) s"\nlen = $init" else ""}
-        |      p = 0
-        |      try{
-        |        f0()
-        |        queue.put(None)}
-        |      catch{
-        |        case e: Throwable => queue.put(Some(Failure(e)))}
-        |    }
-        |    $methStr
-        |  }
+        |def apply(queue: BlockingQueue[Option[Try[Char]]], inputs: Seq[Char]): Runnable = Stepper(queue, inputs)
+        |case class Stepper(queue: BlockingQueue[Option[Try[Char]]], inputs: Seq[Char]) extends Runnable{
+        |var tape = Array[Int]()${if(dyn) s"\nvar len = 0" else ""}
+        |var p = 0
+        |var inp = Seq[Char]()${if(olen >= 0) s"\nvar resLen = 0\nvar end = false" else ""}${if(dyn) dynFunc else ""}
+        |def run(): Unit = {
+        |inp = inputs
+        |tape = Array.fill($init)(0)${if(dyn) s"\nlen = $init" else ""}
+        |p = 0
+        |try{
+        |f0()
+        |queue.put(None)}
+        |catch{
+        |case e: Throwable => queue.put(Some(Failure(e)))
+        |}
+        |}
+        |$methStr
+        |}
         |}""".stripMargin}
 }

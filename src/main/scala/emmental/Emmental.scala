@@ -12,9 +12,6 @@ object Emmental extends Interpreter{
     @tailrec
     def emi(s: EMState): Option[(Char, EMState)] = s.doOp() match{
       case Left(s2) => emi(s2)
-      case Right(op) => op
-    }
-    
-    Try{input => LazyList.unfold(EMState(progRaw, input))(emi)}
-  }
+      case Right(op) => op}
+    Try{input => LazyList.unfold(EMState(progRaw, input))(emi)}}
 }

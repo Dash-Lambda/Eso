@@ -16,6 +16,3 @@ case class Vec2D[N: Numeric](x: N, y: N){
   
   override def toString: String = s"<$x,$y>"
 }
-object Vec2D{
-  def apply[N: Numeric](x: N, y: N): Vec2D[N] = new Vec2D[N](x, y)
-}

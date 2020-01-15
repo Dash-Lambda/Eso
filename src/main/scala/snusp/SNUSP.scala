@@ -86,6 +86,5 @@ object SNUSP extends Interpreter{
           case (nip, ndt) +: cs => (state, SNIP(nip + ndt*2, ndt, dp, cs))
           case _ => (state, SNOP)}
         case '&' => (state, SNLIT(SNIP(ip + dt*2, dt, dp, calls), stp(dt)))
-        case _ => (state, stp(dt))}}
-  }
+        case _ => (state, stp(dt))}}}
 }

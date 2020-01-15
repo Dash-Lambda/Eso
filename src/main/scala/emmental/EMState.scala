@@ -22,12 +22,10 @@ case class EMState(prog: Vector[Char], inp: Seq[Char], stack: Vector[Int], queue
         case '!' => Left(redefine)
         case '?' => Left(eval)
         case ';' => Left(push(';'))
-        case _ if c.isDigit => Left(doMath(c.asDigit))
-        case _ => Left(EMState(cs, inp, stack, queue, ops))
-      }
-    }
-    case _ => Right(None)
-  }
+        case _ =>
+          if(c.isDigit) Left(doMath(c.asDigit))
+          else Left(EMState(cs, inp, stack, queue, ops))}}
+    case _ => Right(None)}
   
   def redefine: EMState = {
     val tag = stack.head.toChar
@@ -35,12 +33,8 @@ case class EMState(prog: Vector[Char], inp: Seq[Char], stack: Vector[Int], queue
     val cmd = tok.reverse.flatMap{n =>
       ops.get(n.toChar) match{
         case Some(r) => r
-        case None => Seq(n.toChar)
-      }
-    }
-    
-    EMState(prog.tail, inp, tl.tail, queue, ops + ((tag, cmd)))
-  }
+        case None => Seq(n.toChar)}}
+    EMState(prog.tail, inp, tl.tail, queue, ops + ((tag, cmd)))}
   
   def input: EMState = EMState(prog.tail, inp.tail, inp.head.toInt +: stack, queue, ops)
   def eval: EMState = EMState(stack.head.toChar +: prog.tail, inp, stack.tail, queue, ops)
@@ -55,8 +49,7 @@ case class EMState(prog: Vector[Char], inp: Seq[Char], stack: Vector[Int], queue
   def subt: EMState = stack match{case a +: b +: ns => EMState(prog.tail, inp, (256 + b - a)%256 +: ns, queue, ops)}
   def log2: EMState = {
     if(stack.head == 0) EMState(prog.tail, inp, 8 +: stack.tail, queue, ops)
-    else EMState(prog.tail, inp, EMState.dlog2(stack.head)%256 +: stack.tail, queue, ops)
-  }
+    else EMState(prog.tail, inp, EMState.dlog2(stack.head)%256 +: stack.tail, queue, ops)}
 }
 object EMState {
   @tailrec def dlog2(n: Int, c: Int = 0): Int = if(n <= 1) c else dlog2(n/2, c + 1)

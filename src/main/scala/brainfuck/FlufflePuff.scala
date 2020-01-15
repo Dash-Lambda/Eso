@@ -1,13 +1,13 @@
 package brainfuck
 
-import common.{Config, Translator}
+import common.Config
 
 import scala.util.{Success, Try}
 
 object FlufflePuff extends BFTranslator{
   val name: String = "FlufflePuff"
   val baseLang: String = "BrainFuck"
-  val kvPairs: Vector[(String, String)] = Vector[(String, String)](
+  val kvPairs: Vector[(String, String)] = Vector(
     ("[", "*gasp*"),
     ("]", "*pomf*"),
     ("+", "pf"),

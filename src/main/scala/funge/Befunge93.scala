@@ -16,17 +16,14 @@ object Befunge93 extends Interpreter{
     
     def chomp(inp: Seq[Char]): (String, Seq[Char]) = {
       val (hd, tl) = inp.splitAt(inp.indexOf('\n'))
-      (hd.mkString, tl.tail)
-    }
+      (hd.mkString, tl.tail)}
     
     def op1(stk: LazyList[Long], f: Long => Seq[Long]): LazyList[Long] = f(stk.head) ++: stk.tail
     def op2(stk: LazyList[Long], f: (Long, Long) => Seq[Long]): LazyList[Long] = stk match{
-      case a +: b +: ns => f(a, b) ++: ns
-    }
+      case a +: b +: ns => f(a, b) ++: ns}
     def mop1(stk: LazyList[Long], f: Long => Long): LazyList[Long] = f(stk.head) #:: stk.tail
     def mop(stk: LazyList[Long], f: (Long, Long) => Long): LazyList[Long] = stk match{
-      case a +: b +: ns => f(a, b) +: ns
-    }
+      case a +: b +: ns => f(a, b) +: ns}
     
     @tailrec
     def bfi(px: Int, py: Int, dx: Int, dy: Int, bs: Boolean, stk: LazyList[Long], inp: Seq[Char], prog: BF93Prog): Option[(String, (Int, Int, Int, Int, Boolean, LazyList[Long], Seq[Char], BF93Prog))] = {
@@ -44,8 +41,7 @@ object Befunge93 extends Interpreter{
             case 0 => bfi(px + 1, py, 1, 0, bs, stk, inp, prog)
             case 1 => bfi(px - 1, py, -1, 0, bs, stk, inp, prog)
             case 2 => bfi(px, py + 1, 0, 1, bs, stk, inp, prog)
-            case 3 => bfi(px, py - 1, 0, -1, bs, stk, inp, prog)
-          }
+            case 3 => bfi(px, py - 1, 0, -1, bs, stk, inp, prog)}
           case '_' =>
             if(stk.head == 0) bfi(px + 1, py, 1, 0, bs, stk.tail, inp, prog)
             else bfi(px - 1, py, -1, 0, bs, stk.tail,inp, prog)
@@ -66,8 +62,7 @@ object Befunge93 extends Interpreter{
           case '`' => bfi(px + dx, py + dy, dx, dy, bs, mop(stk, (a, b) => if(a < b) 1L else 0L), inp, prog)
           case 'g' => bfi(px + dx, py + dy, dx, dy, bs, mop(stk, (y, x) => prog(x, y).toLong), inp, prog)
           case 'p' => stk match{
-            case y +: x +: rep +: rem => bfi(px + dx, py + dy, dx, dy, bs, rem, inp, prog.updated(x.toInt, y.toInt, rep.toChar))
-          }
+            case y +: x +: rep +: rem => bfi(px + dx, py + dy, dx, dy, bs, rem, inp, prog.updated(x.toInt, y.toInt, rep.toChar))}
           case '+' => bfi(px + dx, py + dy, dx, dy, bs, mop(stk, (a, b) => a + b), inp, prog)
           case '-' => bfi(px + dx, py + dy, dx, dy, bs, mop(stk, (a, b) => b - a), inp, prog)
           case '*' => bfi(px + dx, py + dy, dx, dy, bs, mop(stk, (a, b) => a * b), inp, prog)
@@ -77,17 +72,12 @@ object Befunge93 extends Interpreter{
           case '@' => None
           case _ =>
             if(c.isDigit) bfi(px + dx, py + dy, dx, dy, bs, c.asDigit #:: stk, inp, prog)
-            else bfi(px + dx, py + dy, dx, dy, bs, stk, inp, prog)
-        }
+            else bfi(px + dx, py + dy, dx, dy, bs, stk, inp, prog)}
         case None =>
           val nx = (px + 80)%80
           val ny = (py + 25)%25
-          bfi(nx, ny, dx, dy, bs, stk, inp, prog)
-      }
-    }
+          bfi(nx, ny, dx, dy, bs, stk, inp, prog)}}
     
     inputs => LazyList.unfold((0: Int, 0: Int, 1: Int, 0: Int, false: Boolean, LazyList.continually(0L), inputs, bfProg)) {
-      case (px, py, dx, dy, bs, stk, inp, prog) => bfi(px, py, dx, dy, bs, stk, inp, prog)
-    }.flatten
-  }
+      case (px, py, dx, dy, bs, stk, inp, prog) => bfi(px, py, dx, dy, bs, stk, inp, prog)}.flatten}
 }

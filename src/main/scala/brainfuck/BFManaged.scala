@@ -12,7 +12,5 @@ object BFManaged extends Interpreter{
       case 0 => BFBase(config)(progRaw)
       case 1 => BFOpt(config)(progRaw)
       case 2 => BFComp(config)(progRaw)
-      case n => Failure(EsoExcep(s"bfOpt Out Of Range: $n"))
-    }
-  }
+      case n => Failure(EsoExcep(s"bfOpt Out Of Range: $n"))}}
 }

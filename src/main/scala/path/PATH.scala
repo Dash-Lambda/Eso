@@ -9,24 +9,18 @@ object PATH extends Interpreter{
   val name: String = "PATH"
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
-    Try{pathRun(Matrix.fromString(progRaw), config.num("init"), config.bool("dyn"))}
-  }
+    Try{pathRun(Matrix.fromString(progRaw), config.num("init"), config.bool("dyn"))}}
   
   def pathRun(prog: Matrix[Char], initTapeSize: Int, dyn: Boolean): Seq[Char] => LazyList[Char] = {
     @tailrec
     def rdo(ip: POB): Option[(Char, POB)] = ip(prog) match{
       case PEND => None
       case POUT(c, nxt) => Some((c, nxt))
-      case pip: PIP => rdo(pip)
-    }
-  
+      case pip: PIP => rdo(pip)}
     val initIP = prog.coordOf('$') match{
       case Some(v) => v
-      case None => Vec2D(0, 0)
-    }
-    
-    inputs => LazyList.unfold(PIP(initIP, Vec2D(1, 0), MemTape(Vector.fill(initTapeSize)(0), dyn, 0), 0, inputs): POB)(rdo)
-  }
+      case None => Vec2D(0, 0)}
+    inputs => LazyList.unfold(PIP(initIP, Vec2D(1, 0), MemTape(Vector.fill(initTapeSize)(0), dyn, 0), 0, inputs): POB)(rdo)}
   
   trait POB{
     def apply(prog: Matrix[Char]): POB
@@ -57,8 +51,5 @@ object PATH extends Interpreter{
         case 'v' => stp(if(tape(tp) == 0) Vec2D(0, 1) else dt)
         case '/' => stp(dt match{case Vec2D(a, b) => Vec2D(-b, -a)})
         case '\\' => stp(dt match{case Vec2D(a, b) => Vec2D(b, a)})
-        case _ => stp(dt)
-      }
-    }
-  }
+        case _ => stp(dt)}}}
 }

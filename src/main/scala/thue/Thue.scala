@@ -16,32 +16,24 @@ object Thue extends Interpreter{
       if(lst.isEmpty) None
       else{
         val (hd, tl) = lst.span(_ != '\n')
-        Some((hd.mkString, if(tl.startsWith("\n")) tl.tail else tl))
-      }
-    }
+        Some((hd.mkString, if(tl.startsWith("\n")) tl.tail else tl))}}
     
     @tailrec
     def nxt(ac: String, inp: Seq[String]): Option[(String, (String, Seq[String]))] = {
       val hit = {
         if(prog.exists(p => ac.contains(p._1))){
           val hits = prog.filter(p => ac.contains(p._1))
-          Some(hits(rand.nextInt(hits.length)))
-        }else None
-      }
+          Some(hits(rand.nextInt(hits.length)))}
+        else None}
       
       hit match{
         case Some((k, v)) => v match{
           case ":::" => nxt(ac.replaceAllLiterally(k, inp.head), inp.tail)
           case _ =>
             if(v.startsWith("~")) Some((v.tail, (ac.replaceAllLiterally(k, ""), inp)))
-            else nxt(ac.replaceAllLiterally(k, v), inp)
-        }
-        case None => None
-      }
-    }
-    
-    inputs => LazyList.unfold((init, collapse(inputs))){case (ac, inp) => nxt(ac, inp)}.flatten
-  }
+            else nxt(ac.replaceAllLiterally(k, v), inp)}
+        case None => None}}
+    inputs => LazyList.unfold((init, collapse(inputs))){case (ac, inp) => nxt(ac, inp)}.flatten}
   
   def condition(progRaw: String): Try[(String, Vector[(String, String)])] = {
     val ruleExp = raw"""\A(.*)::=(.*)\z""".r
@@ -59,7 +51,5 @@ object Thue extends Interpreter{
     
     conditioned match{
       case Some(p) => Success(p)
-      case None => Failure(EsoExcep("Malformed Program"))
-    }
-  }
+      case None => Failure(EsoExcep("Malformed Program"))}}
 }

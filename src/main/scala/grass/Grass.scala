@@ -8,20 +8,15 @@ import scala.util.Try
 object Grass extends Interpreter{
   val name: String = "Grass"
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
-    val prog = parse(progRaw)
-    Try{eval(prog)}
-  }
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{eval(parse(progRaw))}
   
   def eval(prog: Vector[Expr]): Seq[Char] => LazyList[Char] = {
     @tailrec
     def edo(state: State): Option[(Char, State)] = state.run() match {
       case OutState(c, nxt) => Some((c, nxt))
       case HaltState => None
-      case _ => edo(state.run())
-    }
-    inputs => LazyList.unfold(RunState(prog, Env(Vector(Out, Succ, CharFun('w'), In)), inputs, HaltState): State)(edo)
-  }
+      case _ => edo(state.run())}
+    inputs => LazyList.unfold(RunState(prog, Env(Vector(Out, Succ, CharFun('w'), In)), inputs, HaltState): State)(edo)}
   
   def parse(progRaw: String): Vector[Expr] = {
     val absExp = raw"""\A(w*)([Ww]*)\z""".r
@@ -38,26 +33,21 @@ object Grass extends Interpreter{
       .toVector
     
     def pdo(tok: String): Vector[Expr] = tok match{
-      case absExp(arw, apps) => absArity(arw.length, chomp(apps))
-    }
+      case absExp(arw, apps) => absArity(arw.length, chomp(apps))}
     
     @tailrec
     def absArity(n: Int, p: Vector[Expr]): Vector[Expr] = {
       if(n > 0) absArity(n - 1, Vector(AbsExpr(p)))
-      else p
-    }
+      else p}
     
     @tailrec
     def chomp(str: String, ac: Vector[AppExpr] = Vector()): Vector[AppExpr] = str match{
       case appExp(sW, sw, tl) => chomp(tl, ac :+ AppExpr(sW.length, sw.length))
-      case _ => ac
-    }
+      case _ => ac}
     
     progVec flatMap pdo match{
       case as :+ (a: AbsExpr) => as :+ a :+ AppExpr(1, 1)
-      case as => as
-    }
-  }
+      case as => as}}
   
   case class Env(stk: Vector[Func]){
     def apply(i: Int): Func = stk(i)
@@ -72,8 +62,7 @@ object Grass extends Interpreter{
   case class RunState(code: Vector[Expr], env: Env, inp: Seq[Char], call: State) extends State{
     def run(): State = code match{
       case a +: as => a(RunState(as, env, inp, call))
-      case _ => call.pass(env.head)
-    }
+      case _ => call.pass(env.head)}
     def pass(res: Func): State = RunState(code, env.push(res), inp, call)
   }
   case class OutState(c: Char, nxt: State) extends State{
@@ -117,24 +106,19 @@ object Grass extends Interpreter{
     def apply(arg: Func, ce: RunState): State = {
       val f = arg match{
         case CharFun(a) if a == c => CTrue
-        case _ => CFalse
-      }
-      RunState(ce.code, ce.env.push(f), ce.inp, ce.call)
-    }
+        case _ => CFalse}
+      RunState(ce.code, ce.env.push(f), ce.inp, ce.call)}
   }
   object Out extends Func{
     def apply(arg: Func, ce: RunState): State = arg match{
-      case CharFun(c) => OutState(c, RunState(ce.code, ce.env.push(arg), ce.inp, ce.call))
-    }
+      case CharFun(c) => OutState(c, RunState(ce.code, ce.env.push(arg), ce.inp, ce.call))}
   }
   object In extends Func{
     def apply(arg: Func, ce: RunState): State = {
-      RunState(ce.code, ce.env.push(CharFun(ce.inp.head)), ce.inp.tail, ce.call)
-    }
+      RunState(ce.code, ce.env.push(CharFun(ce.inp.head)), ce.inp.tail, ce.call)}
   }
   object Succ extends Func{
     def apply(arg: Func, ce: RunState): State = arg match{
-      case CharFun(c) => RunState(ce.code, ce.env.push(CharFun(((c.toInt + 1)%256).toChar)), ce.inp, ce.call)
-    }
+      case CharFun(c) => RunState(ce.code, ce.env.push(CharFun(((c.toInt + 1)%256).toChar)), ce.inp, ce.call)}
   }
 }

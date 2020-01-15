@@ -44,14 +44,12 @@ object WSCommon extends EsoObj{
       .reverse
       .map(if(_) '\t' else ' ')
       .mkString
-    s"${if(num < 0) '\t' else ' '}$digs\n"
-  }
+    s"${if(num < 0) '\t' else ' '}$digs\n"}
   
   def longNum(str: String): SafeLong = {
     val signum = str.head match{
       case ' ' => SafeLong(1)
-      case '\t' => SafeLong(-1)
-    }
+      case '\t' => SafeLong(-1)}
     val mag = str
       .tail
       .takeWhile(_ != '\n')
@@ -59,8 +57,7 @@ object WSCommon extends EsoObj{
       .zipWithIndex
       .map{case (c, i) => if(c == '\t') SafeLong(2).pow(i) else SafeLong(0)}
       .foldLeft(SafeLong(0)){case (a, b) => a + b}
-    signum*mag
-  }
+    signum*mag}
   
   def getCalls(prog: Vector[(String, SafeLong)]): immutable.HashMap[SafeLong, Int] = mkMap(prog.zipWithIndex.collect{case (("label", id), n) => (id, n + 1)})
   def condition(progRaw: String): Vector[(String, SafeLong)] = {
@@ -71,9 +68,6 @@ object WSCommon extends EsoObj{
         val lNum = longNum(tail)
         cdo(ac :+ ((v, lNum)), tail.dropWhile(_ != '\n').tail)
       case Some((k, v)) => cdo(ac :+ ((v, SafeLong(0))), src.drop(k.length))
-      case None => if(src.nonEmpty) cdo(ac, src.tail) else ac
-    }
-    
-    cdo(Vector[(String, SafeLong)](), progRaw.replaceAll("(\r\n|\r)", "\n").filter("\t\n ".contains(_)))
-  }
+      case None => if(src.nonEmpty) cdo(ac, src.tail) else ac}
+    cdo(Vector[(String, SafeLong)](), progRaw.replaceAll("(\r\n|\r)", "\n").filter("\t\n ".contains(_)))}
 }

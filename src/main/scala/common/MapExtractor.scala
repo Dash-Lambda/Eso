@@ -11,7 +11,5 @@ case class MapExtractor[K, V](map: immutable.HashMap[K, V]) {
         case Some(v) => udo(ks, ac :+ v)
         case None => None}
       case _ => Some(ac)}
-    
-    udo(keys.toVector) map (_.toList)
-  }
+    udo(keys.toVector) map (_.toList)}
 }

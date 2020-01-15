@@ -46,12 +46,7 @@ object WhiteSpace extends Interpreter{
         case "readNum" => wsi(pc + 1, SafeLong(BigInt(inp.takeWhile(_.isDigit).mkString)) +: stack, heap, callStack, inp.dropWhile(_.isDigit))
         case "outChar" => Some((stack.head.toChar.toString, (pc + 1, stack.tail, heap, callStack, inp)))
         case "outNum" => Some((stack.head.toString, (pc + 1, stack.tail, heap, callStack, inp)))
-        case "endProg" => None
-      }
-    }
-    
+        case "endProg" => None}}
     inputs => LazyList.unfold((0: Int, List[SafeLong](), immutable.HashMap[SafeLong, SafeLong](), List[Int](), inputs)){
-      case (pc, stack, heap, callStack, inp) => wsi(pc, stack, heap, callStack, inp)
-    }.flatten
-  }
+      case (pc, stack, heap, callStack, inp) => wsi(pc, stack, heap, callStack, inp)}.flatten}
 }
