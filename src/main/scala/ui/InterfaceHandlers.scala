@@ -103,6 +103,60 @@ trait InterfaceHandler extends EsoObj{
     (res, System.currentTimeMillis - t)}
 }
 
+object DebugHandler extends InterfaceHandler{
+  val nam: String = "debug"
+  val helpStr: String = "<-s :sourceFileName:> {-l :language:, -i :inputFileName:, -o :outputFileName:}"
+  
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+    val printNum = state.bools("printNum")
+    val logFlg = state.bools("log")
+    val timeFlg = state.bools("time")
+    val appFlg = state.bools("appendInp")
+    val echoFInp = state.bools("echoFileInp")
+    
+    def olim(res: LazyList[Char]): LazyList[Char] = state.nums("olen") match{
+      case -1 => res
+      case n => res.take(n)}
+    
+    def inputs: Try[LazyList[Char]] = args.get("i") match{
+      case Some(fnam) =>
+        val fStr = readFile(fnam) map (s => (s + state.nums("fileEOF").toChar).to(LazyList).map{c => if(echoFInp) print(c); c})
+        if(appFlg) fStr map (s => s :++ LazyList.continually(StdIn.readLine + '\n').flatten)
+        else fStr
+      case None => Success(LazyList.continually(StdIn.readLine + '\n').flatten)}
+    
+    def printer(out: Seq[Char]): Unit = args.get("o") match{
+      case Some(onam) =>
+        val of = new PrintWriter(new File(onam))
+        out foreach{c =>
+          val str = if(printNum) c.toInt.toString + ' ' else c.toString
+          print(str)
+          of.print(str)
+          of.flush()}
+        of.close()
+      case None => out foreach(c => print(if(printNum) c.toInt.toString + ' ' else c.toString))}
+    
+    doOrOp(args.get("s"), "Missing Source File"){src =>
+      doOrOp(getLang(args, "l", "s"), "Unrecognized Language or File Extension"){lang =>
+        if(logFlg) print("Searching for translator path... ")
+        doOrOp(findTranslator(state, lang, state.interpNames), "Language Not Recognized"){
+          case (inam, t) =>
+            if(logFlg) print("Done.\nRetrieving program from file... ")
+            doOrErr(readFile(src)){progRaw =>
+              if(logFlg) print(s"Done.\nTranslating program... ")
+              doOrErr(t(progRaw)){prog =>
+                if(logFlg) print("Done.\nInitializing interpreter... ")
+                timeIt(state.interps(inam)(state.config)(prog)) match{
+                  case (i, dur) =>
+                    if(logFlg) println(s"Done in ${dur}ms.\nRunning program...")
+                    doOrErr(i){r =>
+                      doOrErr(inputs){inp =>
+                        printer(olim(r(inp)))
+                        println("\nProgram Completed")}}}}}}}}
+    
+    state}
+}
+
 object RunProgHandler extends InterfaceHandler{
   val nam: String = "run"
   val helpStr: String = "<-s :sourceFileName:> {-l :language:, -i :inputFileName:, -o :outputFileName:}"

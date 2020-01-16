@@ -18,7 +18,7 @@ object Wierd extends Interpreter{
         case WIPSplit(nip1, nip2) => wri(ips :+ nip2 :+ nip1, inp, prog)
         case WIPOut(c, nip) => Some((c, (ips :+ nip, inp, prog)))
         case WIPHalt => None}}
-    val initWip = WIP(Vec2D(1, 1), Vec2D(1, 1), LazyList[Int]())
+    val initWip = WIP(Vec2D(1, 1), Vec2D(1, 1), LazyList())
     inputs => LazyList.unfold((Vector(initWip), inputs, initProg)){
       case (wips, inp, prog) => wri(wips, inp, prog)}}
 }

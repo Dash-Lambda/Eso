@@ -1,31 +1,31 @@
 package funge
 
-import common.Interpreter
 import common_test.EsoSpec
 
-import scala.io.Source
-import scala.util.{Success, Try}
+import scala.util.Success
 import scala.util.matching.Regex
 
-abstract class FungeSpec extends EsoSpec{
-  private val badReg: Regex = raw"""\s*BAD:.*\z""".r
-  def getMycology: Option[String] = Try{
-    val iFile = Source.fromFile("mycology.b98")
-    val prog = iFile.mkString
-    iFile.close()
-    prog} match{
-    case Success(prog) => Some(prog)
-    case _ => None}
-  def passes(res: Try[LazyList[Char]]): Boolean = res match{
-    case Success(lst) => Try{
-      lst
-        .mkString
-        .linesIterator
-        .forall(str => !badReg.matches(str))}
-      .getOrElse(false)
-    case _ => false}
-  def testMycology(bfi: Interpreter): Boolean = {
-    val progOp = getMycology
-    val inp = Seq()
-    progOp.exists(prog => testInterp(bfi, defaultConfig, prog, inp)(passes))}
+class FungeSpec extends EsoSpec{
+  private val badReg: Regex = raw"""\s*(BAD:.*)\z""".r
+  val mycology: String = grabFile("mycology.b98")
+  def getBadLines(output: String): Vector[String] = output
+    .linesIterator
+    .collect{case badReg(str) => str}
+    .toVector
+  
+  //Befunge-93
+  "Befunge-93" should "pass mycology" in {
+    getOutputString(Befunge93, mycology) match{
+      case Success(str) =>
+        val bads = getBadLines(str)
+        assert(bads.isEmpty)
+      case _ => fail}}
+  
+  //Befunge-98
+  "Befunge-98" should "pass mycology" in {
+    getOutputString(Befunge98, mycology) match{
+      case Success(str) =>
+        val bads = getBadLines(str)
+        assert(bads.isEmpty)
+      case _ => fail}}
 }

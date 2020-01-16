@@ -33,7 +33,7 @@ object EsoDefaults extends EsoObj{
     ("b93", "Befunge-93"),
     ("b98", "Befunge-98"),
     ("b", "BrainFuck"),
-    ("df", "DeadFish"),
+    ("df", "Deadfish"),
     ("emm", "Emmental"),
     ("ft", "FracTran"),
     ("ftp", "FracTran++"),
@@ -111,6 +111,7 @@ object EsoDefaults extends EsoObj{
     ListFileAssociationsHandler)
   
   val persistentHandlers: Vector[InterfaceHandler] = Vector(
+    DebugHandler,
     RunProgHandler,
     TranslateHandler,
     TranspileHandler,
