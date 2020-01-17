@@ -103,6 +103,8 @@ Current native language support (mostly in chronological order):
 This is not an exhaustive list, but here are some of the languages I've considered, am considering, or am currently working on.
 * [Unispace](https://esolangs.org/wiki/Unispace) (difficulty with finding particularly good documentation)
 * [Funciton](https://esolangs.org/wiki/Funciton) (difficulty handling lazy input with its reversed string encoding)
+* [Glass](https://esolangs.org/wiki/Glass) (specification is a bit too ambiguous about scope handling)
+* [Marscapone](https://esolangs.org/wiki/Mascarpone)
 
 ### Design of Eso
 Eso actually started out as a simple, single functional-style BrainFuck interpreter. Since then it's gotten... Complicated. Though I prefer the word "sophisticated".
