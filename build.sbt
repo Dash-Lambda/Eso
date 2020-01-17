@@ -6,6 +6,8 @@ ThisBuild / organizationName := "dashlambda"
 lazy val root = (project in file("."))
   .settings(
     name := "Eso",
+    logBuffered in Test := false,
+    parallelExecution in Test := false,
     scalacOptions ++= Seq("-deprecation", "-feature"),
     resolvers ++= Seq(
       Resolver.sonatypeRepo("releases"),

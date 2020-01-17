@@ -111,7 +111,7 @@ object EsoDefaults extends EsoObj{
     ListFileAssociationsHandler)
   
   val persistentHandlers: Vector[InterfaceHandler] = Vector(
-    DebugHandler,
+    //DebugHandler,
     RunProgHandler,
     TranslateHandler,
     TranspileHandler,

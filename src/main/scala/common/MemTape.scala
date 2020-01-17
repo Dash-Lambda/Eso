@@ -29,6 +29,3 @@ case class MemTape[T : Numeric](vec: Vector[T], dyn: Boolean, blank: T) {
   
   def to[C](factory: Factory[T, C]): C = vec.to(factory)
 }
-object MemTape{
-  def apply[T : Numeric](vec: Vector[T], dyn: Boolean, blank: T): MemTape[T] = new MemTape(vec, dyn, blank)
-}

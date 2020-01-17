@@ -110,7 +110,6 @@ object DebugHandler extends InterfaceHandler{
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val printNum = state.bools("printNum")
     val logFlg = state.bools("log")
-    val timeFlg = state.bools("time")
     val appFlg = state.bools("appendInp")
     val echoFInp = state.bools("echoFileInp")
     
