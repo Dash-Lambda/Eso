@@ -87,6 +87,7 @@ Current native language support (mostly in chronological order):
     * NULL
     * HRTI
     * REFC
+    * CPLI
 
 #### WIP:
 * REPL mode

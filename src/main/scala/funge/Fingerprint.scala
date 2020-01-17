@@ -6,7 +6,7 @@ import scala.collection.immutable
 
 
 object BF98Lib extends EsoObj{
-  val fpvec: Vector[Fingerprint] = Vector[Fingerprint](BOOL, ROMA, MODU, NULL, HRTI, REFC)
+  val fpvec: Vector[Fingerprint] = Vector[Fingerprint](BOOL, ROMA, MODU, NULL, HRTI, REFC, CPLI)
   val lib: immutable.HashMap[Int, Fingerprint] = mkMap(fpvec.map(fp => (fp.id, fp)))
   
   def apply(id: Int): Fingerprint = lib(id)
@@ -28,14 +28,17 @@ trait Fingerprint {
     case FIP(fid, ip, dt, so, bs, stk, binds) => FIPCont(prog, dat, FIP(fid, prog.getNextInd(ip, -dt), -dt, so, bs, stk, binds))}
   
   def push(n: Int)(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = fip match{
-    case FIP(id, ip, dt, so, bs, stk, binds) => FIPCont(prog, dat, FIP(id, prog.getNextInd(ip, dt), dt, so, bs, (n +: fip.TOSS) +: stk.tail, binds))}
+    case FIP(fid, ip, dt, so, bs, stk, binds) => FIPCont(prog, dat, FIP(fid, prog.getNextInd(ip, dt), dt, so, bs, (n +: fip.TOSS) +: stk.tail, binds))}
   def tossOp(f: FungeStack => FungeStack)(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = fip match{
-    case FIP(id, ip, dt, so, bs, stk, binds) => FIPCont(prog, dat, FIP(id, prog.getNextInd(ip, dt), dt, so, bs, f(fip.TOSS) +: stk.tail, binds))}
+    case FIP(fid, ip, dt, so, bs, stk, binds) => FIPCont(prog, dat, FIP(fid, prog.getNextInd(ip, dt), dt, so, bs, f(fip.TOSS) +: stk.tail, binds))}
   def fpDatOp(f: BF98FPData => BF98FPData)(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = dat match{
     case BF98State(times, inp, rand, fpDat) => FIPCont(prog, BF98State(times, inp, rand, f(fpDat)), fip.step(prog))}
   def progOp(f: BF98Prog => BF98Prog)(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = {
     val nprog = f(prog)
     FIPCont(nprog, dat, fip.step(nprog))}
+  def tossOutOp(f: FungeStack => (String, FungeStack))(prog: BF98Prog, dat: BF98State, fip: FIP): FIPRet = fip match{
+    case FIP(fid, ip, dt, so, bs, toss +: tl, binds) => f(toss) match{
+      case(str, ntoss) => FIPOut(str, prog, dat, FIP(fid, prog.getNextInd(ip, dt), dt, so, bs, ntoss +: tl, binds))}}
 }
 
 object BOOL extends Fingerprint{
@@ -136,4 +139,33 @@ object REFC extends Fingerprint{
   val binds: Vector[(Char, (BF98Prog, BF98State, FIP) => FIPRet)] = Vector(
     'R' -> ref,
     'D' -> deref)
+}
+
+object CPLI extends Fingerprint{
+  val name: String = "CPLI"
+  
+  def add(stk: FungeStack): FungeStack = stk match{
+    case bi #-: br #-: ai #-: ar #-: tl => (ai + bi) +: (ar + br) +: tl}
+  def subt(stk: FungeStack): FungeStack = stk match{
+    case bi #-: br #-: ai #-: ar #-: tl => (ai - bi) +: (ar - br) +: tl}
+  def mult(stk: FungeStack): FungeStack = stk match{
+    case bi #-: br #-: ai #-: ar #-: tl => (ar*bi + ai*br) +: (ar*br - ai*bi) +: tl}
+  def div(prog: BF98Prog, state: BF98State, fip: FIP): FIPRet = {
+    def ddo(stk: FungeStack): FungeStack = stk match{
+      case bi #-: br #-: ai #-: ar #-: tl =>
+        if((br*br - bi*bi) == 0 && prog.bDiv) 0 +: 0 +: tl
+        else ((ai*br - ar*bi)/(br*br + bi*bi)) +: ((ar*br + ai*bi)/(br*br + bi*bi)) +: tl}
+    tossOp(ddo)(prog, state, fip)}
+  def abs(stk: FungeStack): FungeStack = stk match{
+    case i #-: r #-: tl => math.sqrt(r*r + i*i).toInt +: tl}
+  def printComp(stk: FungeStack): (String, FungeStack) = stk match{
+    case i #-: r #-: tl => (s"$r${if(i >= 0) "+" else "-"}${i.abs}i", tl)}
+  
+  val binds: Vector[(Char, (BF98Prog, BF98State, FIP) => FIPRet)] = Vector(
+    'A' -> tossOp(add),
+    'S' -> tossOp(subt),
+    'M' -> tossOp(mult),
+    'D' -> div,
+    'V' -> tossOp(abs),
+    'O' -> tossOutOp(printComp))
 }
