@@ -27,6 +27,7 @@
     - [FracTran Program Format](#fracTran-program-format)
     - [P'' Program Format](#p-program-format)
     - [On the Befunge-98 Interpreter](#on-the-befunge-98-interpreter)
+    - [Building](#building)
 
 ### Meaning of functional
 Functional programming is a paradigm with three principle characteristics:
@@ -309,3 +310,6 @@ Ultimately, I settled on a design where clock reads are handled similarly to use
 Of course, the Funge-98 interpreter also does not support file I/O or the system.exec instruction, as this would break the functional style. Thankfully, these features are actually optional in the spec. 
 
 Expect more fingerprints to become available over time. ... Slowly, probably. Whenever I get bored between new language components.
+
+#### Building
+I use [SBT assembly](https://github.com/sbt/sbt-assembly). This repo should give you everything you need to build it, just put it in a folder, run SBT from that directory, let it do its thing, then run assembly.
