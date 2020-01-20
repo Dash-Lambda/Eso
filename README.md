@@ -106,6 +106,8 @@ This is not an exhaustive list, but here are some of the languages I've consider
 * [Glass](https://esolangs.org/wiki/Glass) (specification is a bit too ambiguous about scope handling)
 * [Marscapone](https://esolangs.org/wiki/Mascarpone)
 * [Lazy K](https://esolangs.org/wiki/Lazy_K) (I haven't actually been able to find a spec of any kind, just vague descriptions of its intent)
+* [INTERCAL](https://esolangs.org/wiki/INTERCAL) (I'll get there... Eventually...)
+* [Malbolge](https://esolangs.org/wiki/Malbolge) (... ... ... ... We'll see...)
 
 ## Design of Eso
 Eso actually started out as a simple, single functional-style BrainFuck interpreter. Since then it's gotten... Complicated. Though I prefer the word "sophisticated".
