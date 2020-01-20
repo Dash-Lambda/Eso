@@ -10,9 +10,9 @@ lazy val root = (project in file("."))
     parallelExecution in Test := false,
     scalacOptions ++= Seq("-deprecation", "-feature"),
     resolvers ++= Seq(
-      Resolver.sonatypeRepo("releases"),
-      "Artima Maven Repository" at "http://repo.artima.com/releases"),
+      Resolver.sonatypeRepo("releases")),
     libraryDependencies ++= Seq(
+      "org.scala-lang.modules" %% "scala-parallel-collections" % "0.2.0",
       "org.scala-lang" % "scala-compiler" % "2.13.0",
       "org.typelevel" %% "spire" % "0.17.0-M1",
       "org.typelevel" %% "jawn-parser" % "0.14.2",

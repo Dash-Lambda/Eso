@@ -12,6 +12,11 @@ case class Matrix[T](vec: Vector[T], xdim: Int, ydim: Int){
   def get(v: Vec2D[Int]): Option[T] = get(v.x, v.y)
   def getOrElse(v: Vec2D[Int])(default: T): T = get(v).getOrElse(default)
   
+  def row(r: Int): Vector[T] = vec.slice(r*xdim, (r + 1)*xdim)
+  def col(c: Int): Vector[T] = vec.grouped(xdim).map(_(c)).toVector
+  def rowOption(r: Int): Option[Vector[T]] = if(0 <= r && r < ydim) Some(row(r)) else None
+  def colOption(c: Int): Option[Vector[T]] = if(0 <= c && c < xdim) Some(col(c)) else None
+  
   def coordOf(e: T): Option[Vec2D[Int]] = vec.indexOf(e) match{
     case -1 => None
     case n => Some(getCoord(n))}
@@ -53,7 +58,18 @@ case class Matrix[T](vec: Vector[T], xdim: Int, ydim: Int){
   def getInd(x: Int, y: Int): Int = (y*xdim) + x
   def getCoord(i: Int): Vec2D[Int] = Vec2D(i%xdim, (i - (i%xdim))/xdim)
   
+  def map[A](f: T => A): Matrix[A] = Matrix(vec.map(f), xdim, ydim)
+  def zip[A](mat: Matrix[A]): Matrix[(T, A)] = mat match{
+    case Matrix(u, _, _) => Matrix(vec zip u, xdim, ydim)}
+  
   def denseString: String = vec.grouped(xdim).map(_.mkString).mkString("\n")
+  override def toString: String = {
+    val strs = vec.map(_.toString)
+    val len = strs.map(_.length).max
+    val fstr = s"%${len}s"
+    val forms = strs.map(s => fstr.format(s))
+  
+    forms.grouped(xdim).map(_.mkString(" ")).mkString("\n")}
 }
 object Matrix{
   def apply[T](vecs: Seq[Seq[T]]): Matrix[T] = {

@@ -65,6 +65,7 @@ Current native language support (mostly in chronological order):
 * [Path](https://esolangs.org/wiki/PATH)
 * [SNUSP](https://esolangs.org/wiki/SNUSP)
 * [Metatape](https://esolangs.org/wiki/Metatape)
+* [Prelude](https://esolangs.org/wiki/Prelude)
 * Scala
 
 #### Current features:
@@ -210,6 +211,7 @@ The environment maintained by Eso has collected quite a few parameters, detailed
     * indent: For curly-bracket languages, this flag controls whether transpilers neatly indent everything or don't indent at all.
     * log: Toggle detailed logging, which just means Eso will tell you what it's doing and when it's done.
     * pNull: Toggle whether or not to print the null character for P\'\' output.
+    * preludePar: The Prelude spec says the voices run simultaneously, this gives you the option between parallel and sequential.
     * printNum: Toggle whether or not to convert the character stream to integers. If true, the output is a list of the ASCII codes of the characters rather than the characters.
     * sHead: Toggle which end of the tape the head starts on for P\'\'. True means right.
     * time: Toggle whether or not to print how long a program took to run.

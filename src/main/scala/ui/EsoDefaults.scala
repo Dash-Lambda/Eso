@@ -10,6 +10,7 @@ import grass.Grass
 import metatape.{BFToMetatape, Metatape}
 import path.PATH
 import pdoubleprime.PDP
+import prelude.{BFToPrelude, Prelude}
 import scala_run.ScalaRun
 import slashes.Slashes
 import snusp.{BFToSNUSP, SNUSP}
@@ -50,7 +51,8 @@ object EsoDefaults extends EsoObj{
     ("ook", "Ook"),
     ("wsa", "WSAssembly"),
     ("mt", "Metatape"),
-    ("cpp", "C++"))
+    ("cpp", "C++"),
+    ("pld", "Prelude"))
   val fileExtensionMap: immutable.HashMap[String, String] = mkMap(fileExtensionsVec)
   
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](
@@ -71,9 +73,10 @@ object EsoDefaults extends EsoObj{
     SNUSP,
     Grass,
     PATH,
-    Metatape)
+    Metatape,
+    Prelude)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
-  val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape)
+  val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude)
   val defBoolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](
     ("log", false, "toggle detailed console logging"),
     ("dyn", false, "resize tape as needed for BF interpreter to eliminate memory limitations"),
@@ -87,7 +90,8 @@ object EsoDefaults extends EsoObj{
     ("printNum", false, "print output as numerical values rather than characters"),
     ("time", false, "print program duration on completion"),
     ("appendInp", false, "append console input to the end of file input (useful for some self-interpreters)"),
-    ("echoFileInp", true, "print file input to the console as it is used, makes it look as if the input was entered into the console directly"))
+    ("echoFileInp", true, "print file input to the console as it is used, makes it look as if the input was entered into the console directly"),
+    ("preludePar", true, "run Prelude voices in parallel, can speed up execution of some programs"))
   val defNumVec: Vector[(String, Int, String)] = Vector[(String, Int, String)](
     ("bfOpt", 2, "BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled"),
     ("init", 40000, "initial tape size for interpreters with a data tape"),
