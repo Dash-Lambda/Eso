@@ -421,7 +421,15 @@ object SetVarHandler extends InterfaceHandler{
   val nam: String = "set"
   val helpStr: String = "{-:varName: :value:}*"
   
-  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = args.toVector.foldLeft(state){case (s, (k, v)) => s.setVar(k, v)}
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = args.toVector.foldLeft(state){
+    case (s, (k, v)) => s.setVar(k, v) match{
+      case Success(ns) => ns
+      case Failure(e) =>
+        val str = e match{
+          case EsoExcep(s) => s
+          case _ => e.toString}
+        println(s"Error: $str")
+        s}}
 }
 
 object SetDefaultsHandler extends InterfaceHandler{

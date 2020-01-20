@@ -1,6 +1,6 @@
 package ui
 
-import common.{Config, EsoObj, Interpreter, Translator, Transpiler}
+import common.{Config, EsoExcep, EsoObj, Interpreter, Translator, Transpiler}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -41,12 +41,13 @@ case class EsoRunState(interps: immutable.HashMap[String, Interpreter],
       case Some(t) => Some(t.unapply)
       case None => None}}
   
-  def setVar(k: String, v: String): EsoRunState = v match{
-    case trueReg() if bools.isDefinedAt(k) => addBool(k, bool=true)
-    case falseReg() if bools.isDefinedAt(k) => addBool(k, bool=false)
-    case intReg() if nums.isDefinedAt(k) => addNum(k, v.toInt)
-    case charReg(c) if nums.isDefinedAt(k) => addNum(k, c(0).toInt)
-    case _ => this}
+  def setVarSilent(k: String, v: String): EsoRunState = setVar(k, v).getOrElse(this)
+  def setVar(k: String, v: String): Try[EsoRunState] = v match{
+    case trueReg() if bools.isDefinedAt(k) => Success(addBool(k, bool=true))
+    case falseReg() if bools.isDefinedAt(k) => Success(addBool(k, bool=false))
+    case intReg() if nums.isDefinedAt(k) => Success(addNum(k, v.toInt))
+    case charReg(c) if nums.isDefinedAt(k) => Success(addNum(k, c(0).toInt))
+    case _ => Failure(EsoExcep(s"""Unrecognized Variable "$k""""))}
   
   def config: Config = Config(bools, nums)
   def interpNames: Vector[String] = interps.keys.toVector
@@ -82,9 +83,9 @@ object EsoRunState extends EsoObj{
   
   @tailrec
   def withOps(str: String, state: EsoRunState = default): EsoRunState = str match{
-    case numReg(k, v, ops) if state.nums.isDefinedAt(k) => withOps(ops, state.setVar(k, v))
-    case boolReg(k, v, ops) if state.bools.isDefinedAt(k) => withOps(ops, state.setVar(k, v))
-    case flagReg(k, ops) if state.bools.isDefinedAt(k) => withOps(ops, state.setVar(k, "true"))
+    case numReg(k, v, ops) if state.nums.isDefinedAt(k) => withOps(ops, state.setVarSilent(k, v))
+    case boolReg(k, v, ops) if state.bools.isDefinedAt(k) => withOps(ops, state.setVarSilent(k, v))
+    case flagReg(k, ops) if state.bools.isDefinedAt(k) => withOps(ops, state.setVarSilent(k, "true"))
     case biteReg(ops) => withOps(ops, state)
     case _ => state}
 }

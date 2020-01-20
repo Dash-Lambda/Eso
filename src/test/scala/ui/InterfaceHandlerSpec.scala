@@ -30,10 +30,10 @@ class SetVarHandlerSpec extends InterfaceHandlerSpec{
   val boolNames: Vector[String] = EsoDefaults.defBoolVec.map(_._1)
   val numNames: Vector[String] = EsoDefaults.defNumVec.map(_._1)
   
-  val trueState: EsoRunState = defaultState.setVar("log", "true")
-  val falseState: EsoRunState = defaultState.setVar("log", "false")
-  val numInitState: EsoRunState = defaultState.setVar("olen", "-1")
-  val multiInitState: EsoRunState = (boolNames.map((_, "false")) ++ numNames.map((_, "0"))).foldLeft(defaultState){case (s, (k, v)) => s.setVar(k, v)}
+  val trueState: EsoRunState = defaultState.setVarSilent("log", "true")
+  val falseState: EsoRunState = defaultState.setVarSilent("log", "false")
+  val numInitState: EsoRunState = defaultState.setVarSilent("olen", "-1")
+  val multiInitState: EsoRunState = (boolNames.map((_, "false")) ++ numNames.map((_, "0"))).foldLeft(defaultState){case (s, (k, v)) => s.setVarSilent(k, v)}
   val multiMapping: immutable.HashMap[String, String] = mkMap(boolNames.map((_, "true")) ++ numNames.map((_, "1")))
   
   "SetVarHandler" should "recognize all true keywords" in {

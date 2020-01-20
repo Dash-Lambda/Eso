@@ -227,8 +227,6 @@ Boolean values can be set to true with an argument matching the regex `(true|yes
 
 Numeric values may be set either with a numeric argument or with a character in single quotes `'c'` (in which case it will be set to that character's ASCII code).
 
-For the moment, set commands with invalid input are silently ignored. 
-
 ### Config Environment
 As mentioned earlier, one thing that was necessary to maintain a functional design was to make the environment an input, thus Eso hands off a Config object to language components.
 
