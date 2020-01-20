@@ -1,0 +1,27 @@
+push 72
+outChar
+push 101
+outChar
+push 108
+outChar
+push 108
+outChar
+push 111
+outChar
+push 44
+outChar
+push 32
+outChar
+push 119
+outChar
+push 111
+outChar
+push 114
+outChar
+push 108
+outChar
+push 100
+outChar
+push 33
+outChar
+endProg
