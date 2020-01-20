@@ -1,5 +1,6 @@
 package ui
 
+import null_lang.NULL
 import brainfuck.{BFManaged, BFToCPP, BFToScala, FlufflePuff, Ook}
 import common.{EsoObj, Interpreter, Translator, Transpiler}
 import deadfish.Deadfish
@@ -52,7 +53,8 @@ object EsoDefaults extends EsoObj{
     ("wsa", "WSAssembly"),
     ("mt", "Metatape"),
     ("cpp", "C++"),
-    ("pld", "Prelude"))
+    ("pld", "Prelude"),
+    ("nul", "NULL"))
   val fileExtensionMap: immutable.HashMap[String, String] = mkMap(fileExtensionsVec)
   
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](
@@ -74,7 +76,8 @@ object EsoDefaults extends EsoObj{
     Grass,
     PATH,
     Metatape,
-    Prelude)
+    Prelude,
+    NULL)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
   val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude)
   val defBoolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](
