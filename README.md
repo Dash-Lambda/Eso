@@ -1,5 +1,4 @@
-# Functional Esoteric Language Interpreter
-## Contents
+# Contents
 * [Meaning of Functional](#meaning-of-functional)
     - [First-Class Functions](#first-class-functions)
     - [Zero Side-Effects](#zero-side-effects)
@@ -29,21 +28,21 @@
     - [On the Befunge-98 Interpreter](#on-the-befunge-98-interpreter)
     - [Building](#building)
 
-### Meaning of functional
+## Meaning of functional
 Functional programming is a paradigm with three principle characteristics:
 
-#### First Class Functions
+### First Class Functions
 Functional programming gets its name from the fact that functions are treated as first-class values. This means you can use and manipulate functions just as you would any other variable or parameter.
-#### Zero Side Effects
+### Zero Side Effects
 A function defines a relationship between an input and an output. This means a function does not change anything outside of itself. One major example of this is error handling: In most languages, an error is thrown by a method and prevents a return value, and thus must be caught separately. This means code can have unexpected behavior that extends beyond the return, and it can be a pain to deal with. In functional programming, errors are usually handled by returning a wrapper that holds either a result or error information, which eliminates behavior that the caller does not expect.
-#### Referential Transparency
+### Referential Transparency
 A function is also stable in that each input returns exactly one output. You should be able to replace any call to a function with the result and not change the behavior of the program, which means a function has no mutable state. As an extension of this, functional programming also makes heavy use of immutable data structures, which are data structures that cannot be changed in place.
 
 Ultimately, what functional programming accomplishes is highly modular, testable, and type-safe code. Many functional languages also allow for far more elegant and concise code than is common of imperative and object oriented languages.
 
-### State of the Project
+## State of the Project
 
-#### Supported Languages
+### Supported Languages
 Current native language support (mostly in chronological order):
 * [Brainfuck](https://esolangs.org/wiki/Brainfuck)
 * [Fluffle Puff](https://github.com/juju2143/flufflepuff)
@@ -68,7 +67,7 @@ Current native language support (mostly in chronological order):
 * [Prelude](https://esolangs.org/wiki/Prelude)
 * Scala
 
-#### Current features:
+### Current features:
 * Run programs from text files
 * Feed input from text files
 * Log output to text files
@@ -90,7 +89,7 @@ Current native language support (mostly in chronological order):
     * REFC
     * CPLI
 
-#### WIP:
+### WIP:
 * REPL mode
 * Multiline bindings
 * Automated testing
@@ -100,30 +99,30 @@ Current native language support (mostly in chronological order):
 * Debug features
 * Potentially everything
 
-#### Languages Under Consideration
+### Languages Under Consideration
 This is not an exhaustive list, but here are some of the languages I've considered, am considering, or am currently working on.
 * [Unispace](https://esolangs.org/wiki/Unispace) (difficulty with finding particularly good documentation)
 * [Funciton](https://esolangs.org/wiki/Funciton) (difficulty handling lazy input with its reversed string encoding)
 * [Glass](https://esolangs.org/wiki/Glass) (specification is a bit too ambiguous about scope handling)
 * [Marscapone](https://esolangs.org/wiki/Mascarpone)
 
-### Design of Eso
+## Design of Eso
 Eso actually started out as a simple, single functional-style BrainFuck interpreter. Since then it's gotten... Complicated. Though I prefer the word "sophisticated".
 
 To clarify what is meant by "Functional Esoteric Language Interpreter": All of the language components (with the sole exception of the Scala component) are purely functional. The user interface is not purely functional, but its structure borrows a lot from functional style.
 
-#### Language Components
+### Language Components
 Languages supported by Eso can currently have 3 types of components:
 * Interpreter: This is the basic requirement to support a language in Eso, and enables it to run programs in the language. An interpreter is a curried function with the (pseudocode) signature (configuration => (program => (input => output))), where the configuration is a collection of parameters for any optional features or behaviors the interpreter may have and the program is the source code. This means it defines a relationship between the configuration and the relationship between the program and the relationship between the input and the output... All that means is that when you call the interpreter you don't just get the output, you get another function that takes the input and returns the output.
 * Translator: Some languages have derivatives (BrainFuck has many). A translator defines a relationship between the source code of two languages with one-to-one equivalence, which means you can translate the code freely between the languages without changing the structure of the program. These have a signature of (configuration => (program1 => program2)). Currently translators are used to support BrainFuck derivatives and enable the use of a readable assembly version of WhiteSpace.
 * Transpiler: These define a relationship between non-equivalent languages. A transpiler is one-way, as it changes the structure of the program. These have a signature of (configuration => (program1 => program2)). Transpilers are currently used for compiling interpreters to translate the code into Scala.
 
-#### How the Interface Works
+### How the Interface Works
 It's always a challenge to handle UI functionally. Everything behind the scenes is fair game, but actually receiving input from and sending output to the user is by definition a side-effect.
 
 The philosophy I took with Eso's interface is to focus on modularity without overcomplicating things with a doomed crusade for pure functional code. 
 
-##### Persistent vs Non-Persistent Interfaces
+#### Persistent vs Non-Persistent Interfaces
 Eso has two different interfaces, persistent and non-persistent.
 
 The non-persistent interface is the entry point; it parses the input, executes it, then exits.
@@ -140,14 +139,14 @@ If the non-persistent interface receives either no arguments or the command `per
 
 If you supply `persistent` with arguments, the persistent interface initializes the corresponding environment variables to the provided values.
 
-##### The Parser
+#### The Parser
 Eso parses each line of input into two components: A command and an argument list
 
 The command is just a string, while the arguments are read as a list of name-value pairs in the form `command -name1 value1 -name2 value2 ...`, then stored in a hash map. Boolean options listed without a value default to true.
 
 To make bindings relatively seamless, the bind/unbind commands as well as any active bindings are intercepted before reaching the parser. The bind and unbind commands are instead parsed as `bind <token> <command>` and `unbind <token>`, and any active bindings are replaced with the bound command then sent to the parser.
 
-##### States and Configurations
+#### States and Configurations
 Many of the languages supported by Eso have configurable options or parts of their environment, like optional dynamic tape size, random number generators, or even timers. Rather than using simple global values, which would severely impact modularity and disregard the functional style, Eso wraps all these into a data structure to pass down to components.
 
 There are two structures used for this:
@@ -158,7 +157,7 @@ The interface maintains a State, and when needed uses that State to build a Conf
 
 Any language features which would otherwise break the functional style are pushed to the Config. For instance, there is a Befunge instruction which makes a random decision; instantiating a random number generator from within the interpreter would require either using the same seed every time or breaking referential transparency, so the Config carries its own random number generator, thus making the generator itself an input to the function.
 
-##### Command Handlers
+#### Command Handlers
 Eso originally used a single monolithic interface, but that grew cumbersome. The current design uses objects called "Handlers".
 
 A Handler represents a single command, and it holds three things:
@@ -170,7 +169,7 @@ A Handler is essentially a function with the signature (State => (Arguments => S
 
 This approach makes it very easy to extend Eso with new features. Any new environment variables or components can be added to the State and Config structures without changing any other code, and new commands only require writing the new Handler and adding it to the interface's list of Handlers.
 
-##### Interpreter I/O
+#### Interpreter I/O
 As the interpreters are pure functions, internal interaction with the console is out. Instead, Eso leans heavily on something called lazy evaluation.
 
 By default, Scala adopts eager evaluation; every expression is immediately evaluated to its result as it's encountered. My guess is that this is mostly due to Scala's multi-paradigm design, mixing imperative and functional styles.
@@ -187,7 +186,7 @@ The interface actually runs the program by traversing the output list and printi
 
 This preserves pure functionality because LazyLists are immutable; each element is only evaluated once, after that it doesn't change. The input list always represents a single constant input, it just figures out what that input is while it's being used. The interpreter always maps each unique input to a single output.
 
-##### How Translators are Used
+#### How Translators are Used
 Aside from directly translating a program using the command, Eso uses translators under the hood to make the interface more flexible.
 
 For the translate command, Eso doesn't just look for a translator between the two specified languages; it instead looks for the shortest chain of translators that can get it from the source language to the target language, then composes the chain into a single function. So, if you translate a program from Ook to FlufflePuff, Eso is actually translating Ook>BrainFuck>FlufflePuff.
@@ -198,7 +197,7 @@ The transpile handler searches for the shortest chain from the source language t
 
 Eso can do this with translators because they are guaranteed to be invertible and to preserve the structure of a program. In essence, no matter how many times you translate it, the program is guaranteed to be the same program. Transpilers can freely change how a program works (they just need to preserve the behavior), which means they're more flexible in terms of functionality but less flexible in terms of how they can be manipulated.
 
-#### Environment Variables
+### Environment Variables
 The environment maintained by Eso has collected quite a few parameters, detailed here:
 * Booleans
     * appendInp: Toggle whether or not to append console input to file input. Primarily for self-interpreters who expect both the program and user input from the same sourc.
@@ -229,7 +228,7 @@ Numeric values may be set either with a numeric argument or with a character in 
 
 For the moment, set commands with invalid input are silently ignored. 
 
-#### Config Environment
+### Config Environment
 As mentioned earlier, one thing that was necessary to maintain a functional design was to make the environment an input, thus Eso hands off a Config object to language components.
 
 The Config object currently holds:
@@ -237,9 +236,9 @@ The Config object currently holds:
 * A pseudorandom number generator
 * A LazyList of times, handled the same way as user input.
 
-### Notes
+## Notes
 
-#### BrainFuck Optimization Strategy
+### BrainFuck Optimization Strategy
 The optimizing BrainFuck interpreter translates the program into an intermediate language in a series of passes:
 1. Clear loops (loops that set the current cell to 0) are replaced with a single instruction.
 2. Repeated instructions are contracted into one instruction. For instance, >>>>> would be contracted to (>,5).
@@ -247,17 +246,17 @@ The optimizing BrainFuck interpreter translates the program into an intermediate
 4. Copy/multiply loops are replaced with a single instruction.
 5. Brackets are assigned the index of their partner to eliminate scrubbing.
 
-#### User Defined BrainFuck Translators
+### User Defined BrainFuck Translators
 The best way to define your own translator is to use the command `defineBFLang` and follow the prompts.
 
 The translators are stored in a JSON, and the names of the translators are listed in an array names "names", thus you are not able to define a BrainFuck translator with the name "names".
 
-#### On the Scala "Interpreter"
+### On the Scala "Interpreter"
 The Scala 'interpreter' compiles the source code to an abstract syntax tree, defines a symbol with that tree, then tries to run the standard "main(args: Array[String]): Unit" method.
 
 Its original purpose is to run programs generated by Eso's transpilers. Currently, the Scala 'interpreter' and the internal compiling interpreters are different; The internal compiling interpreters cast the code to a specific class, while the Scala 'interpreter' only assumes there's a main method. This ultimately means the internal ones are faster but the Scala language component is more versatile. 
 
-#### FracTran Program Format
+### FracTran Program Format
 The FracTran interpreter reads programs as an initial value followed by a list of fractions of the form "n/d", each term separated by a line break. The prime generator program looks like this:
 ```
 2
@@ -278,7 +277,7 @@ The FracTran interpreter reads programs as an initial value followed by a list o
 ```
 FracTran++ has identical structure to (and is fully compatible with) FracTran, but with additional syntax detailed [here](https://github.com/Dash-Lambda/Eso/blob/master/FracTranpp_Syntax.txt).
 
-#### P'' Program Format
+### P'' Program Format
 The P'' interpreter handles Böhm's extended instruction set, with the seven instructions (, ), r, r', L, R, and A. The first line is the ordered alphabet (the first character is the empty symbol), the second line is the initial tape state (blank for empty tape), and all following lines contain the program.
 
 Hello world looks like this:
@@ -299,7 +298,7 @@ rA
 A
 ```
 
-#### On the Befunge-98 Interpreter
+### On the Befunge-98 Interpreter
 This is by far the biggest, most complex, and most difficult to get right interpreter in Eso, as it will likely remain for some time.
 
 For a while, there was a glaring issue in the Mycology report: Eso didn't report stack size correctly. There was a very simple reason for this; the Befunge-93 interpreter handles bottomless stacks with LazyLists, meaning the stack listerally is an endless list of 0s. Moving this over to Befunge-98 posed an issue, because Funge-98 adds the ability to query stack sizes, which is always infinite with the LazyList approach.
@@ -316,5 +315,5 @@ Of course, the Funge-98 interpreter also does not support file I/O or the system
 
 Expect more fingerprints to become available over time. ... Slowly, probably. Whenever I get bored between new language components.
 
-#### Building
+### Building
 I use [SBT assembly](https://github.com/sbt/sbt-assembly). This repo should give you everything you need to build it, just put it in a folder, run SBT from that directory, let it do its thing, then run assembly.
