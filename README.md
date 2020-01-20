@@ -105,6 +105,7 @@ This is not an exhaustive list, but here are some of the languages I've consider
 * [Funciton](https://esolangs.org/wiki/Funciton) (difficulty handling lazy input with its reversed string encoding)
 * [Glass](https://esolangs.org/wiki/Glass) (specification is a bit too ambiguous about scope handling)
 * [Marscapone](https://esolangs.org/wiki/Mascarpone)
+* [Lazy K](https://esolangs.org/wiki/Lazy_K) (I haven't actually been able to find a spec of any kind, just vague descriptions of its intent)
 
 ## Design of Eso
 Eso actually started out as a simple, single functional-style BrainFuck interpreter. Since then it's gotten... Complicated. Though I prefer the word "sophisticated".

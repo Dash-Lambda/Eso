@@ -11,7 +11,7 @@ object BFToScalaIntern extends BFTranspiler{
       case Some(op) => op match{
         case BFOpenLoop(_) =>
           val call = s"f$fnum()${if(olen >= 0) "\nif(end) return ()" else ""}"
-          val sig = s"def f$fnum(): Unit = while(tape(p) != 0){"
+          val sig = s"def f$fnum(): Unit = while(${if(dyn) "p < len && " else ""}tape(p) != 0){"
           tdo(ac, (tmp :+ call) +: stk, Vector(sig), fnum + 1, i + 1)
         case BFCloseLoop(_) => tdo(segScala(tmp :+ "}", methSize).mkString("\n") +: ac, stk.tail, stk.head, fnum, i + 1)
         case BFEnd => (segScala(tmp :+ "}", methSize).mkString("\n") +: ac).mkString("\n")
@@ -29,7 +29,7 @@ object BFToScalaIntern extends BFTranspiler{
             case BFOut =>
               val limStr =
                 s"""|
-                      |resLen += 1
+                    |resLen += 1
                     |if(resLen >= $olen){end = true; return ()}""".stripMargin
               s"queue.put(Some(Success(tape(p).toChar)))${if(olen >= 0) limStr else ""}"}
           val block2 = if(dyn && "m/".contains(op)) s"$block\nchkInd()" else block

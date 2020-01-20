@@ -9,7 +9,7 @@ object BFToScala extends BFTranspiler{
     @tailrec
     def tdo(ac: Vector[String] = Vector(), stk: Vector[Vector[String]] = Vector(), tmp: Vector[String] = Vector("def f0(): Unit = {"), fnum: Int = 1, i: Int = 0): String = prog.lift(i) match{
       case Some(op) => op match{
-        case BFOpenLoop(_) => tdo(ac, (tmp :+ s"f$fnum()") +: stk, Vector(s"def f$fnum(): Unit = while(tape(p) != 0){"), fnum + 1, i + 1)
+        case BFOpenLoop(_) => tdo(ac, (tmp :+ s"f$fnum()") +: stk, Vector(s"def f$fnum(): Unit = while(${if(dyn) "p < len && " else ""}tape(p) != 0){"), fnum + 1, i + 1)
         case BFCloseLoop(_) => tdo(segScala(tmp :+ "}", methSize).mkString("\n") +: ac, stk.tail, stk.head, fnum, i + 1)
         case BFEnd => (segScala(tmp :+ "}", methSize).mkString("\n") +: ac).mkString("\n")
         case _ =>
