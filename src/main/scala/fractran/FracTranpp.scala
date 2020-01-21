@@ -1,26 +1,25 @@
 package fractran
 
-import common.{Config, EsoExcep, Interpreter, PrimeNumTools}
+import common.{Config, Interpreter, PrimeNumTools}
 import spire.implicits._
 import spire.math.SafeLong
 
 import scala.annotation.tailrec
 import scala.collection.immutable.ArraySeq
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 object FracTranpp extends Interpreter{
   val name: String = "FracTran++"
   val primes: LazyList[SafeLong] = PrimeNumTools.birdPrimes.to(LazyList)
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{condition(progRaw)} flatMap{
-    case Some((init, prog)) => Success(fti(init, prog))
-    case None => Failure(EsoExcep("Malformed Program"))}
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = parse(progRaw) map{
+    case (init, prog) => fti(init, prog)}
   
   def fti(init: SafeLong, blk: Vector[Vector[FOP]]): Seq[Char] => LazyList[Char] = {
     def collapse(exps: Seq[Int]): SafeLong = exps.zip(primes).map{case (e, p) => p**e}.reduce(_+_)
     def getLine(inp: Seq[Char]): String = inp.takeWhile(_ != '\n').mkString
     def dropLine(inp: Seq[Char]): Seq[Char] = {
-      val (_, tl) = inp.span(_ == '\n')
+      val tl = inp.span(_ == '\n')._2
       if(tl.nonEmpty) tl.tail
       else Seq[Char]()}
     
@@ -64,42 +63,21 @@ object FracTranpp extends Interpreter{
     inputs => LazyList.unfold((init, blk.head, 0: Int, List[(Option[SafeLong], Vector[FOP], Int)](), inputs)){
       case (num, ops, bid, calls, inp) => nxt(num, ops, bid, calls, inp)}.flatten}
   
-  def condition(progRaw: String): Option[(SafeLong, Vector[Vector[FOP]])] = {
-    def expNum(str: String): SafeLong = str
-      .init.tail
-      .split(" ")
-      .map(_.toInt)
-      .zip(primes)
-      .map{case (e, p) => p**e}
-      .reduce(_*_)
-    
-    def mkNum(str: String): SafeLong = {
-      if(str.startsWith("<") && str.endsWith(">")) expNum(str)
-      else SafeLong(BigInt(str))}
-    
-    val progNum = progRaw
-      .filter("0123456789/< >-\n".contains(_))
-      .split("\n")
-      .map{line =>
-        line
-          .split("/")
-          .map(s => Try{mkNum(s)})
-          .collect{case Success(n) => n}
-          .toVector}
-      .filter(_.nonEmpty)
-      .toVector
-    lazy val progFop = progNum
-      .collect{case n +: d +: _ => FOP.make(n, d)}
-      .collect{case Some(fop) => fop}
-    lazy val prog = {
-      @tailrec
-      def pdo(ac: Vector[Vector[FOP]] = Vector[Vector[FOP]](), tmp: Vector[FOP] = Vector[FOP](), src: Vector[FOP] = progFop): Vector[Vector[FOP]] = src match{
-        case f +: fs =>
-          if(f.isBreak) pdo(ac :+ tmp, Vector[FOP](), fs)
-          else pdo(ac, tmp :+ f, fs)
-        case _ => ac :+ tmp}
-      pdo()}
-    progNum.collectFirst{case v if v.sizeIs == 1 => v(0)}.map(init => (init, prog))}
+  def parse(progRaw: String): Try[(SafeLong, Vector[Vector[FOP]])] = {
+    @tailrec
+    def pdo(ac: Vector[Vector[FOP]], tmp: Vector[FOP], src: Vector[FOP]): Vector[Vector[FOP]] = src match{
+      case f +: fs =>
+        if(f.isBreak){
+          if(tmp.nonEmpty) pdo(ac :+ tmp, Vector(), fs)
+          else pdo(ac, tmp, fs)}
+        else pdo(ac, tmp :+ f, fs)
+      case _ =>
+        if(tmp.nonEmpty) ac :+ tmp
+        else ac}
+    FracTranParser.parse(progRaw) map{
+      case (initNum, fracs) =>
+        val fops = fracs.map{case (n, d) => FOP.make(n, d)}.collect{case Some(fop) => fop}
+        (initNum, pdo(Vector(), Vector(), fops))}}
   
   case class FOP(n: SafeLong, d: SafeLong, exp: Vector[Int], ext: Int, j: Boolean, i: Boolean, o: Boolean){
     val isBreak: Boolean = n == 0 && d == 0
