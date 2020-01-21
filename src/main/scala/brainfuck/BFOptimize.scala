@@ -110,7 +110,7 @@ object BFOptimize extends EsoObj{
         case _ => ac}
       sdo(0, Vector(), src)}
     
-    val prog1 = progRaw.filter("><][+-,.".contains(_)).replaceAll("""\[[+\-]\]""", "_") :+ 'e'
+    val prog1 = filterChars(progRaw, "[]<>+-,.").replaceAll("""\[[+\-]\]""", "_") :+ 'e'
     val prog2 = contract(prog1)
     val prog3 = collectBulk(prog2)
     val prog4 = setLoops(prog3)

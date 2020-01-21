@@ -69,5 +69,5 @@ object WSCommon extends EsoObj{
         cdo(ac :+ ((v, lNum)), tail.dropWhile(_ != '\n').tail)
       case Some((k, v)) => cdo(ac :+ ((v, SafeLong(0))), src.drop(k.length))
       case None => if(src.nonEmpty) cdo(ac, src.tail) else ac}
-    cdo(Vector[(String, SafeLong)](), progRaw.replaceAll("(\r\n|\r)", "\n").filter("\t\n ".contains(_)))}
+    cdo(Vector[(String, SafeLong)](), filterChars(progRaw, "\t\n "))}
 }

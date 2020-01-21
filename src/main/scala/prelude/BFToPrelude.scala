@@ -31,5 +31,5 @@ object BFToPrelude extends Transpiler{
       case _ =>
         s"""|${v1.mkString}
             |${v2.mkString}""".stripMargin}
-    Try{tdo(Vector(), Vector(), progRaw.filter("[]<>+-,.".contains(_)))}}
+    Try{tdo(Vector(), Vector(), filterChars(progRaw, "[]<>+-,."))}}
 }

@@ -11,7 +11,7 @@ object BFToSNUSP extends Transpiler{
   
   
   def apply(config: Config)(progRaw: String): Try[String] = {
-    def prog: LazyList[Char] = progRaw.filter("[]<>+-,.".contains(_)).replaceAllLiterally("[]", "[ ]").to(LazyList)
+    def prog: LazyList[Char] = filterChars(progRaw, "[]<>+-,.").replaceAllLiterally("[]", "[ ]").to(LazyList)
     
     def redirect(progSrc: LazyList[Char]): Vector[Char] = {
       def rdo(src: LazyList[Char], ac: Vector[Char] = Vector()): (Vector[Char], LazyList[Char]) = src match{

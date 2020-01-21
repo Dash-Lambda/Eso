@@ -14,7 +14,7 @@ object Deadfish extends Interpreter{
       else _ => dfRun(progRaw).flatMap(_.toString)}
   
   def dfRun(progRaw: String): LazyList[Int] = {
-    val prog = progRaw.filter("isdo".contains(_)).toVector
+    val prog = filterChars(progRaw, "isdo").toVector
     
     def bound(n: Int): Int = if(n == -1 || n == 256) 0 else n
     

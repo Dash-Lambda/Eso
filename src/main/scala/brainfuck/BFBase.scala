@@ -10,7 +10,7 @@ object BFBase extends Interpreter{
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
     Try{(config.num("init"), config.bool("dyn"))}
-      .map{case (init, dyn) => bfRun(init, dyn, progRaw.filter("[]<>+-,.".contains(_)).toVector :+ 'e')}}
+      .map{case (init, dyn) => bfRun(init, dyn, filterChars(progRaw, "[]<>+-,.").toVector :+ 'e')}}
   
   def bfRun(init: Int, dyn: Boolean, prog: Vector[Char]): Seq[Char] => LazyList[Char] = {
     @tailrec

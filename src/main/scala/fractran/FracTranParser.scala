@@ -23,7 +23,7 @@ object FracTranParser extends EsoObj{
         Some(num)
       case _ => None}
     
-    val initProg = progRaw.filter("0123456789/-<>\n ".contains(_))
+    val initProg = filterChars(progRaw, "0123456789/-<>\n ")
     def initNum: Option[SafeLong] = initProg
       .linesIterator
       .collectFirst{

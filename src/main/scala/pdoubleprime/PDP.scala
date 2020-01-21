@@ -30,16 +30,17 @@ object PDP extends Interpreter{
     _ => nxt(0, if(startHead) math.max(0, initSize - init.size) else initSize - 1, initTape)}
   
   def condition(progRaw: String): (Vector[Char], Vector[Char], Vector[Char], immutable.HashMap[Int, Int]) = {
-    val lines = progRaw.split("(\r\n|\r|\n)")
+    val lines = progRaw.linesIterator.to(LazyList)
     val alpha = lines.head.toVector
     val init = lines.tail.head.toVector
-    val prog = lines
-      .tail.tail
-      .mkString
-      .replaceAllLiterally("L", "r'A")
-      .replaceAllLiterally("r'", "r"*(alpha.length - 1))
-      .replaceAllLiterally("r", "AR")
-      .filter("()RA".contains(_))
+    val prog = filterChars(
+      lines
+        .tail.tail
+        .mkString
+        .replaceAllLiterally("L", "r'A")
+        .replaceAllLiterally("r'", "r"*(alpha.length - 1))
+        .replaceAllLiterally("r", "AR"),
+      "()RA")
       .toVector
     lazy val jMap = mdo(Vector[(Int, Int)](), List[Int](), 0)
     

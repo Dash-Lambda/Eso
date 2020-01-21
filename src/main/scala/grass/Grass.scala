@@ -22,12 +22,12 @@ object Grass extends Interpreter{
     val absExp = raw"""\A(w*)([Ww]*)\z""".r
     val appExp = raw"""\A(W+)(w+)([Ww]*)\z""".r
     
-    val progVec = progRaw
-      .replace("\uff37", "W")
-      .replace("\uff57", "w")
-      .replace("\uFF56", "v")
-      .replace("\uFF36", "v")
-      .filter("vwW".contains(_))
+    val progVec = filterChars(progRaw
+      .replaceAllLiterally("\uff37", "W")
+      .replaceAllLiterally("\uff57", "w")
+      .replaceAllLiterally("\uFF56", "v")
+      .replaceAllLiterally("\uFF36", "v"),
+      "vwW")
       .dropWhile(_ != 'w')
       .split('v')
       .toVector

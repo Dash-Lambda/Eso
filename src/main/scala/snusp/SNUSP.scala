@@ -65,28 +65,26 @@ object SNUSP extends Interpreter{
     
     def apply(prog: Matrix[Char], state: State, rand: Random): (State, SNOB) = prog.get(ip) match{
       case None => (state, SNOP)
-      case Some(op) =>
-        //println(s"$ip: $op")
-        op match{
-          case '>' => (state, SNIP(ip + dt, dt, dp + Vec2D(1, 0), calls))
-          case '<' => (state, SNIP(ip + dt, dt, dp + Vec2D(-1, 0), calls))
-          case ':' => (state, SNIP(ip + dt, dt, dp + Vec2D(0, -1), calls))
-          case ';' => (state, SNIP(ip + dt, dt, dp + Vec2D(0, 1), calls))
-          case '+' => (state.inc(dp, 1), stp(dt))
-          case '-' => (state.inc(dp, -1), stp(dt))
-          case '%' => (state.set(dp, rand.nextInt()), stp(dt))
-          case ',' => (state.read(dp), stp(dt))
-          case '.' => (state, SNOUT(state.out(dp), stp(dt)))
-          case '\\' => (state, stp(dt match{case Vec2D(a, b) => Vec2D(b, a)}))
-          case '/' => (state, stp(dt match{case Vec2D(a, b) => Vec2D(-b, -a)}))
-          case '!' => (state, SNIP(ip + dt*2, dt, dp, calls))
-          case '?' =>
-            if(state(dp) == 0) (state, SNIP(ip + dt*2, dt, dp, calls))
-            else (state, stp(dt))
-          case '@' => (state, SNIP(ip + dt, dt, dp, (ip, dt) +: calls))
-          case '#' => calls match{
-            case (nip, ndt) +: cs => (state, SNIP(nip + ndt*2, ndt, dp, cs))
-            case _ => (state, SNOP)}
-          case '&' => (state, SNLIT(SNIP(ip + dt*2, dt, dp, calls), stp(dt)))
-          case _ => (state, stp(dt))}}}
+      case Some(op) => op match{
+        case '>' => (state, SNIP(ip + dt, dt, dp + Vec2D(1, 0), calls))
+        case '<' => (state, SNIP(ip + dt, dt, dp + Vec2D(-1, 0), calls))
+        case ':' => (state, SNIP(ip + dt, dt, dp + Vec2D(0, -1), calls))
+        case ';' => (state, SNIP(ip + dt, dt, dp + Vec2D(0, 1), calls))
+        case '+' => (state.inc(dp, 1), stp(dt))
+        case '-' => (state.inc(dp, -1), stp(dt))
+        case '%' => (state.set(dp, rand.nextInt()), stp(dt))
+        case ',' => (state.read(dp), stp(dt))
+        case '.' => (state, SNOUT(state.out(dp), stp(dt)))
+        case '\\' => (state, stp(dt match{case Vec2D(a, b) => Vec2D(b, a)}))
+        case '/' => (state, stp(dt match{case Vec2D(a, b) => Vec2D(-b, -a)}))
+        case '!' => (state, SNIP(ip + dt*2, dt, dp, calls))
+        case '?' =>
+          if(state(dp) == 0) (state, SNIP(ip + dt*2, dt, dp, calls))
+          else (state, stp(dt))
+        case '@' => (state, SNIP(ip + dt, dt, dp, (ip, dt) +: calls))
+        case '#' => calls match{
+          case (nip, ndt) +: cs => (state, SNIP(nip + ndt*2, ndt, dp, cs))
+          case _ => (state, SNOP)}
+        case '&' => (state, SNLIT(SNIP(ip + dt*2, dt, dp, calls), stp(dt)))
+        case _ => (state, stp(dt))}}}
 }
