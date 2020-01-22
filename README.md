@@ -65,6 +65,7 @@ Current native language support (mostly in chronological order):
 * [SNUSP](https://esolangs.org/wiki/SNUSP)
 * [Metatape](https://esolangs.org/wiki/Metatape)
 * [Prelude](https://esolangs.org/wiki/Prelude)
+* [NULL](https://esolangs.org/wiki/NULL)
 * Scala
 
 ### Current features:
