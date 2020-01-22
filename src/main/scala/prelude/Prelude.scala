@@ -31,9 +31,9 @@ object Prelude extends Interpreter{
     inputs => LazyList.unfold((0, initChorus, inputs)){case (i, chr, inp) => prun(i, chr, inp)}.flatten}
   
   def parse(progRaw: String): Try[PrelProg] = {
-    val progMat = Matrix.fromString(progRaw).transpose
+    val progMat = Matrix.fromString(progRaw)
     @tailrec
-    def sdo(i: Int, stk: Vector[Int], ac: immutable.HashMap[Int, Int]): immutable.HashMap[Int, Int] = progMat.rowOption(i) match{
+    def sdo(i: Int, stk: Vector[Int], ac: immutable.HashMap[Int, Int]): immutable.HashMap[Int, Int] = progMat.colOption(i) match{
       case None => ac
       case Some(ops) =>
         if(ops.contains('(')) sdo(i + 1, i +: stk, ac)
@@ -104,7 +104,7 @@ object Prelude extends Interpreter{
   
   case class PrelProg(mat: Matrix[Char], jump: immutable.HashMap[Int, Int]){
     val numVoices: Int = mat.xdim
-    def apply(i: Int): Vector[Char] = mat.row(i)
-    def get(i: Int): Option[Vector[Char]] = mat.rowOption(i)
+    def apply(i: Int): Vector[Char] = mat.col(i)
+    def get(i: Int): Option[Vector[Char]] = mat.colOption(i)
   }
 }
