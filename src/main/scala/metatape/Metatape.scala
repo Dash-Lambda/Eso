@@ -5,7 +5,7 @@ import common.{Config, Interpreter}
 import scala.annotation.tailrec
 import scala.collection.immutable
 import scala.util.matching.Regex
-import scala.util.{Random, Try}
+import scala.util.Try
 
 import spire.implicits._
 
@@ -15,9 +15,9 @@ object Metatape extends Interpreter{
   val namReg: Regex = raw"""^ ?((?:\S|\S.*\S)) ?\z""".r
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{parse(progRaw)} map{
-    case (prog, subs) => runProg(prog, subs, config.rand, config.num("mtCharWidth"))}
+    case (prog, subs) => runProg(prog, subs, config.rands, config.num("mtCharWidth"))}
   
-  def runProg(prog: Vector[MTOP], subVec: Vector[MSub], rand: Random, padLen: Int): Seq[Char] => LazyList[Char] = {
+  def runProg(prog: Vector[MTOP], subVec: Vector[MSub], rands: LazyList[Int], padLen: Int): Seq[Char] => LazyList[Char] = {
     val subs = mkMap(subVec.map{case MSub(nam, sub) => (nam, sub)})
     val initIP = MDP(0, MTape(None, None, Vector(), Vector()))
     @tailrec
@@ -27,7 +27,7 @@ object Metatape extends Interpreter{
       case _ => rdo(state.step())}
     
     inputs => {
-      val initEnv = MEnv(rand, bitInp(inputs, padLen), Vector(), padLen, subs)
+      val initEnv = MEnv(rands, bitInp(inputs, padLen), Vector(), padLen, subs)
       LazyList.unfold(RunState(initIP, initEnv, RunCont(0, prog, FinCont)): State)(rdo)}}
   
   def bitInp(cinp: Seq[Char], padLen: Int): LazyList[Int] = {
@@ -87,7 +87,8 @@ object Metatape extends Interpreter{
         case MEnter(n) => RunState(tape.enter(n), env, RunCont(i + 1, prog, cc))
         case MExit(n) => RunState(tape.exit(n), env, RunCont(i + 1, prog, cc))
         case MSetNull => RunState(tape.set(None), env, RunCont(i + 1, prog, cc))
-        case MRand(n) => RunState(if(env.rand.nextInt(n) == 0) tape.set(None) else tape, env, RunCont(i + 1, prog, cc))
+        case MRand(n) => env.randInt match{
+          case (r, nenv) => RunState(if(r%n == 0) tape.set(None) else tape, nenv, RunCont(i + 1, prog, cc))}
         case MIf(ind) => RunState(tape, env, RunCont(if(tape.curCheck) i + 1 else ind, prog, cc))
         case MElse(ind) => RunState(tape, env, RunCont(ind, prog, cc))
         case MLoop(ind) => RunState(tape, env, RunCont(ind, prog, cc))
@@ -181,16 +182,19 @@ object Metatape extends Interpreter{
     odo() match{
       case (ops, subs, _) => (ops, subs)}}
   
-  case class MEnv(rand: Random, inp: LazyList[Int], buf: Vector[Int], wid: Int, subs: immutable.HashMap[String, Vector[MTOP]]){
+  case class MEnv(rands: LazyList[Int], inp: LazyList[Int], buf: Vector[Int], wid: Int, subs: immutable.HashMap[String, Vector[MTOP]]){
     def read: (Int, MEnv) = inp match{
-      case n +: ns => (n, MEnv(rand, ns, buf, wid, subs))}
+      case n +: ns => (n, MEnv(rands, ns, buf, wid, subs))}
     
     def write(n: Int): (Option[Char], MEnv) = {
       val nbuf = buf :+ n
-      if(nbuf.sizeIs >= wid) (Some(vecToChar(nbuf)), MEnv(rand, inp, Vector(), wid, subs))
-      else (None, MEnv(rand, inp, nbuf, wid, subs))}
+      if(nbuf.sizeIs >= wid) (Some(vecToChar(nbuf)), MEnv(rands, inp, Vector(), wid, subs))
+      else (None, MEnv(rands, inp, nbuf, wid, subs))}
     
     def vecToChar(vec: Vector[Int]): Char = BigInt(vec.mkString, 2).toChar
+    
+    def randInt: (Int, MEnv) = rands match{
+      case r +: rs => (r, MEnv(rs, inp, buf, wid, subs))}
   }
   
   case class MDP(dp: Int, tape: MTape){

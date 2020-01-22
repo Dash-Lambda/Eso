@@ -3,23 +3,23 @@ package snusp
 import common.{Config, Interpreter, Matrix, Vec2D}
 
 import scala.annotation.tailrec
-import scala.util.{Random, Try}
+import scala.util.Try
 
 object SNUSP extends Interpreter{
   val name: String = "SNUSP"
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
     Try{Matrix.fromString(progRaw)} map{prog =>
-      snuRun(prog, config.num("init"), config.rand)}}
+      snuRun(prog, config.num("init"), config.rands)}}
   
-  def snuRun(prog: Matrix[Char], tapeSize: Int, rand: Random): Seq[Char] => LazyList[Char] = {
+  def snuRun(prog: Matrix[Char], tapeSize: Int, rands: LazyList[Int]): Seq[Char] => LazyList[Char] = {
     @tailrec
     def sdo(state: State, ips: Vector[SNOB]): Option[(Char, (State, Vector[SNOB]))] = ips match{
       case ip +: tl => ip match{
         case SNOP => sdo(state, tl)
         case SNOUT(c, nxt) => Some((c, (state, tl :+ nxt)))
         case SNLIT(ip1, ip2) => sdo(state, ip2 +: (tl :+ ip1))
-        case snip: SNIP => snip(prog, state, rand) match{
+        case snip: SNIP => snip(prog, state) match{
           case (state, nxt) => sdo(state, tl :+ nxt)}}
       case _ => None}
     
@@ -27,10 +27,10 @@ object SNUSP extends Interpreter{
       case Some(v) => SNIP(v, Vec2D(1, 0), Vec2D(0, 0), Vector())
       case None => SNIP(Vec2D(0, 0), Vec2D(1, 0), Vec2D(0, 0), Vector())}
     
-    inputs => LazyList.unfold((State(Matrix.fill(tapeSize, 1)(0), inputs, dyn = true): State, Vector(initIP): Vector[SNOB])){
+    inputs => LazyList.unfold((State(Matrix.fill(tapeSize, 1)(0), inputs, rands, dyn = true): State, Vector(initIP): Vector[SNOB])){
       case (state, sip) => sdo(state, sip)}}
   
-  case class State(data: Matrix[Int], inp: Seq[Char], dyn: Boolean){
+  case class State(data: Matrix[Int], inp: Seq[Char], rands: LazyList[Int], dyn: Boolean){
     def padded(v: Vec2D[Int]): Matrix[Int] = data.padToAbs(v + Vec2D(1, 1), 0)
     
     def apply(v: Vec2D[Int]): Int = {
@@ -38,22 +38,25 @@ object SNUSP extends Interpreter{
       else data(v)}
     
     def set(v: Vec2D[Int], n: Int): State = {
-      if(!data.isDefinedAt(v) && dyn) State(padded(v).updated(v, n), inp, dyn)
-      else State(data.updated(v, n), inp, dyn)}
+      if(!data.isDefinedAt(v) && dyn) State(padded(v).updated(v, n), inp, rands, dyn)
+      else State(data.updated(v, n), inp, rands, dyn)}
     
     def inc(v: Vec2D[Int], n: Int): State = {
       if(!data.isDefinedAt(v) && dyn){
         val ndat = padded(v)
-        State(ndat.updated(v, ndat(v) + n), inp, dyn)}
-      else State(data.updated(v, data(v) + n), inp, dyn)}
+        State(ndat.updated(v, ndat(v) + n), inp, rands, dyn)}
+      else State(data.updated(v, data(v) + n), inp, rands, dyn)}
     
     def read(v: Vec2D[Int]): State = {
-      if(!data.isDefinedAt(v) && dyn) State(padded(v).updated(v, inp.head), inp.tail, dyn)
-      else State(data.updated(v, inp.head), inp.tail, dyn)}
+      if(!data.isDefinedAt(v) && dyn) State(padded(v).updated(v, inp.head), inp.tail, rands, dyn)
+      else State(data.updated(v, inp.head), inp.tail, rands, dyn)}
     
     def out(v: Vec2D[Int]): Char = {
       if(!data.isDefinedAt(v) && dyn) 0.toChar
       else data(v).toChar}
+    
+    def randInt: (Int, State) = rands match{
+      case r +: rs => (r, State(data, inp, rs, dyn))}
   }
   
   trait SNOB
@@ -63,7 +66,7 @@ object SNUSP extends Interpreter{
   case class SNIP(ip: Vec2D[Int], dt: Vec2D[Int], dp: Vec2D[Int], calls: Vector[(Vec2D[Int], Vec2D[Int])]) extends SNOB{
     def stp(ndt: Vec2D[Int]): SNIP = SNIP(ip + ndt, ndt, dp, calls)
     
-    def apply(prog: Matrix[Char], state: State, rand: Random): (State, SNOB) = prog.get(ip) match{
+    def apply(prog: Matrix[Char], state: State): (State, SNOB) = prog.get(ip) match{
       case None => (state, SNOP)
       case Some(op) => op match{
         case '>' => (state, SNIP(ip + dt, dt, dp + Vec2D(1, 0), calls))
@@ -72,7 +75,8 @@ object SNUSP extends Interpreter{
         case ';' => (state, SNIP(ip + dt, dt, dp + Vec2D(0, 1), calls))
         case '+' => (state.inc(dp, 1), stp(dt))
         case '-' => (state.inc(dp, -1), stp(dt))
-        case '%' => (state.set(dp, rand.nextInt()), stp(dt))
+        case '%' => state.randInt match{
+          case (r, nstate) => (nstate.set(dp, r), stp(dt))}
         case ',' => (state.read(dp), stp(dt))
         case '.' => (state, SNOUT(state.out(dp), stp(dt)))
         case '\\' => (state, stp(dt match{case Vec2D(a, b) => Vec2D(b, a)}))

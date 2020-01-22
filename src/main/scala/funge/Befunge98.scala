@@ -28,7 +28,7 @@ object Befunge98 extends Interpreter{
     
     Try{BF98Prog(progRaw.filter(_ != '\f'), config.bool("bfDiv"))} map {prog =>
       val initFIP = FIP(0, prog.getNextInd(initPos, initDt), initDt, Vec2D(0, 0), bs=false, Vector(FungeStack(Vector())), immutable.HashMap())
-      inputs => LazyList.unfold((Vector(initFIP), prog, BF98State(config.times, inputs, config.rand, BF98FPData.default), 1: Int, false: Boolean)){
+      inputs => LazyList.unfold((Vector(initFIP), prog, BF98State(config.times, inputs, config.rands, BF98FPData.default), 1: Int, false: Boolean)){
         case (fips, prg, in, id, halt) => bdo(fips, prg, in, id, halt)}
         .flatten}}
 }

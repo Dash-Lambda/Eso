@@ -3,7 +3,6 @@ package wierd
 import common.{EsoObj, Vec2D}
 
 import scala.annotation.tailrec
-import scala.util.Random
 
 trait WIPRet
 case class WIPCont(wip: WIP, inp: Seq[Char], prog: WierdProg) extends WIPRet
@@ -17,9 +16,10 @@ case class WIP(ip: Vec2D[Int], dt: Vec2D[Int], stk: LazyList[Int]){
     else tryTurn(ip, dt, prog) match{
       case ((ln, lv), (rn, rv)) if ln == rn => ln match{
         case 0 => WIPCont(WIP(ip + dt, dt, stk), inp, prog)
-        case 1 =>
-          val ndt = if(prog.rand.nextInt(2) == 0) lv else rv
-          WIPCont(WIP(ip + ndt, ndt, stk), inp, prog)
+        case 1 => prog.randInt match{
+          case (r, nprog) =>
+            val ndt = if(r%2 == 0) lv else rv
+            WIPCont(WIP(ip + ndt, ndt, stk), inp, nprog)}
         case 2 => WIPSplit(WIP(ip + rv, rv, stk), WIP(ip + lv, lv, stk))
         case 3 => WIPHalt
         case 4 => WIPHalt}
@@ -63,7 +63,7 @@ case class WIP(ip: Vec2D[Int], dt: Vec2D[Int], stk: LazyList[Int]){
     (ls.head, rs.head)}
 }
 
-case class WierdProg(vecs: Vector[Vector[Int]], origin: Vec2D[Int], rand: Random) extends EsoObj{
+case class WierdProg(vecs: Vector[Vector[Int]], origin: Vec2D[Int], rands: LazyList[Int]) extends EsoObj{
   def apply(p: Vec2D[Int]): Int = if(isDefinedAt(origin + p)) vecs(origin.y + p.y)(origin.x + p.x) else 32
   def apply(x: Int, y: Int): Int = apply(Vec2D(x, y))
   
@@ -73,7 +73,7 @@ case class WierdProg(vecs: Vector[Vector[Int]], origin: Vec2D[Int], rand: Random
     val nvecs = padded.updated(v.y, padded(v.y).updated(v.x, e))
     val nx = if(v.x < 0) origin.x - v.x else origin.x
     val ny = if(v.y < 0) origin.y - v.y else origin.y
-    WierdProg(nvecs, Vec2D(nx, ny), rand)}
+    WierdProg(nvecs, Vec2D(nx, ny), rands)}
   
   def padTo(vs: Vector[Vector[Int]], p: Vec2D[Int]): Vector[Vector[Int]] = {
     val pady = vs.padTo(p.y + 1, Vector())
@@ -82,9 +82,12 @@ case class WierdProg(vecs: Vector[Vector[Int]], origin: Vec2D[Int], rand: Random
   
   def isLine(p: Vec2D[Int]): Boolean = !apply(p).toChar.isWhitespace
   def isDefinedAt(p: Vec2D[Int]): Boolean = p.x >= 0 && p.y >= 0 && p.y < vecs.size && p.x < vecs(p.y).size
+  
+  def randInt: (Int, WierdProg) = rands match{
+    case r +: rs => (r, WierdProg(vecs, origin, rs))}
 }
 object WierdProg{
-  def apply(str: String, rand: Random): WierdProg = {
+  def apply(str: String, rands: LazyList[Int]): WierdProg = {
     val vecs = str.linesIterator.map(_.toVector.map(_.toInt)).toVector
-    new WierdProg(vecs, Vec2D(-1, -1), rand)}
+    new WierdProg(vecs, Vec2D(-1, -1), rands)}
 }

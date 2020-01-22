@@ -110,13 +110,14 @@ case class FIP(id: Int, ip: Vec2D[Int], dt: Vec2D[Int], so: Vec2D[Int], bs: Bool
       case 'v' =>
         val nDt = Vec2D(0, 1)
         FIPCont(prog, dat, FIP(id, prog.getNextInd(ip, nDt), nDt, so, bs, stk, binds))
-      case '?' =>
-        val nDt = dat.rand.nextInt(4) match{
-          case 0 => Vec2D(-1, 0)
-          case 1 => Vec2D(1, 0)
-          case 2 => Vec2D(0, -1)
-          case 3 => Vec2D(0, 1)}
-        FIPCont(prog, dat, FIP(id, prog.getNextInd(ip, nDt), nDt, so, bs, stk, binds))
+      case '?' => dat.randInt match{
+        case (r, ndat) =>
+          val nDt = r%4 match{
+            case 0 => Vec2D(-1, 0)
+            case 1 => Vec2D(1, 0)
+            case 2 => Vec2D(0, -1)
+            case 3 => Vec2D(0, 1)}
+          FIPCont(prog, ndat, FIP(id, prog.getNextInd(ip, nDt), nDt, so, bs, stk, binds))}
       case '[' =>
         val nDt = Vec2D(dt.y, -dt.x)
         FIPCont(prog, dat, FIP(id, prog.getNextInd(ip, nDt), nDt, so, bs, stk, binds))

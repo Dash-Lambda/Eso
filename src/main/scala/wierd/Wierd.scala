@@ -8,7 +8,7 @@ import scala.util.Try
 object Wierd extends Interpreter{
   val name: String = "Wierd"
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{WierdProg(progRaw, config.rand)} map wierdRun
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{WierdProg(progRaw, config.rands)} map wierdRun
   
   def wierdRun(initProg: WierdProg): Seq[Char] => LazyList[Char] = {
     @tailrec
