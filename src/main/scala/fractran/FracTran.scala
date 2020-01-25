@@ -1,10 +1,9 @@
 package fractran
 
-import common.{Config, EsoExcep, Interpreter}
+import common.{Config, Interpreter}
 import spire.math.SafeLong
 
-import scala.annotation.tailrec
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 object FracTran extends Interpreter{
   val name: String = "FracTran"

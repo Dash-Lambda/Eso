@@ -12,7 +12,7 @@ import scala.util.Try
 object WhiteSpace extends Interpreter{
   val name: String = "WhiteSpace"
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{condition(progRaw)} map{prog => wsRun(prog, getCalls(prog))}
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{parse(progRaw)} map{prog => wsRun(prog, getCalls(prog))}
   
   def wsRun(prog: Vector[(String, SafeLong)], calls: immutable.HashMap[SafeLong, Int]): Seq[Char] => LazyList[Char] = {
     def binOp(stack: List[SafeLong])(func: (SafeLong, SafeLong) => SafeLong): List[SafeLong] = stack match{case n1 +: n2 +: ns => func(n1, n2) +: ns}

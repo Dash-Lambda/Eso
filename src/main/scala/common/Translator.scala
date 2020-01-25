@@ -2,7 +2,7 @@ package common
 
 import scala.util.Try
 
-trait Translator extends EsoObj{
+abstract class Translator extends EsoObj{
   val name: String
   val baseLang: String
   

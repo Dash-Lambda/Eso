@@ -12,7 +12,7 @@ object WhiteSpaceToScala extends Transpiler{
   val src: String = "WhiteSpace"
   val dst: String = "Scala"
   
-  def apply(config: Config)(progRaw: String): Try[String] = Try{condition(progRaw)} map{prog =>
+  def apply(config: Config)(progRaw: String): Try[String] = Try{parse(progRaw)} map{prog =>
     val progStr = genProg(prog, getCalls(prog))
     if(config.bool("indent")) indent(progStr)
     else progStr}

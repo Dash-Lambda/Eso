@@ -3,7 +3,7 @@ package common
 import scala.annotation.tailrec
 import scala.util.Try
 
-trait Transpiler extends EsoObj{
+abstract class Transpiler extends EsoObj{
   val src: String
   val dst: String
   

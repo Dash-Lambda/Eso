@@ -37,7 +37,7 @@ object WSAssembly extends Translator{
       .toVector
     ado("", cleaned)}
   def unapply(config: Config)(prog: String): Try[String] = {
-    val res = condition(prog)
+    val res = parse(prog)
       .map{case (tag, num) => s"$tag${if(argOps.contains(tag)) s" $num" else ""}"}
       .mkString("\n")
     Success(res)}

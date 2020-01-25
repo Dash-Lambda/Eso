@@ -1,6 +1,6 @@
 package unlambda
 
-import common.{Config, EsoExcep, Interpreter}
+import common.{Config, EsoExcep, EsoParser, Interpreter, PartialParser, RecurParser}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -9,19 +9,7 @@ import scala.util.{Failure, Success, Try}
 object Unlambda extends Interpreter{
   val name: String = "Unlambda"
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = parse(progRaw) map unlRun
-  
-  def unlRun(progExpr: Expr): Seq[Char] => LazyList[Char] = {
-    @tailrec
-    def udo(state: State): Option[(Char, State)] = state match{
-      case EndState => None
-      case PrintState(c, nxt) => Some((c, nxt))
-      case _ => udo(state.step())}
-    
-    inputs => LazyList.unfold(EvalState(progExpr, EndCont, Env(None, inputs)): State)(udo)
-  }
-  
-  def parse(progRaw: String): Try[Expr] = {
+  val funcParser: EsoParser[Vector[Char], Expr] = {
     val funcMap = immutable.HashMap[Char, Func](
       'i' -> I,
       'v' -> V,
@@ -33,113 +21,110 @@ object Unlambda extends Interpreter{
       '@' -> AT,
       '|' -> PIPE,
       'e' -> E)
-    
-    trait PCont{
-      def apply(e: Expr): PCont
-    }
-    object PEnd extends PCont{
-      def apply(e: Expr): PCont = PRes(e)
-    }
-    case class PRes(x: Expr) extends PCont{
-      def apply(e: Expr): PCont = PRes(x)
-    }
-    case class PApp(cc: PCont) extends PCont{
-      def apply(x: Expr): PCont = PApp1(x, cc)
-    }
-    case class PApp1(x: Expr, cc: PCont) extends PCont{
-      def apply(y: Expr): PCont = cc(AppExpr(x, y))
-    }
-    
+    PartialParser[Vector[Char], Expr]{
+      case '.' +: c +: cs => (FuncExpr(OUT(c)), cs)
+      case '?' +: c +: cs => (FuncExpr(QUES(c)), cs)
+      case f +: cs if funcMap.isDefinedAt(f) => (FuncExpr(funcMap(f)), cs)}}
+  val unlParser: EsoParser[Vector[Char], Expr] = {
+    def recur(src: Vector[Char]): Option[Vector[Char]] = src match{
+      case '`' +: cs => Some(cs)
+      case _ => None}
+    def collect(xs: Seq[Expr]): Expr = xs match{
+      case x +: y +: _ => AppExpr(x, y)}
+    RecurParser[Vector[Char], Expr](2)(recur)(collect)(funcParser)}
+  
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
     @tailrec
-    def pdoc(src: Vector[Char], cc: PCont): Option[Expr] = src match{
-      case '`' +: cs => pdoc(cs, PApp(cc))
-      case '.' +: c +: cs => pdoc(cs, cc(FuncExpr(OUT(c))))
-      case '?' +: c +: cs => pdoc(cs, cc(FuncExpr(QUES(c))))
-      case f +: cs if funcMap.isDefinedAt(f) => pdoc(cs, cc(FuncExpr(funcMap(f))))
-      case '#' +: cs => pdoc(cs.dropWhile(c => !"\r\n".contains(c)), cc)
-      case _ +: cs => pdoc(cs, cc)
-      case _ => cc match{
-        case PRes(e) => Some(e)
-        case _ => None}}
+    def udo(state: State): Option[(Char, State)] = state match{
+      case EndState => None
+      case PrintState(c, nxt) => Some((c, nxt))
+      case _ => udo(state.step())}
+    parse(progRaw) map {prog =>
+      inputs => LazyList.unfold(EvalState(prog, EndCont, Env(None, inputs)): State)(udo)}}
+  
+  def parse(progRaw: String): Try[Expr] = {
+    val toks = "ivkscdr@|e`.?#".toVector
+    @tailrec
+    def condition(src: Vector[Char], ac: Vector[Char] = Vector()): Vector[Char] = src match{
+      case '.' +: c +: cs => condition(cs, ac :+ '.' :+ c)
+      case '?' +: c +: cs => condition(cs, ac :+ '?' :+ c)
+      case '#' +: cs => condition(cs.dropWhile(_ != '\n'), ac)
+      case c +: cs if toks.contains(c) => condition(cs, ac :+ c)
+      case _ +: cs => condition(cs, ac)
+      case _ => ac}
     
-    pdoc(progRaw.toVector, PEnd) match{
-      case Some(exp) => Success(exp)
-      case None => Failure(EsoExcep("Invalid Expression"))}
-  }
+    unlParser(condition(progRaw.toVector)) match{
+      case Some(prog) => Success(prog)
+      case None => Failure(EsoExcep("Invalid Unlambda Expression"))}}
   
   case class Env(cur: Option[Char], inp: Seq[Char]){
     def read: Env = inp match{
       case c +: cs => Env(Some(c), cs)
-      case _ => Env(None, inp)}
-  }
+      case _ => Env(None, inp)}}
   
   trait State{
-    def step(): State
-  }
+    def step(): State}
+  
   trait Expr{
-    def apply(cc: Cont, env: Env): State
-  }
+    def apply(cc: Cont, env: Env): State}
+  
   trait Cont{
-    def apply(f: Func, env: Env): State
-  }
+    def apply(f: Func, env: Env): State}
+  
   trait Func{
-    def apply(f: Func, cc: Cont, env: Env): State
-  }
+    def apply(f: Func, cc: Cont, env: Env): State}
   
   //States
   object EndState extends State{
-    def step(): State = EndState
-  }
+    def step(): State = EndState}
+  
   case class EvalState(x: Expr, cc: Cont, env: Env) extends State{
-    def step(): State = x(cc, env)
-  }
+    def step(): State = x(cc, env)}
+  
   case class AppState(x: Func, y: Func, cc: Cont, env: Env) extends State{
-    def step(): State = x(y, cc, env)
-  }
+    def step(): State = x(y, cc, env)}
+  
   case class PrintState(c: Char, nxt: State) extends State{
-    def step(): State = nxt
-  }
+    def step(): State = nxt}
   
   //Expressions
   case class FuncExpr(f: Func) extends Expr{
-    def apply(cc: Cont, env: Env): State = cc(f, env)
-  }
+    def apply(cc: Cont, env: Env): State = cc(f, env)}
+  
   case class AppExpr(x: Expr, y: Expr) extends Expr{
-    def apply(cc: Cont, env: Env): State = EvalState(x, ExprCont(y, cc), env)
-  }
+    def apply(cc: Cont, env: Env): State = EvalState(x, ExprCont(y, cc), env)}
   
   //Continuations
   object EndCont extends Cont{
-    def apply(f: Func, env: Env): State = EndState
-  }
+    def apply(f: Func, env: Env): State = EndState}
+  
   case class FuncCont(x: Func, cc: Cont) extends Cont{
-    def apply(f: Func, env: Env): State = AppState(x, f, cc, env)
-  }
+    def apply(f: Func, env: Env): State = AppState(x, f, cc, env)}
+  
   case class ExprCont(y: Expr, cc: Cont) extends Cont{
     def apply(f: Func, env: Env): State = f match{
       case D => cc(D1(y), env)
-      case _ => EvalState(y, FuncCont(f, cc), env)}
-  }
+      case _ => EvalState(y, FuncCont(f, cc), env)}}
+  
   case class DCont(y: Func, cc: Cont) extends Cont{
-    def apply(f: Func, env: Env): State = AppState(f, y, cc, env)
-  }
+    def apply(f: Func, env: Env): State = AppState(f, y, cc, env)}
   
   //Functions
   object I extends Func{
-    def apply(f: Func, cc: Cont, env: Env): State = cc(f, env)
-  }
+    def apply(f: Func, cc: Cont, env: Env): State = cc(f, env)}
+  
   object V extends Func{
-    def apply(f: Func, cc: Cont, env: Env): State = cc(V, env)
-  }
+    def apply(f: Func, cc: Cont, env: Env): State = cc(V, env)}
+  
   case class OUT(c: Char) extends Func{
-    def apply(f: Func, cc: Cont, env: Env): State = PrintState(c, cc(f, env))
-  }
+    def apply(f: Func, cc: Cont, env: Env): State = PrintState(c, cc(f, env))}
+  
   case class D1(x: Expr) extends Func{
-    def apply(f: Func, cc: Cont, env: Env): State = EvalState(x, DCont(f, cc), env)
-  }
+    def apply(f: Func, cc: Cont, env: Env): State = EvalState(x, DCont(f, cc), env)}
+  
   object D extends Func{
-    def apply(f: Func, cc: Cont, env: Env): State = cc(D1(FuncExpr(f)), env)
-  }
+    def apply(f: Func, cc: Cont, env: Env): State = cc(D1(FuncExpr(f)), env)}
+  
   case class S2(x: Func, y: Func) extends Func{
     def apply(f: Func, cc: Cont, env: Env): State = {
       EvalState(
@@ -150,44 +135,37 @@ object Unlambda extends Interpreter{
           AppExpr(
             FuncExpr(y),
             FuncExpr(f))),
-        cc, env)}
-  }
+        cc, env)}}
   case class S1(x: Func) extends Func{
-    def apply(f: Func, cc: Cont, env: Env): State = cc(S2(x, f), env)
-  }
+    def apply(f: Func, cc: Cont, env: Env): State = cc(S2(x, f), env)}
   object S extends Func{
-    def apply(f: Func, cc: Cont, env: Env): State = cc(S1(f), env)
-  }
+    def apply(f: Func, cc: Cont, env: Env): State = cc(S1(f), env)}
+  
   case class K1(x: Func) extends Func{
-    def apply(f: Func, cc: Cont, env: Env): State = cc(x, env)
-  }
+    def apply(f: Func, cc: Cont, env: Env): State = cc(x, env)}
   object K extends Func{
-    def apply(f: Func, cc: Cont, env: Env): State = cc(K1(f), env)
-  }
+    def apply(f: Func, cc: Cont, env: Env): State = cc(K1(f), env)}
+  
   case class C1(cc1: Cont) extends Func{
-    def apply(f: Func, cc: Cont, env: Env): State = cc1(f, env)
-  }
+    def apply(f: Func, cc: Cont, env: Env): State = cc1(f, env)}
   object C extends Func{
-    def apply(f: Func, cc: Cont, env: Env): State = AppState(f, C1(cc), cc, env)
-  }
+    def apply(f: Func, cc: Cont, env: Env): State = AppState(f, C1(cc), cc, env)}
+  
   object E extends Func{
-    def apply(f: Func, cc: Cont, env: Env): State = EndState
-  }
+    def apply(f: Func, cc: Cont, env: Env): State = EndState}
+  
   object AT extends Func{
-    def apply(f: Func, cc: Cont, env: Env): State = {
-      val nEnv = env.read
-      env.cur match{
-        case None => AppState(f, V, cc, nEnv)
-        case _ => AppState(f, I, cc, nEnv)}}
-  }
+    def apply(f: Func, cc: Cont, env: Env): State = env.cur match{
+      case None => AppState(f, V, cc, env.read)
+      case _ => AppState(f, I, cc, env.read)}}
+  
   case class QUES(c: Char) extends Func{
     def apply(f: Func, cc: Cont, env: Env): State = env.cur match{
       case Some(`c`) => AppState(f, I, cc, env)
-      case _ => AppState(f, V, cc, env)}
-  }
+      case _ => AppState(f, V, cc, env)}}
+  
   object PIPE extends Func{
     def apply(f: Func, cc: Cont, env: Env): State = env.cur match{
       case Some(c) => AppState(f, OUT(c), cc, env)
-      case None => AppState(f, V, cc, env)}
-  }
+      case None => AppState(f, V, cc, env)}}
 }

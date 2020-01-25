@@ -1,6 +1,6 @@
 package fractran
 
-import common.{Config, Interpreter, PrimeNumTools}
+import common.{Config, EsoParser, Interpreter, PartialParser, PrimeNumTools}
 import spire.implicits._
 import spire.math.SafeLong
 
@@ -11,6 +11,13 @@ import scala.util.Try
 object FracTranpp extends Interpreter{
   val name: String = "FracTran++"
   val primes: LazyList[SafeLong] = PrimeNumTools.birdPrimes.to(LazyList)
+  
+  val breakParser: EsoParser[Vector[FOP], Vector[FOP]] = {
+    PartialParser[Vector[FOP], Vector[FOP]]{
+      case fops if fops.nonEmpty =>
+        val ind = fops.indexWhere(_.isBreak)
+        val brk = if(ind == -1) fops.length else ind
+        (fops.take(brk), fops.drop(brk + 1))}}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = parse(progRaw) map{
     case (init, prog) => fti(init, prog)}
@@ -64,27 +71,17 @@ object FracTranpp extends Interpreter{
       case (num, ops, bid, calls, inp) => nxt(num, ops, bid, calls, inp)}.flatten}
   
   def parse(progRaw: String): Try[(SafeLong, Vector[Vector[FOP]])] = {
-    @tailrec
-    def pdo(ac: Vector[Vector[FOP]], tmp: Vector[FOP], src: Vector[FOP]): Vector[Vector[FOP]] = src match{
-      case f +: fs =>
-        if(f.isBreak){
-          if(tmp.nonEmpty) pdo(ac :+ tmp, Vector(), fs)
-          else pdo(ac, tmp, fs)}
-        else pdo(ac, tmp :+ f, fs)
-      case _ =>
-        if(tmp.nonEmpty) ac :+ tmp
-        else ac}
     FracTranParser.parse(progRaw) map{
       case (initNum, fracs) =>
         val fops = fracs.map{case (n, d) => FOP.make(n, d)}.collect{case Some(fop) => fop}
-        (initNum, pdo(Vector(), Vector(), fops))}}
+        (initNum, breakParser.parseAll(fops))}}
   
   case class FOP(n: SafeLong, d: SafeLong, exp: Vector[Int], ext: Int, j: Boolean, i: Boolean, o: Boolean){
     val isBreak: Boolean = n == 0 && d == 0
     lazy val pat: Int = exp(ext)
     def canDo(num: SafeLong): Boolean = num%d == 0
-    def *(num: SafeLong): SafeLong = n*num/d
-  }
+    def *(num: SafeLong): SafeLong = n*num/d}
+  
   object FOP{
     def make(n: SafeLong, d: SafeLong): Option[FOP] = {
       lazy val gcd = n.abs.gcd(d.abs)
@@ -113,6 +110,5 @@ object FracTranpp extends Interpreter{
         case (nxt, p) =>
           if (nxt == 1) ac :+ p
           else fgo(nxt, ac :+ p, src.tail)}
-      fgo(num.abs)}
-  }
+      fgo(num.abs)}}
 }

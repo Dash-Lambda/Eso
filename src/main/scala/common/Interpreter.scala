@@ -2,7 +2,7 @@ package common
 
 import scala.util.Try
 
-trait Interpreter extends EsoObj{
+abstract class Interpreter extends EsoObj{
   val name: String
   override def toString: String = name
   

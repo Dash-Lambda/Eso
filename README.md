@@ -10,6 +10,7 @@
     - [Languages Under Consideration](#languages-under-consideration)
 * [Design of Eso](#design-of-eso)
     - [Language Components](#language-components)
+    - [Parsers](#parsers)
     - [How the Interface Works](#how-the-interface-works)
         - [Persistent vs Non-Persistent Interfaces](#persistent-vs-non-persistent-interfaces)
         - [The Parser](#the-parser)
@@ -27,6 +28,15 @@
     - [P'' Program Format](#p-program-format)
     - [On the Befunge-98 Interpreter](#on-the-befunge-98-interpreter)
     - [Building](#building)
+
+## Purpose of Eso
+I develop and maintain this for two principle reasons:
+* It's fun
+* I learn a surprising amount
+
+Eso started as a functional BrainFuck interpreter made out of curiosity about pure functional programming. In the course of turning Eso into what it is now, I've learned a shocking amount about language design, types, category theory, compiler theory, CPS, combinators, parsers, generative grammars, concurrency, effects, prime generators, and... quite a lot more.
+
+You may notice that some things in Eso that could be implemented with a relatively simple library are not; usually that's on purpose, because writing the boilerplate and abstractions myself is... Well, it's fun and educational.
 
 ## Meaning of functional
 Functional programming is a paradigm with three principle characteristics:
@@ -111,7 +121,7 @@ This is not an exhaustive list, but here are some of the languages I've consider
 * [Malbolge](https://esolangs.org/wiki/Malbolge) (... ... ... ... We'll see...)
 
 ## Design of Eso
-Eso actually started out as a simple, single functional-style BrainFuck interpreter. Since then it's gotten... Complicated. Though I prefer the word "sophisticated".
+As I mentioned earlier, Eso started out as a simple, single functional-style BrainFuck interpreter. Since then it's gotten... Complicated. Though I prefer the word "sophisticated".
 
 To clarify what is meant by "Functional Esoteric Language Interpreter": All of the language components (with the sole exception of the Scala component) are purely functional. The user interface is not purely functional, but its structure borrows a lot from functional style.
 
@@ -120,6 +130,28 @@ Languages supported by Eso can currently have 3 types of components:
 * Interpreter: This is the basic requirement to support a language in Eso, and enables it to run programs in the language. An interpreter is a curried function with the (pseudocode) signature (configuration => (program => (input => output))), where the configuration is a collection of parameters for any optional features or behaviors the interpreter may have and the program is the source code. This means it defines a relationship between the configuration and the relationship between the program and the relationship between the input and the output... All that means is that when you call the interpreter you don't just get the output, you get another function that takes the input and returns the output.
 * Translator: Some languages have derivatives (BrainFuck has many). A translator defines a relationship between the source code of two languages with one-to-one equivalence, which means you can translate the code freely between the languages without changing the structure of the program. These have a signature of (configuration => (program1 => program2)). Currently translators are used to support BrainFuck derivatives and enable the use of a readable assembly version of WhiteSpace.
 * Transpiler: These define a relationship between non-equivalent languages. A transpiler is one-way, as it changes the structure of the program. These have a signature of (configuration => (program1 => program2)). Transpilers are currently used for compiling interpreters to translate the code into Scala.
+
+### Parsers
+One of the first things everyone would ask me when I started telling people about Eso is "what are you using for parsing?"
+
+I didn't really understand the question at first, because each language's parser is different. I wrote the boilerplate code every time. But, as I wrote more and more parsers, I started to understand why they asked: There's a _lot_ of boilerplate.
+
+So I started looking into parser libraries, then parser combinator libraries, then just decided I'd write my own damn parsing tools.
+
+So, Eso has two general forms of parsers: Bespoke parsers, which are written by hand boilerplate and all, and abstracted parsers, which use Eso's set of parser tools to more cleanly and elegantly put together a parser. I only use bespoke parsers when there's a significant gain in performance (and I care enough about performance), or in any old parsers I overlooked when overhauling for the new tools.
+
+The parser tools are a collection of Parser classes that all implement an `apply` method and a `step` method, where `apply` finds and parses the first valid token in the input and `step` does the same thing as `apply` but also returns the remaining input.
+
+The parent class additionally implements a method to parse _all_ valid tokens to a vector of results, to lazily parse all tokens to a LazyList, and a set of combinators and modifiers that currently consist of:
+* `map`: Maps the output of the parser (the output is an Option[T])
+* `~`: Pipes the output of the left-hand parser to the input of the right-hand parser. Each parsing result on the left is a whole input to the right.
+* `<+>`: If the left-hand parser fails, the right-hand parser is used (equivalent to PartialFunction's orElse)
+
+There are currently 5 parser classes:
+* ChunkParser: Takes a function with signature (A => Option[(B, A)]), which means it's built from the `step` function.
+* PartialParser: Basically ChunkParser but it takes a PartialFunction (A => (B, A)) and lifts it (usually more concise than ChunkParser)
+* RecurParser: This one is for parsing to tree structures, currently used in Unlambda. It takes a `recur` function that decides when to go down a level, a `collect` function to turn a set of leaves into a node, and another parser for the non-branching tokens.
+* RegexParser: This takes a regex and a function to turn a match into the output. This one lets me condense a lot of parsers into a single line, which makes me giddy.
 
 ### How the Interface Works
 It's always a challenge to handle UI functionally. Everything behind the scenes is fair game, but actually receiving input from and sending output to the user is by definition a side-effect.
