@@ -17,6 +17,7 @@ import slashes.Slashes
 import snusp.{BFToSNUSP, SNUSP}
 import thue.Thue
 import unlambda.Unlambda
+import volatile.Volatile
 import whitespace.{WSAssembly, WhiteSpace, WhiteSpaceToScala}
 import wierd.Wierd
 
@@ -54,7 +55,8 @@ object EsoDefaults extends EsoObj{
     ("mt", "Metatape"),
     ("cpp", "C++"),
     ("pld", "Prelude"),
-    ("nul", "NULL"))
+    ("nul", "NULL"),
+    ("vol", "Volatile"))
   val fileExtensionMap: immutable.HashMap[String, String] = mkMap(fileExtensionsVec)
   
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](
@@ -77,7 +79,8 @@ object EsoDefaults extends EsoObj{
     PATH,
     Metatape,
     Prelude,
-    NULL)
+    NULL,
+    Volatile)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
   val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude)
   val defBoolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](
