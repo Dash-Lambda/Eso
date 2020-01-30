@@ -13,7 +13,7 @@ import scala.io.{Source, StdIn}
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
-trait InterfaceHandler extends EsoObj{
+abstract class InterfaceHandler extends EsoObj{
   val nam: String
   val helpStr: String
   
@@ -97,6 +97,19 @@ trait InterfaceHandler extends EsoObj{
     case Some(x) => x
     case None => default}
   
+  def doOrOpFlat[A, B](inp: Option[A], err: String)(act: A => Option[B]): Option[B] = inp match{
+    case Some(a) => act(a)
+    case None =>
+      println(s"Error: $err")
+      None}
+  def doOrErrFlat[A, B](inp: Try[A])(act: A => Option[B]): Option[B] = inp match{
+    case Success(a) => act(a)
+    case Failure(e) =>
+      e match{
+        case EsoExcep(info) => println(s"Error: common.EsoExcep ($info)")
+        case _ => println(s"Error: $e")}
+      None}
+  
   def timeIt[T](thing: => T): (T, Long) = {
     val t = System.currentTimeMillis
     val res = thing
@@ -136,29 +149,33 @@ object RunProgHandler extends InterfaceHandler{
         of.close()
       case None => out foreach(c => print(if(printNum) c.toInt.toString + ' ' else c.toString))}
     
-    doOrOp(args.get("s"), "Missing Source File"){src =>
-      doOrOp(getLang(args, "l", "s"), "Unrecognized Language or File Extension"){lang =>
+    val params = doOrOpFlat(args.get("s"), "Missing Source File"){src =>
+      doOrOpFlat(getLang(args, "l", "s"), "Unrecognized Language or File Extension"){lang =>
         if(logFlg) print("Searching for translator path... ")
-        doOrOp(findTranslator(state, lang, state.interpNames), "Language Not Recognized"){
+        doOrOpFlat(findTranslator(state, lang, state.interpNames), "Language Not Recognized"){
           case (inam, t) =>
             if(logFlg) print("Done.\nRetrieving program from file... ")
-            doOrErr(readFile(src)){progRaw =>
+            doOrErrFlat(readFile(src)){progRaw =>
               if(logFlg) print(s"Done.\nTranslating program... ")
-              doOrErr(t(progRaw)){prog =>
+              doOrErrFlat(t(progRaw)){prog =>
                 if(logFlg) print("Done.\nInitializing interpreter... ")
                 timeIt(state.interps(inam)(state.config)(prog)) match{
                   case (i, dur) =>
-                    if(logFlg) println(s"Done in ${dur}ms.\nRunning program...")
-                    doOrErr(i){r =>
+                    if(logFlg) println(s"Done in ${dur}ms.")
+                    doOrErrFlat(i){r =>
                       doOrErr(inputs){inp =>
-                        timeIt{tryAll{printer(olim(r(inp)))}} match{
-                          case (flg, rdr) => flg match{
-                            case Failure(e) =>
-                              if(timeFlg) println(s"\nError: $e\nProgram failed in ${rdr}ms")
-                              else println(s"\nError: $e")
-                            case Success(_) =>
-                              if(timeFlg) println(s"\nProgram completed in ${rdr}ms")
-                              else println}}}}}}}}}}
+                        (r, inp)}}}}}}}}
+    
+    for((r, inp) <- params){
+      println("Running program...")
+      timeIt{tryAll{printer(olim(r(inp)))}} match{
+        case (flg, rdr) => flg match{
+          case Failure(e) =>
+            if(timeFlg) println(s"\nError: $e\nProgram failed in ${rdr}ms")
+            else println(s"\nError: $e")
+          case Success(_) =>
+            if(timeFlg) println(s"\nProgram completed in ${rdr}ms")
+            else println}}}
     
     state}
 }
@@ -176,19 +193,17 @@ object TranslateHandler extends InterfaceHandler{
         if(logFlg) println(s"Translation saved to $onam.")
       case None => println(str)}
     
-    args.get("s") match{
-      case None => println("Error: Not Enough Arguments")
-      case Some(i) =>
-        doOrOp(getLang(args, "sl", "s"), "Unrecognized Language or File Extension"){sl =>
-          doOrOp(getLang(args, "tl", "o"), "Unrecognized Target Language or File Extension"){tl =>
-            if(logFlg) print("Searching for translation path... ")
-            doOrOp(buildTrans(state)(sl, tl), "No Applicable Translation Path"){t =>
-              if(logFlg) print("Done.\nRetrieving program from file... ")
-              doOrErr(readFile(i)){progRaw =>
-                if(logFlg) print("Done.\nTranslating... ")
-                doOrErr(t(progRaw)){prog =>
-                  if(logFlg) println("Done.")
-                  printer(prog)}}}}}}
+    doOrOp(args.get("s"), "Not Enough Arguments"){i =>
+      doOrOp(getLang(args, "sl", "s"), "Unrecognized Language or File Extension"){sl =>
+        doOrOp(getLang(args, "tl", "o"), "Unrecognized Target Language or File Extension"){tl =>
+          if(logFlg) print("Searching for translation path... ")
+          doOrOp(buildTrans(state)(sl, tl), "No Applicable Translation Path"){t =>
+            if(logFlg) print("Done.\nRetrieving program from file... ")
+            doOrErr(readFile(i)){progRaw =>
+              if(logFlg) print("Done.\nTranslating... ")
+              doOrErr(t(progRaw)){prog =>
+                if(logFlg) println("Done.")
+                printer(prog)}}}}}}
     
     state}
 }
@@ -206,29 +221,27 @@ object TranspileHandler extends InterfaceHandler{
         if(logFlg) println(s"Transpiled program saved to $onam.")
       case None => println(str)}
     
-    args.get("s") match{
-      case None => println("Error: Not Enough Arguments")
-      case Some(s) =>
-        doOrOp(getLang(args, "sl", "s"), "Unrecognized Source Language or File Extension"){sl =>
-          doOrOp(getLang(args, "tl", "o"), "Unrecognized Target Language or File Extension"){tl =>
-            if(logFlg) print("Searching for source translator path... ")
-            doOrOp(findTranslator(state, sl, state.genNames.map(_._1)), "No Applicable Translation Path"){
-              case (lin, tin) =>
-                if(logFlg) print("Done.\nSearching for target translator path... ")
-                doOrOp(findTranslator(state, state.genLinks(lin), tl), "No Applicable Translation Path"){
-                  case (lout, tout) =>
-                    if(logFlg) print("Done.\nRetrieving program from file... ")
-                    doOrErr(readFile(s)){progRaw =>
-                      if(logFlg) print("Done.\nTranslating from source... ")
-                      doOrErr(tin(progRaw)){prog1 =>
-                        if(logFlg) print("Done.\nTranspiling... ")
-                        timeIt(state.gens((lin, lout))(state.config)(prog1)) match{
-                          case (transTry, dur) =>
-                            doOrErr(transTry){prog2 =>
-                              if(logFlg) print(s"Done in ${dur}ms.\nTranslating to target... ")
-                              doOrErr(tout(prog2)){prog3 =>
-                                if(logFlg) println("Done.")
-                                printer(prog3)}}}}}}}}}}
+    doOrOp(args.get("s"), "Not Enough Arguments"){s =>
+      doOrOp(getLang(args, "sl", "s"), "Unrecognized Source Language or File Extension"){sl =>
+        doOrOp(getLang(args, "tl", "o"), "Unrecognized Target Language or File Extension"){tl =>
+          if(logFlg) print("Searching for source translator path... ")
+          doOrOp(findTranslator(state, sl, state.genNames.map(_._1)), "No Applicable Translation Path"){
+            case (lin, tin) =>
+              if(logFlg) print("Done.\nSearching for target translator path... ")
+              doOrOp(findTranslator(state, state.genLinks(lin), tl), "No Applicable Translation Path"){
+                case (lout, tout) =>
+                  if(logFlg) print("Done.\nRetrieving program from file... ")
+                  doOrErr(readFile(s)){progRaw =>
+                    if(logFlg) print("Done.\nTranslating from source... ")
+                    doOrErr(tin(progRaw)){prog1 =>
+                      if(logFlg) print("Done.\nTranspiling... ")
+                      timeIt(state.gens((lin, lout))(state.config)(prog1)) match{
+                        case (transTry, dur) =>
+                          doOrErr(transTry){prog2 =>
+                            if(logFlg) print(s"Done in ${dur}ms.\nTranslating to target... ")
+                            doOrErr(tout(prog2)){prog3 =>
+                              if(logFlg) println("Done.")
+                              printer(prog3)}}}}}}}}}}
     
     state}
 }

@@ -23,8 +23,8 @@ case class EsoExecutor(cmds: Vector[InterfaceHandler]) extends EsoObj{
       state}
   
   def parse(binds: immutable.HashMap[String, String])(inp: String): EsoParsed = inp match{
-    case boundReg(b, ops) if binds.isDefinedAt(b) => EsoParser(s"${binds(b)}$ops")
-    case _ => EsoParser(inp)}
+    case boundReg(b, ops) if binds.isDefinedAt(b) => EsoCommandParser(s"${binds(b)}$ops")
+    case _ => EsoCommandParser(inp)}
   
   def showHelp(): Unit = {
     val cStr = cmds.map(h => s"- ${h.nam} ${h.helpStr}").sorted.mkString("\n")
