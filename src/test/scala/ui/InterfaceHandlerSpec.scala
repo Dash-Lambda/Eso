@@ -6,6 +6,17 @@ import scala.collection.immutable
 
 abstract class InterfaceHandlerSpec extends EsoSpec{
   val defaultState: EsoRunState = EsoRunState.default
+  def defaultIO(strs: String*): EsoTestInterface = EsoTestInterface(strs)
+}
+
+class RunProgHandlerSpec extends InterfaceHandlerSpec{
+  "RunProgHandler" should "run hworld.b correctly" in {
+    val args = Vector("s" -> "testResources/hworld.b")
+    val eio = defaultIO()
+    val handler = RunProgHandler(eio)
+    handler(defaultState)(mkMap(args))
+    val res = eio.collectOutput()
+    assertResult("Hello World!\n\n")(res)}
 }
 
 class SetVarHandlerSpec extends InterfaceHandlerSpec{

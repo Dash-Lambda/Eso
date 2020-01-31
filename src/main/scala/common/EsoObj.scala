@@ -8,8 +8,8 @@ trait EsoObj {
   
   def mkMut[A, B](immut: immutable.HashMap[A, B]): mutable.HashMap[A, B] = mutable.HashMap.from(immut)
   def mkImmut[A, B](mut: mutable.HashMap[A, B]): immutable.HashMap[A, B] = immutable.HashMap.from(mut)
-  def mkMap(ks: Vector[String], vs: Vector[String]): immutable.HashMap[String, String] = mkMap(ks.zip(vs))
-  def mkMap[A, B](vec: Vector[(A, B)]): immutable.HashMap[A, B] = {
+  def mkMap(ks: Seq[String], vs: Seq[String]): immutable.HashMap[String, String] = mkMap(ks.zip(vs))
+  def mkMap[A, B](vec: Seq[(A, B)]): immutable.HashMap[A, B] = {
     val builder = immutable.HashMap.newBuilder[A, B]
     builder ++= vec
     builder.result}
