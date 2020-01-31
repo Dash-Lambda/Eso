@@ -9,7 +9,6 @@ import org.typelevel.jawn.ast.{JArray, JNull, JObject, JString, JValue}
 
 import scala.collection.immutable
 import scala.collection.immutable.HashMap
-import scala.io.StdIn
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
@@ -61,7 +60,7 @@ abstract class InterfaceHandler extends EsoObj{
     oFile.close()}
 }
 
-case class RunProgHandler(eio: EsoIOInterface) extends InterfaceHandler{
+case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
   val nam: String = "run"
   val helpStr: String = "<-s :sourceFileName:> {-l :language:, -i :inputFileName:, -o :outputFileName:}"
   
@@ -95,21 +94,21 @@ case class RunProgHandler(eio: EsoIOInterface) extends InterfaceHandler{
       case None => out foreach(c => eio.print(if(printNum) c.toInt.toString + ' ' else c.toString))}
     
     Trampoline.doOrElse(state){
-      DoOrOp(args.get("s"), "Missing Source File"){src =>
-        DoOrOp(getLang(args, "l", "s"), "Unrecognized Language or File Extension"){lang =>
+      DoOrOp(args.get("s"), "Missing Source File", eio){src =>
+        DoOrOp(getLang(args, "l", "s"), "Unrecognized Language or File Extension", eio){lang =>
           if(logFlg) eio.print("Searching for translator path... ")
-          DoOrOp(findTranslator(state, lang, state.interpNames), "Language Not Recognized"){
+          DoOrOp(findTranslator(state, lang, state.interpNames), "Language Not Recognized", eio){
             case (inam, t) =>
               if(logFlg) eio.print("Done.\nRetrieving program from file... ")
-              DoOrErr(EsoFileReader.readFile(src)){progRaw =>
+              DoOrErr(EsoFileReader.readFile(src), eio){progRaw =>
                 if(logFlg) eio.print(s"Done.\nTranslating program... ")
-                DoOrErr(t(progRaw)){prog =>
+                DoOrErr(t(progRaw), eio){prog =>
                   if(logFlg) eio.print("Done.\nInitializing interpreter... ")
                   TimeIt(state.interps(inam)(state.config)(prog)) match{
                     case (i, dur) =>
                       if(logFlg) eio.println(s"Done in ${dur}ms.")
-                      DoOrErr(i){r =>
-                        DoOrErr(inputs){inp =>
+                      DoOrErr(i, eio){r =>
+                        DoOrErr(inputs, eio){inp =>
                           TimeIt{tryAll{printer(olim(r(inp)))}} match{
                             case (flg, rdr) => flg match{
                               case Failure(e) =>
@@ -121,7 +120,7 @@ case class RunProgHandler(eio: EsoIOInterface) extends InterfaceHandler{
                           Done{state}}}}}}}}}}}
 }
 
-object TranslateHandler extends InterfaceHandler{
+case class TranslateHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
   val nam: String = "translate"
   val helpStr: String = "<-s :sourceFileName:> (-tl :targetLanguage, -o :targetFileName:) {-sl :sourceLanguage}"
   
@@ -131,25 +130,25 @@ object TranslateHandler extends InterfaceHandler{
     def printer(str: String): Unit = args.get("o") match{
       case Some(onam) =>
         writeFile(onam, str)
-        if(logFlg) println(s"Translation saved to $onam.")
-      case None => println(str)}
+        if(logFlg) eio.println(s"Translation saved to $onam.")
+      case None => eio.println(str)}
     
-    Trampoline{
-      DoOrOp(args.get("s"), "Not Enough Arguments"){i =>
-        DoOrOp(getLang(args, "sl", "s"), "Unrecognized Source Language or File Extension"){sl =>
-          DoOrOp(getLang(args, "tl", "o"), "Unrecognized Target Language or File Extension"){tl =>
-            if(logFlg) print("Searching for translation path... ")
-            DoOrOp(buildTrans(state)(sl, tl), "No Applicable Translation Path"){t =>
-              if(logFlg) print("Done.\nRetrieving program from file... ")
-              DoOrErr(EsoFileReader.readFile(i)){progRaw =>
-                if(logFlg) print("Done.\nTranslating... ")
-                DoOrErr(t(progRaw)){prog =>
-                  if(logFlg) println("Done.")
+    Trampoline.doOrElse(state){
+      DoOrOp(args.get("s"), "Not Enough Arguments", eio){i =>
+        DoOrOp(getLang(args, "sl", "s"), "Unrecognized Source Language or File Extension", eio){sl =>
+          DoOrOp(getLang(args, "tl", "o"), "Unrecognized Target Language or File Extension", eio){tl =>
+            if(logFlg) eio.print("Searching for translation path... ")
+            DoOrOp(buildTrans(state)(sl, tl), "No Applicable Translation Path", eio){t =>
+              if(logFlg) eio.print("Done.\nRetrieving program from file... ")
+              DoOrErr(EsoFileReader.readFile(i), eio){progRaw =>
+                if(logFlg) eio.print("Done.\nTranslating... ")
+                DoOrErr(t(progRaw), eio){prog =>
+                  if(logFlg) eio.println("Done.")
                   printer(prog)
                   Done{state}}}}}}}}}
 }
 
-object TranspileHandler extends InterfaceHandler{
+case class TranspileHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
   val nam: String = "transpile"
   val helpStr: String = "<-s :sourceFileName:> (-tl :targetLanguage, -o :targetFileName:) {-sl :sourceLanguage}"
   
@@ -159,46 +158,46 @@ object TranspileHandler extends InterfaceHandler{
     def printer(str: String): Unit = args.get("o") match{
       case Some(onam) =>
         writeFile(onam, str)
-        if(logFlg) println(s"Transpiled program saved to $onam.")
-      case None => println(str)}
+        if(logFlg) eio.println(s"Transpiled program saved to $onam.")
+      case None => eio.println(str)}
     
-    Trampoline{
-      DoOrOp(args.get("s"), "Not Enough Arguments"){s =>
-        DoOrOp(getLang(args, "sl", "s"), "Unrecognized Source Language or File Extension"){sl =>
-          DoOrOp(getLang(args, "tl", "o"), "Unrecognized Target Language or File Extension"){tl =>
-            if(logFlg) print("Searching for source translator path... ")
-            DoOrOp(findTranslator(state, sl, state.genNames.map(_._1)), "No Applicable Translation Path"){
+    Trampoline.doOrElse(state){
+      DoOrOp(args.get("s"), "Not Enough Arguments", eio){s =>
+        DoOrOp(getLang(args, "sl", "s"), "Unrecognized Source Language or File Extension", eio){sl =>
+          DoOrOp(getLang(args, "tl", "o"), "Unrecognized Target Language or File Extension", eio){tl =>
+            if(logFlg) eio.print("Searching for source translator path... ")
+            DoOrOp(findTranslator(state, sl, state.genNames.map(_._1)), "No Applicable Translation Path", eio){
               case (lin, tin) =>
-                if(logFlg) print("Done.\nSearching for target translator path... ")
-                DoOrOp(findTranslator(state, state.genLinks(lin), tl), "No Applicable Translation Path"){
+                if(logFlg) eio.print("Done.\nSearching for target translator path... ")
+                DoOrOp(findTranslator(state, state.genLinks(lin), tl), "No Applicable Translation Path", eio){
                   case (lout, tout) =>
-                    if(logFlg) print("Done.\nRetrieving program from file... ")
-                    DoOrErr(EsoFileReader.readFile(s)){progRaw =>
-                      if(logFlg) print("Done.\nTranslating from source... ")
-                      DoOrErr(tin(progRaw)){prog1 =>
-                        if(logFlg) print("Done.\nTranspiling... ")
+                    if(logFlg) eio.print("Done.\nRetrieving program from file... ")
+                    DoOrErr(EsoFileReader.readFile(s), eio){progRaw =>
+                      if(logFlg) eio.print("Done.\nTranslating from source... ")
+                      DoOrErr(tin(progRaw), eio){prog1 =>
+                        if(logFlg) eio.print("Done.\nTranspiling... ")
                         TimeIt(state.gens((lin, lout))(state.config)(prog1)) match{
                           case (transTry, dur) =>
-                            DoOrErr(transTry){prog2 =>
-                              if(logFlg) print(s"Done in ${dur}ms.\nTranslating to target... ")
-                              DoOrErr(tout(prog2)){prog3 =>
-                                if(logFlg) println("Done.")
+                            DoOrErr(transTry, eio){prog2 =>
+                              if(logFlg) eio.print(s"Done in ${dur}ms.\nTranslating to target... ")
+                              DoOrErr(tout(prog2), eio){prog3 =>
+                                if(logFlg) eio.println("Done.")
                                 printer(prog3)
                                 Done{state}}}}}}}}}}}}
     
     state}
 }
 
-object DefineBFLangHandler extends InterfaceHandler{
+case class DefineBFLangHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
   val nam: String = "defineBFLang"
   val helpStr: String = ""
   
-  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = StdIn.readLine("Name: ") match{
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = eio.readLine("Name: ") match{
     case "names" =>
-      println("""Error: Name Cannot Be "names"""")
+      eio.println("""Error: Name Cannot Be "names"""")
       state
     case nam =>
-      val syn = "[]<>+-,.".toVector map{c => (c.toString, StdIn.readLine(s"$c => "))}
+      val syn = "[]<>+-,.".toVector map{c => (c.toString, eio.readLine(s"$c => "))}
       state.addTrans(GenBFT(nam, syn))}
 }
 

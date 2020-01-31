@@ -81,11 +81,17 @@ object EsoRunState extends EsoObj{
     mkMap(EsoDefaults.defNumVec.map(t => (t._1, t._2))),
     mkMap(Vector()))
   
-  @tailrec
-  def withOps(str: String, state: EsoRunState = default): EsoRunState = str match{
-    case numReg(k, v, ops) if state.nums.isDefinedAt(k) => withOps(ops, state.setVarSilent(k, v))
-    case boolReg(k, v, ops) if state.bools.isDefinedAt(k) => withOps(ops, state.setVarSilent(k, v))
-    case flagReg(k, ops) if state.bools.isDefinedAt(k) => withOps(ops, state.setVarSilent(k, "true"))
-    case biteReg(ops) => withOps(ops, state)
-    case _ => state}
+  def withOps(opstr: String, initState: EsoRunState = default): EsoRunState = {
+    @tailrec
+    def wdo(str: String, state: EsoRunState = default): EsoRunState = str match{
+      case numReg(k, v, ops) if state.nums.isDefinedAt(k) => wdo(ops, state.setVarSilent(k, v))
+      case boolReg(k, v, ops) if state.bools.isDefinedAt(k) => wdo(ops, state.setVarSilent(k, v))
+      case flagReg(k, ops) if state.bools.isDefinedAt(k) => wdo(ops, state.setVarSilent(k, "true"))
+      case biteReg(ops) => wdo(ops, state)
+      case _ => state}
+    wdo(opstr, initState)}
+  
+  def withOps(ops: Seq[(String, String)]): EsoRunState = {
+    ops.foldLeft(default){
+      case (s, (k, v)) => s.setVarSilent(k, v)}}
 }

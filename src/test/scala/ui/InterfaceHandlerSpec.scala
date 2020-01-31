@@ -1,8 +1,11 @@
 package ui
 
+import brainfuck.{BFOpt, Ook}
 import common_test.EsoSpec
+import metatape.Metatape
 
 import scala.collection.immutable
+import scala.util.Success
 
 abstract class InterfaceHandlerSpec extends EsoSpec{
   val defaultState: EsoRunState = EsoRunState.default
@@ -10,13 +13,146 @@ abstract class InterfaceHandlerSpec extends EsoSpec{
 }
 
 class RunProgHandlerSpec extends InterfaceHandlerSpec{
-  "RunProgHandler" should "run hworld.b correctly" in {
-    val args = Vector("s" -> "testResources/hworld.b")
-    val eio = defaultIO()
+  def runWithArgs(eio: EsoTestInterface = defaultIO())(ops: (String, String)*)(args: (String, String)*): String = {
     val handler = RunProgHandler(eio)
-    handler(defaultState)(mkMap(args))
-    val res = eio.collectOutput()
+    val state = EsoRunState.withOps(ops)
+    handler(state)(mkMap(args.toVector))
+    eio.collectOutput()}
+  
+  "RunProgHandler" should "fail on an unknown file extension" in {
+    val res = runWithArgs()()("s" -> "testResources/hworldb.txt")
+    assertResult("Error: Unrecognized Language or File Extension\n")(res)}
+  
+  it should "run hworldb.txt correctly with language override arg" in {
+    val res = runWithArgs()()("s" -> "testResources/hworldb.txt", "l" -> "BrainFuck")
     assertResult("Hello World!\n\n")(res)}
+  
+  it should "recognize known file extensions" in {
+    val res = runWithArgs()()("s" -> "testResources/hworld.b")
+    assertResult("Hello World!\n\n")(res)}
+  
+  it should "print ASCII values if printNum is on" in {
+    val res = runWithArgs()("printNum" -> "true")("s" -> "testResources/hworld.b")
+    assertResult("72 101 108 108 111 32 87 111 114 108 100 33 10 \n")(res)}
+  
+  it should "print detailed information if log is on" in {
+    val chkStr =
+      s"""|Searching for translator path... Done.
+          |Retrieving program from file... Done.
+          |Translating program... Done.
+          |Initializing interpreter... Done in NUMms.
+          |Hello World!
+          |
+          |""".stripMargin.replaceAllLiterally("\r", "")
+    val res = runWithArgs()("log" -> "true")("s" -> "testResources/hworld.b").replaceAll("""\d+ms""", "NUMms")
+    assertResult(chkStr)(res)}
+  
+  it should "print the program duration if time is on" in {
+    val chkStr =
+      s"""|Hello World!
+          |
+          |Program completed in NUMms
+          |""".stripMargin.replaceAllLiterally("\r", "")
+    val res = runWithArgs()("time" -> "true")("s" -> "testResources/hworld.b").replaceAll("""\d+ms""", "NUMms")
+    assertResult(chkStr)(res)}
+  
+  it should "fail to read input if an inaccessible file is given" in {
+    val chkStr = "Error: java.io.FileNotFoundException: testResources\\invalid.txt (The system cannot find the file specified)\n"
+    val res = runWithArgs()()("s" -> "testResources/cat.b", "i" -> "testResources/invalid.txt")
+    assertResult(chkStr)(res)}
+  
+  it should "read input from a file if given one" in {
+    val chkStr = grabFile("randomNonsense.txt") + '\n'
+    val res = runWithArgs()("echoFileInp" -> "false")("s" -> "testResources/cat.b", "i" -> "testResources/randomNonsense.txt")
+    assertResult(chkStr)(res)}
+  
+  it should "correctly append console input to file input if appendInp is on" in {
+    val inpStr = "and test"
+    val chkStr = s"${grabFile("randomNonsense.txt")} $inpStr\n"
+    val res = runWithArgs(defaultIO(inpStr + 0.toChar))("echoFileInp" -> "false", "appendInp" -> "true", "fileEOF" -> "' '")("s" -> "testResources/cat.b", "i" -> "testResources/randomNonsense.txt")
+    assertResult(chkStr)(res)}
+  
+  it should "not append console input to file input if appendInp is off" in {
+    val inpStr = "and test"
+    val chkStr = grabFile("randomNonsense.txt") + '\n'
+    val res = runWithArgs(defaultIO(inpStr))("echoFileInp" -> "false", "appendInp" -> "false")("s" -> "testResources/cat.b", "i" -> "testResources/randomNonsense.txt")
+    assertResult(chkStr)(res)}
+  
+  it should "limit output length if olen >= 0" in {
+    val res = runWithArgs()("olen" -> "10")("s" -> "testResources/hworld.b")
+    assertResult("Hello Worl\n")(res)}
+  
+  it should "build a translator path if needed" in {
+    val res = runWithArgs()()("s" -> "testResources/hworld.fl")
+    assertResult("Hello World!\n\n")(res)}
+}
+
+class TranslateHandlerSpec extends InterfaceHandlerSpec{
+  def runWithArgs(eio: EsoTestInterface = defaultIO())(ops: (String, String)*)(args: (String, String)*): String = {
+    val handler = TranslateHandler(eio)
+    val state = EsoRunState.withOps(ops)
+    handler(state)(mkMap(args.toVector))
+    eio.collectOutput()}
+  
+  "TranslateHandler" should "fail on unknown file extensions" in {
+    val prog = runWithArgs()()("s" -> "testResources/hworldfl.txt", "tl" -> "BrainFuck")
+    assertResult("Error: Unrecognized Source Language or File Extension\n")(prog)}
+  
+  it should "translate hworldfl.txt to BrainFuck correctly with language override" in {
+    val prog = runWithArgs()()("s" -> "testResources/hworldfl.txt", "sl" -> "FlufflePuff", "tl" -> "BrainFuck")
+    val res = getOutputString(BFOpt, prog)
+    assertResult(Success("Hello World!\n"))(res)}
+  
+  it should "recognize known file extensions" in {
+    val prog = runWithArgs()()("s" -> "testResources/hworld.b", "tl" -> "BrainFuck")
+    val res = getOutputString(BFOpt, prog)
+    assertResult(Success("Hello World!\n"))(res)}
+  
+  it should "chain translators if needed" in {
+    val prog1 = runWithArgs()()("s" -> "testResources/hworld.fl", "tl" -> "Ook")
+    val prog2 = Ook(defaultConfig)(prog1)
+    val res = prog2 flatMap (p => getOutputString(BFOpt, p))
+    assertResult(Success("Hello World!\n"))(res)}
+}
+
+class TranspileHandlerSpec extends InterfaceHandlerSpec{
+  def runWithArgs(eio: EsoTestInterface = defaultIO())(ops: (String, String)*)(args: (String, String)*): String = {
+    val handler = TranspileHandler(eio)
+    val state = EsoRunState.withOps(ops)
+    handler(state)(mkMap(args.toVector))
+    eio.collectOutput()}
+  
+  "TranspileHandler" should "fail on unknown file extensions" in {
+    val prog = runWithArgs()()("s" -> "testResources/hworldb.txt", "tl" -> "Metatape")
+    assertResult("Error: Unrecognized Source Language or File Extension\n")(prog)}
+  
+  it should "transpile hworldb.txt to Metatape correctly with language override" in {
+    val prog = runWithArgs()()("s" -> "testResources/hworldb.txt", "tl" -> "Metatape", "sl" -> "BrainFuck")
+    val res = getOutputString(Metatape, prog)
+    assertResult(Success("Hello World!\n"))(res)}
+  
+  it should "recognize known file extensions" in {
+    val prog = runWithArgs()()("s" -> "testResources/hworld.b", "tl" -> "Metatape")
+    val res = getOutputString(Metatape, prog)
+    assertResult(Success("Hello World!\n"))(res)}
+  
+  it should "build a translator path if needed" in {
+    val prog = runWithArgs()()("s" -> "testResources/hworld.fl", "tl" -> "Metatape")
+    val res = getOutputString(Metatape, prog)
+    assertResult(Success("Hello World!\n"))(res)}
+}
+
+class DefineBFLangHandlerSpec extends InterfaceHandlerSpec{
+  def runWithArgs(eio: EsoTestInterface = defaultIO())(ops: (String, String)*)(args: (String, String)*): EsoState = {
+    val handler = DefineBFLangHandler(eio)
+    val state = EsoRunState.withOps(ops)
+    handler(state)(mkMap(args.toVector))}
+  
+  "DefineBFLangHandler" should "correctly define a BF lang" in {
+    val finState = runWithArgs(defaultIO("test", "1", "2", "3", "4", "5", "6", "7", "8"))()()
+    finState match{
+      case EsoRunState(_, _, ts, _, _, _) => assert(ts.isDefinedAt(("test", "BrainFuck")))
+      case _ => fail("Returned Improper State")}}
 }
 
 class SetVarHandlerSpec extends InterfaceHandlerSpec{

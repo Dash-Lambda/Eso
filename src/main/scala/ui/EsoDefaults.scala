@@ -112,19 +112,19 @@ object EsoDefaults extends EsoObj{
   val defGenMap: immutable.HashMap[(String, String), Transpiler] = mkMap(defGenVec map (g => (g.id, g)))
   
   val nonPersistentHandlers: Vector[InterfaceHandler] = Vector(
-    RunProgHandler(EsoConsoleInterface),
-    TranslateHandler,
-    TranspileHandler,
+    RunProgHandler(),
+    TranslateHandler(),
+    TranspileHandler(),
     ShowSyntaxHandler,
     ListLangsHandler,
     ListVarsHandler,
     ListFileAssociationsHandler)
   
   val persistentHandlers: Vector[InterfaceHandler] = Vector(
-    RunProgHandler(EsoConsoleInterface),
-    TranslateHandler,
-    TranspileHandler,
-    DefineBFLangHandler,
+    RunProgHandler(),
+    TranslateHandler(),
+    TranspileHandler(),
+    DefineBFLangHandler(),
     LoadBFLangsHandler,
     SaveBFLangsHandler,
     ShowSyntaxHandler,
@@ -141,9 +141,9 @@ object EsoDefaults extends EsoObj{
   
   def allHandlers(eio: EsoIOInterface = EsoConsoleInterface): Vector[InterfaceHandler] = Vector(
     RunProgHandler(eio),
-    TranslateHandler,
-    TranspileHandler,
-    DefineBFLangHandler,
+    TranslateHandler(eio),
+    TranspileHandler(eio),
+    DefineBFLangHandler(eio),
     LoadBFLangsHandler,
     SaveBFLangsHandler,
     ShowSyntaxHandler,

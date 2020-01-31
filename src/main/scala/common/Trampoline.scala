@@ -1,6 +1,7 @@
 package common
 
 import org.typelevel.jawn.ast.{JNull, JValue}
+import ui.{EsoConsoleInterface, EsoIOInterface}
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
@@ -11,24 +12,24 @@ case class More[A](call: () => Trampoline[A]) extends Trampoline[A]
 
 trait FlatOp[A] extends Trampoline[A]{
   def collapse(): Option[Trampoline[A]]}
-case class DoOrOp[A, B](inp: Option[A], err: String)(f: A => Trampoline[B]) extends FlatOp[B]{
+case class DoOrOp[A, B](inp: Option[A], err: String, eio: EsoIOInterface = EsoConsoleInterface)(f: A => Trampoline[B]) extends FlatOp[B]{
   def collapse(): Option[Trampoline[B]] = inp match{
     case Some(a) => Some(More(() => f(a)))
     case None =>
-      println(s"Error: $err")
+      eio.println(s"Error: $err")
       None}}
-case class DoOrErr[A, B](inp: Try[A])(f: A => Trampoline[B]) extends FlatOp[B]{
+case class DoOrErr[A, B](inp: Try[A], eio: EsoIOInterface = EsoConsoleInterface)(f: A => Trampoline[B]) extends FlatOp[B]{
   def collapse(): Option[Trampoline[B]] = inp match{
     case Success(a) => Some(More(() => f(a)))
     case Failure(e) =>
       e match{
-        case EsoExcep(info) => println(s"Error: common.EsoExcep ($info)")
-        case _ => println(s"Error: $e")}
+        case EsoExcep(info) => eio.println(s"Error: common.EsoExcep ($info)")
+        case _ => eio.println(s"Error: $e")}
       None}}
-case class DoOrNull[B](inp: JValue, err: String)(f: JValue => Trampoline[B]) extends FlatOp[B]{
+case class DoOrNull[B](inp: JValue, err: String, eio: EsoIOInterface = EsoConsoleInterface)(f: JValue => Trampoline[B]) extends FlatOp[B]{
   def collapse(): Option[Trampoline[B]] = inp match{
     case JNull =>
-      println(s"Error: $err")
+      eio.println(s"Error: $err")
       None
     case _ => Some(f(inp))}}
 
