@@ -47,7 +47,7 @@ case class EsoRunState(interps: immutable.HashMap[String, Interpreter],
     case falseReg() if bools.isDefinedAt(k) => Success(addBool(k, bool=false))
     case intReg() if nums.isDefinedAt(k) => Success(addNum(k, v.toInt))
     case charReg(c) if nums.isDefinedAt(k) => Success(addNum(k, c(0).toInt))
-    case _ => Failure(EsoExcep(s"""Unrecognized Variable "$k""""))}
+    case _ => Failure(EsoExcep(s"""Invalid Parameter Name or Value for "$k""""))}
   
   def config: Config = Config(bools, nums)
   def interpNames: Vector[String] = interps.keys.toVector

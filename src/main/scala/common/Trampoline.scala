@@ -12,12 +12,14 @@ case class More[A](call: () => Trampoline[A]) extends Trampoline[A]
 
 trait FlatOp[A] extends Trampoline[A]{
   def collapse(): Option[Trampoline[A]]}
+
 case class DoOrOp[A, B](inp: Option[A], err: String, eio: EsoIOInterface = EsoConsoleInterface)(f: A => Trampoline[B]) extends FlatOp[B]{
   def collapse(): Option[Trampoline[B]] = inp match{
     case Some(a) => Some(More(() => f(a)))
     case None =>
       eio.println(s"Error: $err")
       None}}
+
 case class DoOrErr[A, B](inp: Try[A], eio: EsoIOInterface = EsoConsoleInterface)(f: A => Trampoline[B]) extends FlatOp[B]{
   def collapse(): Option[Trampoline[B]] = inp match{
     case Success(a) => Some(More(() => f(a)))
@@ -26,6 +28,7 @@ case class DoOrErr[A, B](inp: Try[A], eio: EsoIOInterface = EsoConsoleInterface)
         case EsoExcep(info) => eio.println(s"Error: common.EsoExcep ($info)")
         case _ => eio.println(s"Error: $e")}
       None}}
+
 case class DoOrNull[B](inp: JValue, err: String, eio: EsoIOInterface = EsoConsoleInterface)(f: JValue => Trampoline[B]) extends FlatOp[B]{
   def collapse(): Option[Trampoline[B]] = inp match{
     case JNull =>

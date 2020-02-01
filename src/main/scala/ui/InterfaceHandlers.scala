@@ -201,21 +201,21 @@ case class DefineBFLangHandler(eio: EsoIOInterface = EsoConsoleInterface) extend
       state.addTrans(GenBFT(nam, syn))}
 }
 
-object LoadBFLangsHandler extends InterfaceHandler{
+case class LoadBFLangsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
   val nam: String = "loadBFLangs"
   val helpStr: String = "{-f :fileName:}"
   
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val logFlg = state.bools("log")
     
-    if(logFlg) print("Retrieving lang file... ")
+    if(logFlg) eio.print("Retrieving lang file... ")
     Trampoline.doOrElse(state){
-      DoOrErr(EsoFileReader.readFile(args.getOrElse("f", EsoDefaults.defBFLFile))){langFile =>
-        if(logFlg) print("Done.\nParsing file... ")
-        DoOrErr(Parser.parseFromString[JValue](langFile)){jsv =>
-          DoOrNull(jsv, "Parsed To Null"){jso =>
-            if(logFlg) print(s"Done.\nBuilding translators... ")
-            DoOrNull(jso.get("names"), "Missing Names Array"){namsJS =>
+      DoOrErr(EsoFileReader.readFile(args.getOrElse("f", EsoDefaults.defBFLFile)), eio){langFile =>
+        if(logFlg) eio.print("Done.\nParsing file... ")
+        DoOrErr(Parser.parseFromString[JValue](langFile), eio){jsv =>
+          DoOrNull(jsv, "Parsed To Null", eio){jso =>
+            if(logFlg) eio.print(s"Done.\nBuilding translators... ")
+            DoOrNull(jso.get("names"), "Missing Names Array", eio){namsJS =>
               Done{
                 val tv = LazyList.from(0)
                   .map(i => namsJS.get(i))
@@ -223,11 +223,12 @@ object LoadBFLangsHandler extends InterfaceHandler{
                   .map(_.asString)
                   .map(k => GenBFT(k, jso.get(k)))
                   .toVector
-                println(s"Done.\nLoaded BF Langs:\n${tv.map(t => s"- ${t.name}").mkString("\n")}")
+                if(logFlg) eio.println(s"Done.")
+                eio.println(s"Loaded BF Langs:\n${tv.map(t => s"- ${t.name}").mkString("\n")}")
                 state.addAllTrans(tv)}}}}}}}
 }
 
-object SaveBFLangsHandler extends InterfaceHandler{
+case class SaveBFLangsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
   val nam: String = "saveBFLangs"
   val helpStr: String = "{-f :fileName:}"
   
@@ -239,12 +240,12 @@ object SaveBFLangsHandler extends InterfaceHandler{
     val namVec = jsoVec.map{case (k, _) => JString(k)}
     val jsObj = JObject.fromSeq(jsoVec :+ ("names", JArray.fromSeq(namVec)))
     writeFile(fnam, jsObj.render)
-    if(state.bools("log")) println(s"Translators saved to $fnam.")
+    if(state.bools("log")) eio.println(s"Translators saved to $fnam.")
     
     state}
 }
 
-object ShowSyntaxHandler extends InterfaceHandler{
+case class ShowSyntaxHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
   val nam: String = "syntax"
   val helpStr: String = "{-l :language:}"
   
@@ -255,7 +256,7 @@ object ShowSyntaxHandler extends InterfaceHandler{
         case Some(t) => s"Syntax for $lang...\n${t.kvPairs.map{case (k, v) => s"$k: $v"}.mkString("\n")}\n"
         case None => "Error: Language Not Recognized"}
       case _ => "Error: Not Enough Arguments"}
-    println(str)
+    eio.println(str)
     
     state}
 }
@@ -267,16 +268,16 @@ object ClearBindingsHandler extends InterfaceHandler{
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = state.clearBinds
 }
 
-object LoadBindingsHandler extends InterfaceHandler{
+case class LoadBindingsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
   val nam: String = "loadBindings"
   val helpStr: String = "{-f :fileName:}"
   
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val fnam = args.getOrElse("f", EsoDefaults.defBindFile)
     Trampoline.doOrElse(state){
-      DoOrErr(EsoFileReader.readFile(fnam)){str =>
-        DoOrErr(Parser.parseFromString[JValue](str)){jVal =>
-          DoOrNull(jVal.get("names"), "Missing Name List"){jNams =>
+      DoOrErr(EsoFileReader.readFile(fnam), eio){str =>
+        DoOrErr(Parser.parseFromString[JValue](str), eio){jVal =>
+          DoOrNull(jVal.get("names"), "Missing Name List", eio){jNams =>
             Done{
               LazyList.from(0)
                 .map(jNams.get)
@@ -302,7 +303,7 @@ object SaveBindingsHandler extends InterfaceHandler{
     state}
 }
 
-object ListBindingsHandler extends InterfaceHandler{
+case class ListBindingsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
   val nam: String = "listBindings"
   val helpStr: String = ""
   
@@ -316,12 +317,12 @@ object ListBindingsHandler extends InterfaceHandler{
       s"""|Bindings...
           |$bindStr
           |""".stripMargin
-    println(str)
+    eio.println(str)
     
     state}
 }
 
-object SetVarHandler extends InterfaceHandler{
+case class SetVarHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
   val nam: String = "set"
   val helpStr: String = "{-:varName: :value:}*"
   
@@ -332,7 +333,7 @@ object SetVarHandler extends InterfaceHandler{
         val str = e match{
           case EsoExcep(s) => s
           case _ => e.toString}
-        println(s"Error: $str")
+        eio.println(s"Error: $str")
         s}}
 }
 
@@ -343,7 +344,7 @@ object SetDefaultsHandler extends InterfaceHandler{
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = EsoRunState.default
 }
 
-object ListLangsHandler extends InterfaceHandler{
+case class ListLangsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
   val nam: String = "listLangs"
   val helpStr: String = ""
   
@@ -358,12 +359,12 @@ object ListLangsHandler extends InterfaceHandler{
           |Transpilers...
           |${state.gens.keys.map{case (snam, dnam) => s"- $snam => $dnam"}.toVector.sorted.mkString("\n")}
           |""".stripMargin
-    println(str)
+    eio.println(str)
     
     state}
 }
 
-object ListVarsHandler extends InterfaceHandler{
+case class ListVarsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
   val nam: String = "listVars"
   val helpStr: String = ""
   
@@ -378,12 +379,12 @@ object ListVarsHandler extends InterfaceHandler{
       s"""|Runtime Parameters...
           |$strs
           |""".stripMargin
-    println(str)
+    eio.println(str)
     
     state}
 }
 
-object ListFileAssociationsHandler extends InterfaceHandler{
+case class ListFileAssociationsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
   val nam: String = "listFileAssociations"
   val helpStr: String = ""
   
@@ -392,7 +393,7 @@ object ListFileAssociationsHandler extends InterfaceHandler{
       s"""|File Associations...
           |${EsoDefaults.fileExtensionsVec.map{case (f, l) => s"- .$f => $l"}.mkString("\n")}
           |""".stripMargin
-    println(str)
+    eio.println(str)
     state}
 }
 

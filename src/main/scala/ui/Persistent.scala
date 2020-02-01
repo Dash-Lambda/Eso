@@ -14,7 +14,7 @@ object Persistent extends EsoObj{
   
   def start(state: EsoRunState = EsoRunState.default): Unit = {
     println(EsoDefaults.defWelcome)
-    run(LoadBindingsHandler(state)(immutable.HashMap()))}
+    run(LoadBindingsHandler()(state)(immutable.HashMap()))}
   
   @tailrec
   def run(state: EsoState = EsoRunState.default): Unit = state match{
