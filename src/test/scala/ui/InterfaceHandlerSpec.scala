@@ -60,9 +60,8 @@ class RunProgHandlerSpec extends InterfaceHandlerSpec{
     assertResult(chkStr)(res)}
   
   it should "fail to read input if an inaccessible file is given" in {
-    val chkStr = "Error: java.io.FileNotFoundException: testResources\\invalid.txt (The system cannot find the file specified)\n"
     val res = runWithArgs()()("s" -> "testResources/cat.b", "i" -> "testResources/invalid.txt")._2
-    assertResult(chkStr)(res)}
+    assert(res.startsWith("Error: java.io.FileNotFoundException"))}
   
   it should "read input from a file if given one" in {
     val chkStr = grabFile("randomNonsense.txt") + '\n'
@@ -152,7 +151,7 @@ class LoadBFLangsHandlerSpec extends InterfaceHandlerSpec{
   
   "LoadBFLangsHandlerSpec" should "fail on an inaccessible file" in {
     val (_, str) = runWithArgs()()("f" -> "fail")
-    assertResult("Error: java.io.FileNotFoundException: fail (The system cannot find the file specified)\n")(str)}
+    assert(str.startsWith("Error: java.io.FileNotFoundException"))}
   
   it should "correctly load languages from a file" in {
     val pairs = Vector(

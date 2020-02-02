@@ -9,6 +9,7 @@ lazy val root = (project in file("."))
     logBuffered in Test := false,
     parallelExecution in Test := false,
     scalacOptions ++= Seq("-deprecation", "-feature"),
+    testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oF"),
     resolvers ++= Seq(
       Resolver.sonatypeRepo("releases")),
     libraryDependencies ++= Seq(
