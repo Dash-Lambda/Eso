@@ -1,25 +1,19 @@
 package common_test
 
-import java.io.File
-
 import common.{Config, Interpreter}
 import org.scalatest.flatspec.AnyFlatSpec
-import ui.EsoRunState
+import ui.{EsoFileReader, EsoRunState}
 
 import scala.collection.immutable
-import scala.io.Source
 import scala.util.Try
 
 abstract class EsoSpec extends AnyFlatSpec{
   val defaultConfig: Config = EsoRunState.default.config
   
   def grabFile(str: String, normLineBreaks: Boolean = true): String = {
-    val iFile = new File(s"testResources/$str")
-    assume(iFile.exists, s"$str not in testResources")
-    val src = Source.fromFile(iFile)
-    val prog = src.mkString
-    src.close()
-    if(normLineBreaks) prog.replaceAllLiterally("\r\n", "\n") else prog}
+    val tried = EsoFileReader.readFile(s"testResources/$str")
+    assume(tried.isSuccess)
+    tried.get}
   
   def mkMap[A, B](vec: Vector[(A, B)]): immutable.HashMap[A, B] = {
     val builder = immutable.HashMap.newBuilder[A, B]
