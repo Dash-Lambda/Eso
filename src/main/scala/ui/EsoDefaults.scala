@@ -7,6 +7,7 @@ import deadfish.Deadfish
 import emmental.Emmental
 import fractran.{FracTran, FracTranpp}
 import funge.{Befunge93, Befunge98}
+import glypho.Glypho
 import grass.Grass
 import metatape.{BFToMetatape, Metatape}
 import path.PATH
@@ -56,7 +57,8 @@ object EsoDefaults extends EsoObj{
     ("cpp", "C++"),
     ("pld", "Prelude"),
     ("nul", "NULL"),
-    ("vol", "Volatile"))
+    ("vol", "Volatile"),
+    ("glo", "Glypho"))
   val fileExtensionMap: immutable.HashMap[String, String] = mkMap(fileExtensionsVec)
   
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](
@@ -80,7 +82,8 @@ object EsoDefaults extends EsoObj{
     Metatape,
     Prelude,
     NULL,
-    Volatile)
+    Volatile,
+    Glypho)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
   val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude)
   val defBoolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](

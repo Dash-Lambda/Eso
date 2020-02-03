@@ -83,3 +83,6 @@ case class RegexParser[B](reg: Regex)(f: Match => B) extends EsoParser[String, B
   def apply(inp: String): Option[B] = reg.findFirstMatchIn(inp) map f
   def step(inp: String): Option[(B, String)] = reg.findFirstMatchIn(inp) map (m => (f(m), m.after.toString))
 }
+object RegexParser{
+  def apply[B](reg: String)(f: Match => B): RegexParser[B] = RegexParser(reg.r)(f)
+}
