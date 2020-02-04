@@ -7,7 +7,7 @@ import deadfish.Deadfish
 import emmental.Emmental
 import fractran.{FracTran, FracTranpp}
 import funge.{Befunge93, Befunge98}
-import glypho.Glypho
+import glypho.{Glypho, GlyphoShorthand}
 import grass.Grass
 import metatape.{BFToMetatape, Metatape}
 import path.PATH
@@ -58,7 +58,8 @@ object EsoDefaults extends EsoObj{
     ("pld", "Prelude"),
     ("nul", "NULL"),
     ("vol", "Volatile"),
-    ("glo", "Glypho"))
+    ("glo", "Glypho"),
+    ("glos", "GlyphoShorthand"))
   val fileExtensionMap: immutable.HashMap[String, String] = mkMap(fileExtensionsVec)
   
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](
@@ -84,8 +85,9 @@ object EsoDefaults extends EsoObj{
     NULL,
     Volatile,
     Glypho)
-  val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly)
+  val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly, GlyphoShorthand)
   val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude)
+  
   val defBoolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](
     ("log", false, "toggle detailed console logging"),
     ("dyn", false, "resize tape as needed for BF interpreter to eliminate memory limitations"),

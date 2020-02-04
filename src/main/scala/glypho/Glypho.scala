@@ -1,14 +1,12 @@
 package glypho
 
-import common.{Config, Interpreter, RegexParser}
+import common.{Config, Interpreter}
 
 import scala.annotation.tailrec
 import scala.util.Try
 
 object Glypho extends Interpreter{
   val name: String = "Glypho"
-  
-  val normParse: RegexParser[Char] = RegexParser("(....)"){m => parseOne(m.group(1))}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
     @tailrec
@@ -17,35 +15,10 @@ object Glypho extends Interpreter{
       case HaltState => None
       case nxt => rdo(nxt)}
     
-    Try{normParse.parseAll(progRaw)} map{initProg =>
+    Try{GlyphoParser.parseAll(progRaw)} map{initProg =>
       inputs => {
         val initState: State = RunState(Vector(), inputs, RunCont(initProg, Vector(), HaltCont))
         LazyList.unfold(initState)(rdo)}}}
-  
-  def parseOne(tok: String): Char = {
-    @tailrec
-    def normalize(src: Seq[Char], ac: Vector[Int] = Vector(), maps: Vector[Char] = Vector()): String = src match{
-      case c +: cs => maps.indexOf(c) match{
-        case -1 => normalize(cs, ac :+ maps.size, maps :+ c)
-        case n => normalize(cs, ac :+ n, maps)}
-      case _ => ac.mkString}
-    def toOp(str: String): Char = str match{
-      case "0000" => 'n'
-      case "0001" => 'i'
-      case "0010" => '>'
-      case "0011" => '\\'
-      case "0012" => '1'
-      case "0100" => '<'
-      case "0101" => 'd'
-      case "0102" => '+'
-      case "0110" => '['
-      case "0111" => 'o'
-      case "0112" => '*'
-      case "0120" => 'e'
-      case "0121" => '-'
-      case "0122" => '!'
-      case "0123" => ']'}
-    toOp(normalize(tok))}
   
   trait State{
     def next: State}
@@ -96,7 +69,7 @@ object Glypho extends Interpreter{
             case a +: b +: ns => RunState((a*b) +: ns, inp, nxc)}
           case 'e' => stk match{
             case a +: b +: c +: d +: ns =>
-              val nop = parseOne(Vector(a, b, c, d).map(_.toChar).mkString)
+              val nop = GlyphoParser.parseOne(Vector(a, b, c, d).map(_.toChar).mkString)
               RunState(ns, inp, RunCont(nop +: cs, loops, cc))}
           case '-' => RunState((-stk.head) +: stk.tail, inp, nxc)
           case '!' => RunState(stk.tail, inp, nxc)
