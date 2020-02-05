@@ -1,6 +1,6 @@
 package unlambda
 
-import common.{Config, EsoExcep, EsoParser, Interpreter, PartialParser, RecurParser}
+import common.{Config, EsoExcep, EsoParsed, Interpreter, OrderedParser, OrderedPartialParser, OrderedRecurParser}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -9,8 +9,8 @@ import scala.util.{Failure, Success, Try}
 object Unlambda extends Interpreter{
   val name: String = "Unlambda"
   
-  val funcParser: EsoParser[Vector[Char], Expr] = {
-    val funcMap = immutable.HashMap[Char, Func](
+  val funcParser: OrderedParser[Vector[Char], Expr] = {
+    val funcMap = immutable.HashMap(
       'i' -> I,
       'v' -> V,
       'k' -> K,
@@ -21,17 +21,17 @@ object Unlambda extends Interpreter{
       '@' -> AT,
       '|' -> PIPE,
       'e' -> E)
-    PartialParser[Vector[Char], Expr]{
-      case '.' +: c +: cs => (FuncExpr(OUT(c)), cs)
-      case '?' +: c +: cs => (FuncExpr(QUES(c)), cs)
-      case f +: cs if funcMap.isDefinedAt(f) => (FuncExpr(funcMap(f)), cs)}}
-  val unlParser: EsoParser[Vector[Char], Expr] = {
+    OrderedPartialParser{
+      case '.' +: c +: cs => (FuncExpr(OUT(c)), cs, 0)
+      case '?' +: c +: cs => (FuncExpr(QUES(c)), cs, 0)
+      case f +: cs if funcMap.isDefinedAt(f) => (FuncExpr(funcMap(f)), cs, 0)}}
+  val unlParser: OrderedParser[Vector[Char], Expr] = {
     def recur(src: Vector[Char]): Option[Vector[Char]] = src match{
       case '`' +: cs => Some(cs)
       case _ => None}
     def collect(xs: Seq[Expr]): Expr = xs match{
       case x +: y +: _ => AppExpr(x, y)}
-    RecurParser[Vector[Char], Expr](2)(recur)(collect)(funcParser)}
+    OrderedRecurParser(2)(recur)(collect)(funcParser)}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
     @tailrec
@@ -54,8 +54,8 @@ object Unlambda extends Interpreter{
       case _ => ac}
     
     unlParser(condition(progRaw.toVector)) match{
-      case Some(prog) => Success(prog)
-      case None => Failure(EsoExcep("Invalid Unlambda Expression"))}}
+      case EsoParsed(prog, _, _) => Success(prog)
+      case _ => Failure(EsoExcep("Invalid Unlambda Expression"))}}
   
   case class Env(cur: Option[Char], inp: Seq[Char]){
     def read: Env = inp match{

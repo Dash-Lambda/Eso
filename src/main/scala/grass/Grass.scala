@@ -1,6 +1,6 @@
 package grass
 
-import common.{Config, EsoParser, Interpreter, RegexParser}
+import common.{Config, OrderedParser, Interpreter, OrderedRegexParser}
 
 import scala.annotation.tailrec
 import scala.util.Try
@@ -8,16 +8,16 @@ import scala.util.Try
 object Grass extends Interpreter{
   val name: String = "Grass"
   
-  val grassParser: EsoParser[String, Vector[Expr]] = {
+  val grassParser: OrderedParser[String, Vector[Expr]] = {
     val absReg = raw"""(w*)([Ww]*)""".r
     @tailrec
     def absArity(n: Int, p: Vector[Expr]): Vector[Expr] = {
       if(n > 0) absArity(n - 1, Vector(AbsExpr(p)))
       else p}
-    val appParser = RegexParser[AppExpr](raw"""(W+)(w+)""".r){m => AppExpr(m.group(1).length, m.group(2).length)}
-    RegexParser[Vector[Expr]](raw"""([Ww]+)""".r){m =>
+    val appParser = OrderedRegexParser(raw"""(W+)(w+)""".r){m => AppExpr(m.group(1).length, m.group(2).length)}
+    OrderedRegexParser(raw"""([Ww]+)""".r){m =>
       m.group(1) match{
-        case absReg(arw, apps) => absArity(arw.length, appParser.parseAll(apps))}}}
+        case absReg(arw, apps) => absArity(arw.length, appParser.parseAllValues(apps))}}}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{eval(parse(progRaw))}
   
@@ -38,7 +38,7 @@ object Grass extends Interpreter{
       "vwW")
       .dropWhile(_ != 'w')
     
-    grassParser.parseAll(conditioned).flatten match{
+    grassParser.parseAllValues(conditioned).flatten match{
       case as :+ (a: AbsExpr) => as :+ a :+ AppExpr(1, 1)
       case as => as}}
   

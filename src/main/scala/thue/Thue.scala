@@ -1,6 +1,6 @@
 package thue
 
-import common.{Config, EsoExcep, EsoParser, Interpreter, RegexParser}
+import common.{Config, EsoExcep, OrderedParser, Interpreter, OrderedRegexParser}
 
 import scala.annotation.tailrec
 import scala.util.matching.Regex
@@ -10,7 +10,7 @@ object Thue extends Interpreter{
   val name: String = "Thue"
   
   val initReg: Regex = raw"""(?s)(.*)\n\s*::=\s*\n(.*)\z""".r
-  val ruleParser: EsoParser[String, (String, String)] = RegexParser[(String, String)](raw"""(?m)^(.*)::=(.*)$$""".r){m => (m.group(1), m.group(2))}
+  val ruleParser: OrderedParser[String, (String, String)] = OrderedRegexParser(raw"""(?m)^(.*)::=(.*)$$""".r){m => (m.group(1), m.group(2))}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = parse(progRaw) map{case (init, prog) => thi(init, prog, config.rands)}
   
@@ -37,6 +37,6 @@ object Thue extends Interpreter{
   
   def parse(progRaw: String): Try[(String, Vector[(String, String)])] = {
     progRaw match{
-      case initReg(rls, init) => Success((init, ruleParser.parseAll(rls)))
+      case initReg(rls, init) => Success((init, ruleParser.parseAllValues(rls)))
       case _ => Failure(EsoExcep("Malformed Program"))}}
 }

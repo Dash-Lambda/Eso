@@ -1,6 +1,6 @@
 package whitespace
 
-import common.{ChunkParser, EsoObj, EsoParser}
+import common.{OrderedChunkParser, EsoObj, OrderedParser}
 import spire.math.SafeLong
 import spire.implicits._
 
@@ -37,7 +37,7 @@ object WSCommon extends EsoObj {
   val synMap: immutable.HashMap[String, (String, String)] = mkMap(syntax.map { case (k, v) => (k, (k, v)) })
   val revMap: immutable.HashMap[String, String] = mkMap(syntax.map { case (k, v) => (v, k) })
   
-  val argOpParser: EsoParser[String, (String, SafeLong)] = {
+  val argOpParser: OrderedParser[String, (String, SafeLong)] = {
     def longNum(str: String): SafeLong = {
       val signum = str.head match {
         case ' ' => SafeLong(1)
@@ -58,14 +58,14 @@ object WSCommon extends EsoObj {
       ("\n \n", "jump"),
       ("\n\t ", "jumpZero"),
       ("\n\t\t", "jumpNeg"))
-    ChunkParser[String, (String, SafeLong)] { inp =>
+    OrderedChunkParser{inp =>
       argMaps.find(p => inp.startsWith(p._1)) map {
         case (k, v) =>
           val tail = inp.drop(k.length)
           val lNum = longNum(tail)
-          ((v, lNum), tail.dropWhile(_ != '\n').tail)}}}
+          ((v, lNum), tail.dropWhile(_ != '\n').tail, 0)}}}
   
-  val nonArgParser: EsoParser[String, (String, SafeLong)] = {
+  val nonArgParser: OrderedParser[String, (String, SafeLong)] = {
     val maps = Vector(
       (" \n ", "dup"),
       (" \n\t", "swap"),
@@ -83,11 +83,11 @@ object WSCommon extends EsoObj {
       ("\t\n \t", "outNum"),
       ("\t\n\t ", "readChar"),
       ("\t\n\t\t", "readNum"))
-    ChunkParser[String, (String, SafeLong)] { inp =>
+    OrderedChunkParser{inp =>
       maps.find(p => inp.startsWith(p._1)) map {
-        case (k, v) => ((v, SafeLong(0)), inp.drop(k.length))}}}
+        case (k, v) => ((v, SafeLong(0)), inp.drop(k.length), 0)}}}
   
-  val wsParser: EsoParser[String, (String, SafeLong)] = argOpParser <+> nonArgParser
+  val wsParser: OrderedParser[String, (String, SafeLong)] = argOpParser <+> nonArgParser
   
   def binNum(num: SafeLong): String = {
     val digs = LazyList
@@ -98,5 +98,5 @@ object WSCommon extends EsoObj {
     s"${if (num < 0) '\t' else ' '}$digs\n"}
   
   def getCalls(prog: Vector[(String, SafeLong)]): immutable.HashMap[SafeLong, Int] = mkMap(prog.zipWithIndex.collect { case (("label", id), n) => (id, n + 1) })
-  def parse(progRaw: String): Vector[(String, SafeLong)] = wsParser.parseAll(filterChars(progRaw, "\t\n "))
+  def parse(progRaw: String): Vector[(String, SafeLong)] = wsParser.parseAllValues(filterChars(progRaw, "\t\n "))
 }

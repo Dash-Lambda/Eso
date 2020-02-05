@@ -1,6 +1,6 @@
 package fractran
 
-import common.{Config, EsoParser, Interpreter, PartialParser, PrimeNumTools}
+import common.{Config, Interpreter, OrderedParser, OrderedPartialParser, PrimeNumTools}
 import spire.implicits._
 import spire.math.SafeLong
 
@@ -12,12 +12,12 @@ object FracTranpp extends Interpreter{
   val name: String = "FracTran++"
   val primes: LazyList[SafeLong] = PrimeNumTools.birdPrimes.to(LazyList)
   
-  val breakParser: EsoParser[Vector[FOP], Vector[FOP]] = {
-    PartialParser[Vector[FOP], Vector[FOP]]{
+  val breakParser: OrderedParser[Vector[FOP], Vector[FOP]] = {
+    OrderedPartialParser[Vector[FOP], Vector[FOP]]{
       case fops if fops.nonEmpty =>
         val ind = fops.indexWhere(_.isBreak)
         val brk = if(ind == -1) fops.length else ind
-        (fops.take(brk), fops.drop(brk + 1))}}
+        (fops.take(brk), fops.drop(brk + 1), brk)}}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = parse(progRaw) map{
     case (init, prog) => fti(init, prog)}
@@ -74,7 +74,7 @@ object FracTranpp extends Interpreter{
     FracTranParser.parse(progRaw) map{
       case (initNum, fracs) =>
         val fops = fracs.map{case (n, d) => FOP.make(n, d)}.collect{case Some(fop) => fop}
-        (initNum, breakParser.parseAll(fops))}}
+        (initNum, breakParser.parseAllValues(fops))}}
   
   case class FOP(n: SafeLong, d: SafeLong, exp: Vector[Int], ext: Int, j: Boolean, i: Boolean, o: Boolean){
     val isBreak: Boolean = n == 0 && d == 0

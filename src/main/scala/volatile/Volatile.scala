@@ -1,6 +1,6 @@
 package volatile
 
-import common.{Config, EsoParser, Interpreter, PartialParser}
+import common.{Config, OrderedParser, Interpreter, OrderedPartialParser}
 import spire.math.SafeLong
 
 import scala.annotation.tailrec
@@ -9,8 +9,8 @@ import scala.util.{Success, Try}
 object Volatile extends Interpreter{
   val name: String = "Volatile"
   
-  val volParser: EsoParser[Vector[Char], VOP] = {
-    PartialParser[Vector[Char], VOP]{
+  val volParser: OrderedParser[Vector[Char], VOP] = {
+    OrderedPartialParser{
       case c +: cs =>
         val op = c match{
           case '~' => PUSH
@@ -22,7 +22,7 @@ object Volatile extends Interpreter{
           case '.' => OUT
           case '(' => LSTART(-1)
           case ')' => LEND(-1)}
-        (op, cs)}}
+        (op, cs, 0)}}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
     val prog = parse(progRaw)
@@ -57,7 +57,7 @@ object Volatile extends Interpreter{
           case n +: ns => sdo(ops, ac.updated(n, LSTART(i + 1)) :+ LEND(n + 1), ns)}
         case _ => sdo(ops, ac :+ op, stk)}
       case _ => ac}
-    sdo(volParser.parseAllLazy(filterChars(progRaw, "~+-*/:.()").toVector).zipWithIndex)}
+    sdo(volParser.parseAllValuesLazy(filterChars(progRaw, "~+-*/:.()").toVector).zipWithIndex)}
   
   trait VOP
   object PUSH extends VOP
