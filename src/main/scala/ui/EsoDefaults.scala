@@ -12,6 +12,7 @@ import grass.Grass
 import metatape.{BFToMetatape, Metatape}
 import path.PATH
 import pdoubleprime.PDP
+import platts.Platts
 import prelude.{BFToPrelude, Prelude}
 import scala_run.ScalaRun
 import slashes.Slashes
@@ -59,7 +60,8 @@ object EsoDefaults extends EsoObj{
     ("nul", "NULL"),
     ("vol", "Volatile"),
     ("glo", "Glypho"),
-    ("glos", "GlyphoShorthand"))
+    ("glos", "GlyphoShorthand"),
+    ("plts", "Platts"))
   val fileExtensionMap: immutable.HashMap[String, String] = mkMap(fileExtensionsVec)
   
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](
@@ -84,7 +86,8 @@ object EsoDefaults extends EsoObj{
     Prelude,
     NULL,
     Volatile,
-    Glypho)
+    Glypho,
+    Platts)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly, GlyphoShorthand)
   val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude)
   
