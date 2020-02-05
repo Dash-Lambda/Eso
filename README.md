@@ -78,6 +78,7 @@ Current native language support (mostly in chronological order):
 * [NULL](https://esolangs.org/wiki/NULL)
 * [Volatile](https://esolangs.org/wiki/Volatile)
 * [Glypho](https://esolangs.org/wiki/Glypho)
+* [Platts](https://esolangs.org/wiki/Platts)
 * Scala
 
 ### Current features:
