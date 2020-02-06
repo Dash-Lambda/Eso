@@ -11,7 +11,7 @@ object WordLang extends Interpreter{
   val name: String = "WordLang"
   
   val escapeReg: Regex = raw"""\\(.)""".r
-  val commentReg: Regex = raw""""[^"]*"""".r
+  val commentReg: Regex = raw"""(?s)"[^"]*"""".r
   val wordLangParser: OrderedParser[String, WOP] = {
     def flipBack(str: String): String = str.map(_.abs)
     val ibvParser = OrderedRegexParser[WOP](raw"""'(\S*)'""")(m => IncByVar(flipBack(m.group(1))))

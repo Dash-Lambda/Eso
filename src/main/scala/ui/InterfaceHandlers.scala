@@ -70,6 +70,7 @@ case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface) extends Int
     val timeFlg = state.bools("time")
     val appFlg = state.bools("appendInp")
     val echoFInp = state.bools("echoFileInp")
+    val normLineFlag = state.bools("normLineBreaks")
     
     def olim(res: LazyList[Char]): LazyList[Char] = state.nums("olen") match{
       case -1 => res
@@ -77,7 +78,7 @@ case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface) extends Int
     
     def inputs: Try[LazyList[Char]] = args.get("i") match{
       case Some(fnam) =>
-        val fStr = EsoFileReader.readFile(fnam) map (s => (s + state.nums("fileEOF").toChar).to(LazyList).map{c => if(echoFInp) eio.print(c); c})
+        val fStr = EsoFileReader.readFile(fnam, normLineFlag) map (s => (s + state.nums("fileEOF").toChar).to(LazyList).map{c => if(echoFInp) eio.print(c); c})
         if(appFlg) fStr map (s => s :++ LazyList.continually(eio.readLine + '\n').flatten)
         else fStr
       case None => Success(LazyList.continually(eio.readLine + '\n').flatten)}
@@ -100,7 +101,7 @@ case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface) extends Int
           DoOrOp(findTranslator(state, lang, state.interpNames), "Language Not Recognized", eio){
             case (inam, t) =>
               if(logFlg) eio.print("Done.\nRetrieving program from file... ")
-              DoOrErr(EsoFileReader.readFile(src), eio){progRaw =>
+              DoOrErr(EsoFileReader.readFile(src, normLineFlag), eio){progRaw =>
                 if(logFlg) eio.print(s"Done.\nTranslating program... ")
                 DoOrErr(t(progRaw), eio){prog =>
                   if(logFlg) eio.print("Done.\nInitializing interpreter... ")

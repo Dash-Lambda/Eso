@@ -249,6 +249,7 @@ The environment maintained by Eso has collected quite a few parameters, detailed
     * fPtr: P\'\' doesn't have output commands, so I had to improvise -at the end of the program, the tape is printed. This flag controls the direction: True starts at the read head and goes right, false starts at the origin and goes left.
     * indent: For curly-bracket languages, this flag controls whether transpilers neatly indent everything or don't indent at all.
     * log: Toggle detailed logging, which just means Eso will tell you what it's doing and when it's done.
+    * normLineBreaks: For some reason the definition of a new line varies between platforms, this flag turns all line breaks into `\n`
     * pNull: Toggle whether or not to print the null character for P\'\' output.
     * preludePar: The Prelude spec says the voices run simultaneously, this gives you the option between parallel and sequential.
     * printNum: Toggle whether or not to convert the character stream to integers. If true, the output is a list of the ASCII codes of the characters rather than the characters.

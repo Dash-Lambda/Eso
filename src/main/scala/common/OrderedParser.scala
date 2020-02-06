@@ -73,6 +73,7 @@ case class OrderedRegexParser[B](reg: Regex)(func: Match => B) extends OrderedPa
     case Some(m) => EsoParsed(func(m), m.after.toString, m.start, m.end)
     case None => EsoParseFail}
   
+  override def parseValuesIterator(inp: String): Iterator[B] = reg.findAllMatchIn(inp) map func
   override def parseIterator(inp: String): Iterator[EsoParsed[String, B]] = {
     reg.findAllMatchIn(inp) map{m =>
       EsoParsed(func(m), m.after.toString, m.start, m.end)}}
