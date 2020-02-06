@@ -22,6 +22,7 @@ import unlambda.Unlambda
 import volatile.Volatile
 import whitespace.{WSAssembly, WhiteSpace, WhiteSpaceToScala}
 import wierd.Wierd
+import wordlang.WordLang
 
 import scala.collection.immutable
 
@@ -61,7 +62,8 @@ object EsoDefaults extends EsoObj{
     ("vol", "Volatile"),
     ("glo", "Glypho"),
     ("glos", "GlyphoShorthand"),
-    ("plts", "Platts"))
+    ("plts", "Platts"),
+    ("wl", "WordLang"))
   val fileExtensionMap: immutable.HashMap[String, String] = mkMap(fileExtensionsVec)
   
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](
@@ -87,7 +89,8 @@ object EsoDefaults extends EsoObj{
     NULL,
     Volatile,
     Glypho,
-    Platts)
+    Platts,
+    WordLang)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly, GlyphoShorthand)
   val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude)
   

@@ -6,19 +6,21 @@ import scala.util.matching.Regex.Match
 
 trait EsoParseRes[+A, +B]{
   def passed: Boolean
-  def ind: Int
+  def start: Int
+  def end: Int
   def map[C](f: B => C): EsoParseRes[A, C]
   def flatMap[C, D](f: B => EsoParseRes[C, D]): EsoParseRes[C, D]
 }
 object EsoParseFail extends EsoParseRes[Nothing, Nothing]{
   def passed: Boolean = false
-  def ind: Int = -1
+  def start: Int = -1
+  def end: Int = -1
   def map[C](f: Nothing => C): EsoParseRes[Nothing, Nothing] = EsoParseFail
   def flatMap[C, D](f: Nothing => EsoParseRes[C, D]): EsoParseRes[Nothing, Nothing] = EsoParseFail
 }
-case class EsoParsed[+A, +B](res: B, rem: A, ind: Int) extends EsoParseRes[A, B]{
+case class EsoParsed[+A, +B](res: B, rem: A, start: Int, end: Int) extends EsoParseRes[A, B]{
   def passed: Boolean = true
-  def map[C](f: B => C): EsoParseRes[A, C] = EsoParsed(f(res), rem, ind)
+  def map[C](f: B => C): EsoParseRes[A, C] = EsoParsed(f(res), rem, start, end)
   def flatMap[C, D](f: B => EsoParseRes[C, D]): EsoParseRes[C, D] = f(res)
 }
 
@@ -38,7 +40,7 @@ abstract class OrderedParser[A, B] extends EsoObj{
   def parseIterator(inp: A): Iterator[EsoParsed[A, B]] = Iterator.unfold((inp, 0)){
     case (src, tot) =>
       apply(src) match{
-        case EsoParsed(res, rem, ind) => Some((EsoParsed(res, rem, tot + ind), (rem, tot + ind)))
+        case EsoParsed(res, rem, start, end) => Some((EsoParsed(res, rem, tot + start, tot + end), (rem, tot + end)))
         case EsoParseFail => None}}
   
   def matches(inp: A): Boolean = apply(inp).passed
@@ -54,7 +56,8 @@ case class OrderedMultiParser[A, B](parsers: Vector[OrderedParser[A, B]]) extend
   def apply(inp: A): EsoParseRes[A, B] = {
     parsers
       .map(p => p(inp))
-      .sortBy(_.ind)
+      .sortBy(r => r.start - r.end)
+      .sortBy(_.start)
       .find(_.passed)
       .getOrElse(EsoParseFail)}
   
@@ -67,33 +70,45 @@ case class OrderedMultiParser[A, B](parsers: Vector[OrderedParser[A, B]]) extend
 
 case class OrderedRegexParser[B](reg: Regex)(func: Match => B) extends OrderedParser[String, B]{
   def apply(inp: String): EsoParseRes[String, B] = reg.findFirstMatchIn(inp) match{
-    case Some(m) => EsoParsed(func(m), m.after.toString, m.start)
+    case Some(m) => EsoParsed(func(m), m.after.toString, m.start, m.end)
     case None => EsoParseFail}
   
   override def parseIterator(inp: String): Iterator[EsoParsed[String, B]] = {
     reg.findAllMatchIn(inp) map{m =>
-      EsoParsed(func(m), m.after.toString, m.start)}}
+      EsoParsed(func(m), m.after.toString, m.start, m.end)}}
   
   override def map[C](f: B => C): OrderedParser[String, C] = OrderedRegexParser(reg)(func andThen f)
   
   override def matches(inp: String): Boolean = reg.matches(inp)
 }
 
-case class OrderedPartialParser[A, B](func: PartialFunction[A, (B, A, Int)]) extends OrderedParser[A, B]{
+object OrderedRegexParser{
+  def apply[B](reg: String)(func: Match => B): OrderedRegexParser[B] = OrderedRegexParser(reg.r)(func)
+}
+
+case class OrderedPartialParser[A, B](func: PartialFunction[A, (B, A, Int, Int)]) extends OrderedParser[A, B]{
   def apply(inp: A): EsoParseRes[A, B] = func.lift(inp) match{
-    case Some((res, rem, ind)) => EsoParsed(res, rem, ind)
+    case Some((res, rem, start, end)) => EsoParsed(res, rem, start, end)
     case None => EsoParseFail}
   
-  override def map[C](f: B => C): OrderedPartialParser[A, C] = OrderedPartialParser(func andThen {case (res, rem, ind) => (f(res), rem, ind)})
+  override def map[C](f: B => C): OrderedPartialParser[A, C] = new OrderedPartialParser(func andThen {case (res, rem, start, end) => (f(res), rem, start, end)})
   
   override def matches(inp: A): Boolean = func.isDefinedAt(inp)
 }
 
-case class OrderedChunkParser[A, B](func: A => Option[(B, A, Int)]) extends OrderedParser[A, B]{
+object OrderedPartialParser{
+  def simple[A, B](func: PartialFunction[A, (B, A)]): OrderedPartialParser[A, B] = OrderedPartialParser(func andThen {case (b, a) => (b, a, 0, 0)})
+}
+
+case class OrderedChunkParser[A, B](func: A => Option[(B, A, Int, Int)]) extends OrderedParser[A, B]{
   def apply(inp: A): EsoParseRes[A, B] = func(inp) match{
-    case Some((res, rem, ind)) => EsoParsed(res, rem, ind)
+    case Some((res, rem, start, end)) => EsoParsed(res, rem, start, end)
     case None => EsoParseFail}
-  override def map[C](f: B => C): OrderedParser[A, C] = OrderedChunkParser(func andThen (_.map{case (res, rem, ind) => (f(res), rem, ind)}))
+  override def map[C](f: B => C): OrderedParser[A, C] = OrderedChunkParser(func andThen (_.map{case (res, rem, start, end) => (f(res), rem, start, end)}))
+}
+
+object OrderedChunkParser{
+  def simple[A, B](func: A => Option[(B, A)]): OrderedChunkParser[A, B] = OrderedChunkParser(func andThen (_.map{case (b, a) => (b, a, 0, 0)}))
 }
 
 case class OrderedRecurParser[A, B](depth: Int, priority: Int = 0)(recur: A => Option[A])(collect: Seq[B] => B)(endParser: OrderedParser[A, B]) extends OrderedParser[A, B]{
@@ -114,9 +129,9 @@ case class OrderedRecurParser[A, B](depth: Int, priority: Int = 0)(recur: A => O
       recur(src) match{
         case Some(nxt) => pdo(nxt, RecCont(depth, Vector(), cc))
         case None => endParser(src) match{
-          case EsoParsed(res, rem, _) => pdo(rem, cc(res))
+          case EsoParsed(res, rem, _, _) => pdo(rem, cc(res))
           case EsoParseFail => cc match{
-            case ResCont(res) => EsoParsed(res, src, priority)
+            case ResCont(res) => EsoParsed(res, src, priority, -1)
             case _ => EsoParseFail}}}}
     pdo(inp, FinCont)}
 }

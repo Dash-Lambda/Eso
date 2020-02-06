@@ -13,11 +13,11 @@ object FracTranpp extends Interpreter{
   val primes: LazyList[SafeLong] = PrimeNumTools.birdPrimes.to(LazyList)
   
   val breakParser: OrderedParser[Vector[FOP], Vector[FOP]] = {
-    OrderedPartialParser[Vector[FOP], Vector[FOP]]{
+    OrderedPartialParser.simple{
       case fops if fops.nonEmpty =>
         val ind = fops.indexWhere(_.isBreak)
         val brk = if(ind == -1) fops.length else ind
-        (fops.take(brk), fops.drop(brk + 1), brk)}}
+        (fops.take(brk), fops.drop(brk + 1))}}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = parse(progRaw) map{
     case (init, prog) => fti(init, prog)}

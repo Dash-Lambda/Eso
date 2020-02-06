@@ -1,0 +1,1 @@
+In all chaotic beauty lies a wounded work of art. Beautiful but torn, wreaking havoc on my heart. Camouflaged by insecurities, blinded by it all. I love the way you sit there and barely notice me at all.

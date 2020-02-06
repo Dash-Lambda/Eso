@@ -1,0 +1,15 @@
+1,0, > 1	"Store 1 into 1"
+d > C		"C(ounter) is declared to 100 (d)"
+
+'C'.		"Load and print C"
+'C'		"Load C"
+
+-loop		"declare loop"
+,		"Set to decrease mode"
+'1'		"Load and subtract 1"
+,		"Set to increse mode"
+> C		"Store to C"
+'C'		"Load C"
+.		"Print"
+'C'		"Load C"
+loop!!!		"Repeat while data isn't 0"

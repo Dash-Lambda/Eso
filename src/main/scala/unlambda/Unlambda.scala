@@ -21,10 +21,10 @@ object Unlambda extends Interpreter{
       '@' -> AT,
       '|' -> PIPE,
       'e' -> E)
-    OrderedPartialParser{
-      case '.' +: c +: cs => (FuncExpr(OUT(c)), cs, 0)
-      case '?' +: c +: cs => (FuncExpr(QUES(c)), cs, 0)
-      case f +: cs if funcMap.isDefinedAt(f) => (FuncExpr(funcMap(f)), cs, 0)}}
+    OrderedPartialParser.simple{
+      case '.' +: c +: cs => (FuncExpr(OUT(c)), cs)
+      case '?' +: c +: cs => (FuncExpr(QUES(c)), cs)
+      case f +: cs if funcMap.isDefinedAt(f) => (FuncExpr(funcMap(f)), cs)}}
   val unlParser: OrderedParser[Vector[Char], Expr] = {
     def recur(src: Vector[Char]): Option[Vector[Char]] = src match{
       case '`' +: cs => Some(cs)
@@ -54,7 +54,7 @@ object Unlambda extends Interpreter{
       case _ => ac}
     
     unlParser(condition(progRaw.toVector)) match{
-      case EsoParsed(prog, _, _) => Success(prog)
+      case EsoParsed(prog, _, _, _) => Success(prog)
       case _ => Failure(EsoExcep("Invalid Unlambda Expression"))}}
   
   case class Env(cur: Option[Char], inp: Seq[Char]){

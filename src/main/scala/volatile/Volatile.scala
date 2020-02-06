@@ -10,7 +10,7 @@ object Volatile extends Interpreter{
   val name: String = "Volatile"
   
   val volParser: OrderedParser[Vector[Char], VOP] = {
-    OrderedPartialParser{
+    OrderedPartialParser.simple{
       case c +: cs =>
         val op = c match{
           case '~' => PUSH
@@ -22,7 +22,7 @@ object Volatile extends Interpreter{
           case '.' => OUT
           case '(' => LSTART(-1)
           case ')' => LEND(-1)}
-        (op, cs, 0)}}
+        (op, cs)}}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
     val prog = parse(progRaw)

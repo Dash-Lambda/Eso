@@ -1,6 +1,6 @@
 package platts
 
-import common.{Config, Interpreter, RegexParser}
+import common.{Config, EsoParseFail, EsoParsed, Interpreter, OrderedRegexParser}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -11,7 +11,7 @@ object Platts extends Interpreter{
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{parse(progRaw)} map{
     case (symLen, ruleMap, initData) =>
-      val stepper = RegexParser(raw"""(.{$symLen}).{$symLen}"""){m => ruleMap.getOrElse(m.group(1), REP("", toggle=false))}
+      val stepper = OrderedRegexParser(raw"""(.{$symLen}).{$symLen}"""){m => ruleMap.getOrElse(m.group(1), REP("", toggle=false))}
       
       @tailrec
       def repInp(ac: String, inp: Seq[Char]): (String, Seq[Char]) = {
@@ -20,9 +20,9 @@ object Platts extends Interpreter{
           case c +: cs => repInp(ac.replaceFirst(s"${-1.toChar}", c.toString), cs)}}
       
       @tailrec
-      def rdo(ac: String, out: Boolean, inp: Seq[Char]): Option[(String, (String, Boolean, Seq[Char]))] = stepper.step(ac) match{
-        case None => None
-        case Some((op, tl)) =>
+      def rdo(ac: String, out: Boolean, inp: Seq[Char]): Option[(String, (String, Boolean, Seq[Char]))] = stepper(ac) match{
+        case EsoParseFail => None
+        case EsoParsed(op, tl, _, _) =>
           op match{
             case Halt => None
             case REP(str, toggle) => repInp(str, inp) match{

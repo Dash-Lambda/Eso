@@ -58,12 +58,12 @@ object WSCommon extends EsoObj {
       ("\n \n", "jump"),
       ("\n\t ", "jumpZero"),
       ("\n\t\t", "jumpNeg"))
-    OrderedChunkParser{inp =>
+    OrderedChunkParser.simple{inp =>
       argMaps.find(p => inp.startsWith(p._1)) map {
         case (k, v) =>
           val tail = inp.drop(k.length)
           val lNum = longNum(tail)
-          ((v, lNum), tail.dropWhile(_ != '\n').tail, 0)}}}
+          ((v, lNum), tail.dropWhile(_ != '\n').tail)}}}
   
   val nonArgParser: OrderedParser[String, (String, SafeLong)] = {
     val maps = Vector(
@@ -83,9 +83,9 @@ object WSCommon extends EsoObj {
       ("\t\n \t", "outNum"),
       ("\t\n\t ", "readChar"),
       ("\t\n\t\t", "readNum"))
-    OrderedChunkParser{inp =>
+    OrderedChunkParser.simple{inp =>
       maps.find(p => inp.startsWith(p._1)) map {
-        case (k, v) => ((v, SafeLong(0)), inp.drop(k.length), 0)}}}
+        case (k, v) => ((v, SafeLong(0)), inp.drop(k.length))}}}
   
   val wsParser: OrderedParser[String, (String, SafeLong)] = argOpParser <+> nonArgParser
   
