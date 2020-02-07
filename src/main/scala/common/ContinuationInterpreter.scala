@@ -21,8 +21,8 @@ object IHaltState extends IState{
 
 case class IPrintState(str: String, next: IState) extends IState
 
-trait ICont[E]{
+trait ICont[-E]{
   def apply(env: E): IState}
 
-case class IHaltCont[E](default: E) extends ICont[E]{
-  def apply(env: E): IState = IHaltState}
+object IHaltCont extends ICont[Any]{
+  def apply(env: Any): IState = IHaltState}

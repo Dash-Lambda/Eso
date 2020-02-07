@@ -22,7 +22,7 @@ object WordLang extends Interpreter{
         case 1 => Jump(flipBack(m.group(1)))
         case 2 => JumpLess(flipBack(m.group(1)))
         case 3 => JumpGreater(flipBack(m.group(1)))}}
-    val charParser = OrderedRegexParser[WOP](raw"""([^'\>\-\!\(\)"\s])"""){m =>
+    val charParser = OrderedRegexParser[WOP](raw"""(\S)"""){m =>
       m.group(1).head match{
         case ',' => IncToggle
         case '.' => PrintChar
