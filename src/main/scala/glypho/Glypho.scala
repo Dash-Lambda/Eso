@@ -10,7 +10,7 @@ object Glypho extends Interpreter{
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
     Try{GlyphoParser.parseAll(progRaw)} map{initProg =>
       inputs => {
-        val initState: IState = RunState(GEnv(Vector(), inputs), RunCont(initProg, Vector(), IHaltCont(GEnv(Vector(), Vector()))))
+        val initState: IState = RunState(GEnv(Vector(), inputs), RunCont(initProg, Vector(), IHaltCont))
         ContinuationInterpreter(initState)}}}
   
   case class GEnv(stk: Vector[Int], inp: Seq[Char]){
