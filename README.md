@@ -13,7 +13,7 @@
     - [Parsers](#parsers)
     - [How the Interface Works](#how-the-interface-works)
         - [Persistent vs Non-Persistent Interfaces](#persistent-vs-non-persistent-interfaces)
-        - [The Parser](#the-parser)
+        - [The Command Parser](#the-command-parser)
         - [States and Configurations](#states-and-configurations)
         - [Command Handlers](#command-handlers)
         - [Interpreter I/O](#interpreter-io)
@@ -144,16 +144,15 @@ So I started looking into parser libraries, then parser combinator libraries, th
 
 So, Eso has two general forms of parsers: Bespoke parsers, which are written by hand boilerplate and all, and abstracted parsers, which use Eso's set of parser tools to more cleanly and elegantly put together a parser. I only use bespoke parsers when there's a significant gain in performance (and I care enough about performance), or in any old parsers I overlooked when overhauling for the new tools.
 
-The parser tools are a collection of Parser classes that all implement an `apply` method and a `step` method, where `apply` finds and parses the first valid token in the input and `step` does the same thing as `apply` but also returns the remaining input.
+The parser tools are a collection of function classes that take an input and return either a parse failure or a structure with the next parsed token, the remaining input, and information on where the token was found.
 
 The parent class additionally implements a method to parse _all_ valid tokens to a vector of results, to lazily parse all tokens to a LazyList, and a set of combinators and modifiers that currently consist of:
 * `map`: Maps the output of the parser (the output is an Option[T])
-* `~`: Pipes the output of the left-hand parser to the input of the right-hand parser. Each parsing result on the left is a whole input to the right.
 * `<+>`: If the left-hand parser fails, the right-hand parser is used (equivalent to PartialFunction's orElse)
 
 There are currently 5 parser classes:
-* ChunkParser: Takes a function with signature (A => Option[(B, A)]), which means it's built from the `step` function.
-* PartialParser: Basically ChunkParser but it takes a PartialFunction (A => (B, A)) and lifts it (usually more concise than ChunkParser)
+* ChunkParser: Takes a function which returns an `Option`
+* PartialParser: Similar to a ChunkParser except it takes a PartialFunction
 * RecurParser: This one is for parsing to tree structures, currently used in Unlambda. It takes a `recur` function that decides when to go down a level, a `collect` function to turn a set of leaves into a node, and another parser for the non-branching tokens.
 * RegexParser: This takes a regex and a function to turn a match into the output. This one lets me condense a lot of parsers into a single line, which makes me giddy.
 
@@ -179,7 +178,7 @@ If the non-persistent interface receives either no arguments or the command `per
 
 If you supply `persistent` with arguments, the persistent interface initializes the corresponding environment variables to the provided values.
 
-#### The Parser
+#### The Command Parser
 Eso parses each line of input into two components: A command and an argument list
 
 The command is just a string, while the arguments are read as a list of name-value pairs in the form `command -name1 value1 -name2 value2 ...`, then stored in a hash map. Boolean options listed without a value default to true.
