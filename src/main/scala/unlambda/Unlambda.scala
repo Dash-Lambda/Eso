@@ -26,8 +26,8 @@ object Unlambda extends Interpreter{
       case '?' +: c +: cs => (FuncExpr(QUES(c)), cs)
       case f +: cs if funcMap.isDefinedAt(f) => (FuncExpr(funcMap(f)), cs)}}
   val unlParser: OrderedParser[Vector[Char], Expr] = {
-    def recur(src: Vector[Char]): Option[Vector[Char]] = src match{
-      case '`' +: cs => Some(cs)
+    def recur(src: Vector[Char]): Option[(Vector[Char], Int, Int)] = src match{
+      case '`' +: cs => Some((cs, 0, 1))
       case _ => None}
     def collect(xs: Seq[Expr]): Expr = xs match{
       case x +: y +: _ => AppExpr(x, y)}
