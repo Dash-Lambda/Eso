@@ -5,6 +5,7 @@ import parsers.{ARPDown, ARPFail, ARPNext, ARPRet, ARPUp, ArbitraryRecurParser, 
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Try}
+import scala.util.control.TailCalls._
 
 object LazyK extends Interpreter{
   val name: String = "LazyK"
@@ -41,9 +42,10 @@ object LazyK extends Interpreter{
       case _ => ARPUp(src, 0, 0)}
     ArbitraryRecurParser(recur _, collect)}
   val iotaParser: OrderedParser[Vector[Char], Expr] = {
+    val iotaI: Expr = FuncExpr(Pair(sexp, kexp))
     val funcParser = {
       OrderedPartialParser[Vector[Char], Expr]{
-        case 'i' +: cs => (FuncExpr(IotaI), cs, 0, 1)}}
+        case 'i' +: cs => (iotaI, cs, 0, 1)}}
     def recur(src: Vector[Char]): Option[(Vector[Char], Int, Int)] = src match{
       case '*' +: cs => Some((cs, 0, 1))
       case _ => None}
@@ -76,13 +78,13 @@ object LazyK extends Interpreter{
           FuncExpr(ChurchCounter)),
         FuncExpr(ChurchHalt))}
     val num = countChurchNum(eval(cexpr))
-    if(0 <= num && num <= 255){
+    if(0 > num || num > 255) None
+    else{
       val nexpr = {
         AppExpr(
           FuncExpr(cur),
           FuncExpr(churchFalse))}
-      Some((num.toChar, nexpr))}
-    else None}
+      Some((num.toChar, nexpr))}}
   
   @tailrec
   def countChurchNum(fun: Func, ac: Int = 0): Int = {
@@ -91,109 +93,74 @@ object LazyK extends Interpreter{
       case ChurchHalt => ac
       case _ => -1}}
   
-  def eval(expr: Expr): Func = eval(EvalState(expr, EndCont))
-  @tailrec
-  def eval(state: State): Func = {
-    state match{
-      case EndState(res) => res
-      case _ => eval(state.next)}}
-  
-  trait State{
-    def next: State}
+  def eval(expr: Expr): Func = expr(EndCont).result
   
   trait Expr{
-    def apply(cc: Cont): State}
+    def apply(cc: Cont): TailRec[Func]}
   
   trait Cont{
-    def apply(f: Func): State}
+    def apply(f: Func): TailRec[Func]}
   
   trait Func{
-    def apply(f: Expr, cc: Cont): State}
-  
-  //States
-  case class EndState(res: Func) extends State{
-    def next: State = EndState(res)}
-  
-  case class EvalState(x: Expr, cc: Cont) extends State{
-    def next: State = x(cc)}
-  
-  case class AppState(x: Func, y: Expr, cc: Cont) extends State{
-    def next: State = x(y, cc)}
+    def apply(f: Expr, cc: Cont): TailRec[Func]}
   
   //Expressions
   case class FuncExpr(f: Func) extends Expr{
-    def apply(cc: Cont): State = cc(f)}
+    def apply(cc: Cont): TailRec[Func] = tailcall(cc(f))
+    override def toString: String = f.toString}
   
   case class AppExpr(x: Expr, y: Expr) extends Expr{
-    def apply(cc: Cont): State = EvalState(x, ExprCont(y, cc))}
+    def apply(cc: Cont): TailRec[Func] = tailcall(x(ExprCont(y, cc)))
+    override def toString: String = s"($x $y)"}
   
   //Continuations
   object EndCont extends Cont{
-    def apply(f: Func): State = EndState(f)}
+    def apply(f: Func): TailRec[Func] = done(f)
+    override def toString: String = "END"}
   
   case class ExprCont(y: Expr, cc: Cont) extends Cont{
-    def apply(f: Func): State = f(y, cc)}
+    def apply(f: Func): TailRec[Func] = tailcall(f(y, cc))}
   
   //Funcs
   object I extends Func{
-    def apply(f: Expr, cc: Cont): State = EvalState(f, cc)}
+    def apply(f: Expr, cc: Cont): TailRec[Func] = tailcall(f(cc))
+    override def toString: String = "I"}
   
   case class K1(x: Expr) extends Func{
-    def apply(f: Expr, cc: Cont): State = EvalState(x, cc)}
+    def apply(f: Expr, cc: Cont): TailRec[Func] = tailcall(x(cc))}
   object K extends Func{
-    def apply(f: Expr, cc: Cont): State = cc(K1(f))}
+    def apply(f: Expr, cc: Cont): TailRec[Func] = tailcall(cc(K1(f)))
+    override def toString: String = "K"}
   
   case class S2(x: Expr, y: Expr) extends Func{
-    def apply(f: Expr, cc: Cont): State = {
-      EvalState(
-        AppExpr(
-          AppExpr(x, f),
-          AppExpr(y, f)),
-        cc)}}
+    def apply(f: Expr, cc: Cont): TailRec[Func] = tailcall{
+      AppExpr(AppExpr(x, f), AppExpr(y, f))(cc)}}
   case class S1(x: Expr) extends Func{
-    def apply(f: Expr, cc: Cont): State = cc(S2(x, f))}
+    def apply(f: Expr, cc: Cont): TailRec[Func] = tailcall(cc(S2(x, f)))}
   object S extends Func{
-    def apply(f: Expr, cc: Cont): State = cc(S1(f))}
-  
-  object IotaI extends Func{
-    def apply(f: Expr, cc: Cont): State = {
-      EvalState(
-        AppExpr(
-          AppExpr(f, FuncExpr(S)),
-          FuncExpr(K)),
-        cc)}}
-  
-  case class Pair(x: Expr, y: Expr) extends Func{
-    def apply(f: Expr, cc: Cont): State = {
-      EvalState(AppExpr(AppExpr(f, x), y), cc)}}
+    def apply(f: Expr, cc: Cont): TailRec[Func] = tailcall(cc(S1(f)))
+    override def toString: String = "S"}
   
   case class ChurchNum1(num: Int, fexp: Expr) extends Func{
-    def apply(f: Expr, cc: Cont): State = {
-      @tailrec
-      def cdo(n: Int, ac: Expr): Expr = n match{
-        case 0 => ac
-        case _ => cdo(n - 1, AppExpr(fexp, ac))}
-      EvalState(cdo(num, f), cc)}}
+    def apply(f: Expr, cc: Cont): TailRec[Func] = tailcall{
+      Iterator.fill(num)(fexp).foldLeft(f){case (y, x) => AppExpr(x, y)}(cc)}}
   case class ChurchNum(num: Int) extends Func{
-    def apply(f: Expr, cc: Cont): State = cc(ChurchNum1(num, f))}
+    def apply(f: Expr, cc: Cont): TailRec[Func] = tailcall(cc(ChurchNum1(num, f)))}
+  
+  case class Pair(x: Expr, y: Expr) extends Func{
+    def apply(f: Expr, cc: Cont): TailRec[Func] = tailcall(f(ExprCont(x, ExprCont(y, cc))))}
   
   case class ChurchList(lst: Seq[Int]) extends Func{
-    def apply(f: Expr, cc: Cont): State = lst match{
+    def apply(f: Expr, cc: Cont): TailRec[Func] = lst match{
       case n +: ns =>
-        EvalState(
-          AppExpr(
-            FuncExpr(
-              Pair(
-                FuncExpr(ChurchNum(n)),
-                FuncExpr(ChurchList(ns)))),
-            f),
-          cc)}}
+        tailcall(Pair(FuncExpr(ChurchNum(n)), FuncExpr(ChurchList(ns)))(f, cc))}}
   
   object ChurchHalt extends Func{
-    def apply(f: Expr, cc: Cont): State = EndState(ChurchCounter)}
-  
+    def apply(f: Expr, cc: Cont): TailRec[Func] = done(ChurchCounter)
+    override def toString: String = "CH"}
   case class ChurchReturn(exp: Expr) extends Func{
-    def apply(f: Expr, cc: Cont): State = EndState(this)}
+    def apply(f: Expr, cc: Cont): TailRec[Func] = done(this)}
   object ChurchCounter extends Func{
-    def apply(f: Expr, cc: Cont): State = EndState(ChurchReturn(f))}
+    def apply(f: Expr, cc: Cont): TailRec[Func] = done(ChurchReturn(f))
+    override def toString: String = "CC"}
 }
