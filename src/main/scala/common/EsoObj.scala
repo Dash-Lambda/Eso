@@ -15,6 +15,7 @@ trait EsoObj {
     builder.result}
   
   def filterChars(str: String, cs: Seq[Char]): String = str.filter(cs.contains(_))
+  def filterContains[A](seq: Seq[A], cs: Seq[A]): Seq[A] = seq.filter(cs.contains(_))
   
   def StringToRect(str: String): Vector[Vector[Int]] = {
     val lines = str.linesIterator.map(_.toVector.map(_.toInt)).toVector

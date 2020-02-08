@@ -1,6 +1,7 @@
 package unlambda
 
-import common.{Config, EsoExcep, EsoParsed, Interpreter, OrderedParser, OrderedPartialParser, OrderedRecurParser}
+import common.{Config, EsoExcep, Interpreter}
+import parsers.{EsoParsed, OrderedParser, OrderedPartialParser, OrderedRecurParser}
 
 import scala.annotation.tailrec
 import scala.collection.immutable

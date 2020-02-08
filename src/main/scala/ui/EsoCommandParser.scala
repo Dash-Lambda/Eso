@@ -1,6 +1,7 @@
 package ui
 
-import common.{EsoObj, OrderedParser, OrderedRegexParser}
+import common.EsoObj
+import parsers.{OrderedParser, OrderedRegexParser}
 
 import scala.collection.immutable
 

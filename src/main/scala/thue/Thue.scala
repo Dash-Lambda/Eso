@@ -1,6 +1,7 @@
 package thue
 
-import common.{Config, EsoExcep, OrderedParser, Interpreter, OrderedRegexParser}
+import common.{Config, EsoExcep, Interpreter}
+import parsers.{OrderedParser, OrderedRegexParser}
 
 import scala.annotation.tailrec
 import scala.util.matching.Regex

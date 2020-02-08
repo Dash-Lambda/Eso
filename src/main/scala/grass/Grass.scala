@@ -1,6 +1,7 @@
 package grass
 
-import common.{Config, OrderedParser, Interpreter, OrderedRegexParser}
+import common.{Config, Interpreter}
+import parsers.{OrderedParser, OrderedRegexParser}
 
 import scala.annotation.tailrec
 import scala.util.Try

@@ -1,6 +1,6 @@
 package glypho
 
-import common.OrderedRegexParser
+import parsers.OrderedRegexParser
 
 import scala.annotation.tailrec
 

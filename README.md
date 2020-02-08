@@ -27,6 +27,7 @@
     - [FracTran Program Format](#fracTran-program-format)
     - [P'' Program Format](#p-program-format)
     - [On the Befunge-98 Interpreter](#on-the-befunge-98-interpreter)
+    - [On the LazyK Interpreter](#on-the-lazyk-interpreter)
     - [Building](#building)
 
 ## Purpose of Eso
@@ -80,6 +81,7 @@ Current native language support (mostly in chronological order):
 * [Glypho](https://esolangs.org/wiki/Glypho)
 * [Platts](https://esolangs.org/wiki/Platts)
 * [WordLang](https://github.com/WilliamRagstad/WordLang)
+* [LazyK](https://esolangs.org/wiki/Lazy_K) (Currently only Unlambda and CC dialects)
 * Scala
 
 ### Current features:
@@ -155,6 +157,7 @@ There are currently 5 parser classes:
 * PartialParser: Similar to a ChunkParser except it takes a PartialFunction
 * RecurParser: This one is for parsing to tree structures, currently used in Unlambda. It takes a `recur` function that decides when to go down a level, a `collect` function to turn a set of leaves into a node, and another parser for the non-branching tokens.
 * RegexParser: This takes a regex and a function to turn a match into the output. This one lets me condense a lot of parsers into a single line, which makes me giddy.
+* ArbitraryRecurParser: This one's called "arbitrary" because the depth isn't constant. It's given a function that can either parse the next token or tell it to go up or down a level.
 
 ### How the Interface Works
 It's always a challenge to handle UI functionally. Everything behind the scenes is fair game, but actually receiving input from and sending output to the user is by definition a side-effect.
@@ -352,6 +355,11 @@ Ultimately, I settled on a design where clock reads are handled similarly to use
 Of course, the Funge-98 interpreter also does not support file I/O or the system.exec instruction, as this would break the functional style. Thankfully, these features are actually optional in the spec. 
 
 Expect more fingerprints to become available over time. ... Slowly, probably. Whenever I get bored between new language components.
+
+### On the LazyK Interpreter
+There's one blemish on Eso's LazyK interpreter at the moment: Its parser doesn't yet support the Jot or Iota dialects. Those are coming as soon as I can figure out how I want to parse them.
+
+The parser also doesn't support mixing dialects in the same source file. That feature had only one mention in the entire spec, and the author put that mention there to say he didn't know how he felt about it -and implementing it with my current set of parser tools would mean bringing an ugly, inelegant monstrosity into this world where I otherwise have a parser so neat and tidy it make me smile. Sorry, I don't plan to implement that unless my parser tools evolve to the point where it becomes a 3-4 line solution.
 
 ### Building
 I use [SBT assembly](https://github.com/sbt/sbt-assembly). This repo should give you everything you need to build it, just put it in a folder, run SBT from that directory, let it do its thing, then run assembly.

@@ -1,6 +1,7 @@
 package fractran
 
-import common.{Config, Interpreter, OrderedParser, OrderedPartialParser, PrimeNumTools}
+import common.{Config, Interpreter, PrimeNumTools}
+import parsers.{OrderedParser, OrderedPartialParser}
 import spire.implicits._
 import spire.math.SafeLong
 

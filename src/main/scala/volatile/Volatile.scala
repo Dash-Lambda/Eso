@@ -1,6 +1,7 @@
 package volatile
 
-import common.{Config, OrderedParser, Interpreter, OrderedPartialParser}
+import common.{Config, Interpreter}
+import parsers.{OrderedParser, OrderedPartialParser}
 import spire.math.SafeLong
 
 import scala.annotation.tailrec

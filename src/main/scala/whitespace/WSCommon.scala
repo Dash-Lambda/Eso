@@ -1,6 +1,7 @@
 package whitespace
 
-import common.{OrderedChunkParser, EsoObj, OrderedParser}
+import common.EsoObj
+import parsers.{OrderedChunkParser, OrderedParser}
 import spire.math.SafeLong
 import spire.implicits._
 

@@ -1,6 +1,7 @@
 package fractran
 
-import common.{EsoExcep, EsoObj, OrderedParser, OrderedRegexParser, PrimeNumTools}
+import common.{EsoExcep, EsoObj, PrimeNumTools}
+import parsers.{OrderedParser, OrderedRegexParser}
 import spire.math.SafeLong
 
 import scala.util.{Failure, Success, Try}

@@ -1,6 +1,7 @@
 package wordlang
 
-import common.{Config, Interpreter, OrderedParser, OrderedRegexParser}
+import common.{Config, Interpreter}
+import parsers.{OrderedParser, OrderedRegexParser}
 
 import scala.annotation.tailrec
 import scala.collection.immutable

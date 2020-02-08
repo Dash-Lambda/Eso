@@ -1,6 +1,7 @@
 package platts
 
-import common.{Config, EsoParseFail, EsoParsed, Interpreter, OrderedRegexParser}
+import common.{Config, Interpreter}
+import parsers.{EsoParseFail, EsoParsed, OrderedRegexParser}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
