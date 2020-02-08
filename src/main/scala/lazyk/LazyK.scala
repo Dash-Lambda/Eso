@@ -40,7 +40,17 @@ object LazyK extends Interpreter{
         case _ => ARPFail}
       case _ => ARPUp(src, 0, 0)}
     ArbitraryRecurParser(recur _, collect)}
-  val totParser: OrderedParser[Vector[Char], Expr] = unlParser <+> combParser
+  val iotaParser: OrderedParser[Vector[Char], Expr] = {
+    val funcParser = {
+      OrderedPartialParser[Vector[Char], Expr]{
+        case 'i' +: cs => (FuncExpr(IotaI), cs, 0, 1)}}
+    def recur(src: Vector[Char]): Option[(Vector[Char], Int, Int)] = src match{
+      case '*' +: cs => Some((cs, 0, 1))
+      case _ => None}
+    def collect(xs: Seq[Expr]): Expr = xs match{
+      case x +: y +: _ => AppExpr(x, y)}
+    OrderedRecurParser(2)(recur)(collect)(funcParser)}
+  val totParser: OrderedParser[Vector[Char], Expr] = unlParser <+> combParser <+> iotaParser
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = parse(progRaw) match{
     case None => Failure(EsoExcep("Invalid Expression"))
@@ -144,6 +154,14 @@ object LazyK extends Interpreter{
     def apply(f: Expr, cc: Cont): State = cc(S2(x, f))}
   object S extends Func{
     def apply(f: Expr, cc: Cont): State = cc(S1(f))}
+  
+  object IotaI extends Func{
+    def apply(f: Expr, cc: Cont): State = {
+      EvalState(
+        AppExpr(
+          AppExpr(f, FuncExpr(S)),
+          FuncExpr(K)),
+        cc)}}
   
   case class Pair(x: Expr, y: Expr) extends Func{
     def apply(f: Expr, cc: Cont): State = {
