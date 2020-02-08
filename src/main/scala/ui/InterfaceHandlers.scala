@@ -115,6 +115,7 @@ case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface) extends Int
                               case Failure(e) =>
                                 if(timeFlg) eio.println(s"\nError: $e\nProgram failed in ${rdr}ms")
                                 else eio.println(s"\nError: $e")
+                                e.printStackTrace()
                               case Success(_) =>
                                 if(timeFlg) eio.println(s"\nProgram completed in ${rdr}ms")
                                 else eio.println()}}

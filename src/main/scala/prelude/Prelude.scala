@@ -6,7 +6,8 @@ import spire.implicits._
 
 import scala.annotation.tailrec
 import scala.collection.immutable
-import scala.collection.parallel.immutable.ParVector
+import scala.concurrent.duration.Duration
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Success, Try}
 
 object Prelude extends Interpreter{
@@ -26,8 +27,8 @@ object Prelude extends Interpreter{
           else Some((out.mkString, (ni, nchr, ninp)))}}
           
     val initChorus: Chorus = {
-      if(par) SeqChorus(Vector.range(0, prog.numVoices).map(i => Voice(i, LazyList.continually(SafeLong(0)))))
-      else ParChorus(ParVector.range(0, prog.numVoices).map(i => Voice(i, LazyList.continually(SafeLong(0)))))}
+      if(par) ParChorus(Vector.range(0, prog.numVoices).map(i => Voice(i, LazyList.continually(SafeLong(0)))))
+      else SeqChorus(Vector.range(0, prog.numVoices).map(i => Voice(i, LazyList.continually(SafeLong(0)))))}
     inputs => LazyList.unfold((0, initChorus, inputs)){case (i, chr, inp) => prun(i, chr, inp)}.flatten}
   
   def parse(progRaw: String): Try[PrelProg] = {
@@ -42,11 +43,10 @@ object Prelude extends Interpreter{
     Success(PrelProg(progMat, sdo(0, Vector(), immutable.HashMap())))}
   
   trait Chorus{
-    def exec(ops: Vector[Char], inp: Seq[Char]): (Chorus, Vector[Char], Boolean, Boolean)
-  }
+    def exec(ops: Vector[Char], inp: Seq[Char]): (Chorus, Vector[Char], Boolean, Boolean)}
+  
   case class SeqChorus(voices: Vector[Voice]) extends Chorus{
-    val size: Int = voices.size
-    def voice(i: Int): Voice = voices((i%size + size)%size)
+    def voice(i: Int): Voice = voices((i%voices.size + voices.size)%voices.size)
     
     def exec(ops: Vector[Char], inp: Seq[Char]): (Chorus, Vector[Char], Boolean, Boolean) = {
       @tailrec
@@ -65,13 +65,13 @@ object Prelude extends Interpreter{
           case n if n.isDigit => edo(ac :+ v.push(SafeLong(n.asDigit)), ps, out, read, jmp)
           case _ => edo(ac :+ v, ps, out, read, jmp)}
         case _ => (SeqChorus(ac), out, read, jmp)}
-      edo(Vector(), ops.zip(voices), Vector(), read=false, jmp=false)}
-  }
-  case class ParChorus(voices: ParVector[Voice]) extends Chorus{
-    lazy val size: Int = voices.size
-    def voice(i: Int): Voice = {
-      val fid = (i%size + size)%size
-      voices.find(_.id == fid).get}
+      edo(Vector(), ops.zip(voices), Vector(), read=false, jmp=false)}}
+  
+  case class ParChorus(voices: Vector[Voice]) extends Chorus{
+    import scala.concurrent.Await
+    implicit val ec: ExecutionContext = ExecutionContext.global
+    def voice(i: Int): Voice = voices((i%voices.size + voices.size)%voices.size)
+    
     def exec(ops: Vector[Char], inp: Seq[Char]): (Chorus, Vector[Char], Boolean, Boolean) = {
       def edo(op: Char, v: Voice): (Voice, Boolean, Option[Char]) = op match{
         case '+' => (v.add, false, None)
@@ -86,9 +86,8 @@ object Prelude extends Interpreter{
           case (n, nv) => (nv, false, Some(n.toChar))}
         case n if n.isDigit => (v.push(SafeLong(n.asDigit)), false, None)
         case _ => (v, false, None)}
-      val res = voices.to(ParVector).map(v => edo(ops(v.id), v))
-      (ParChorus(res.map(_._1)), res.collect{case (_, _, Some(c)) => c}.toVector, ops.contains('?'), res.exists(_._2))}
-  }
+      val res = Await.result(Future.traverse(voices)(v => Future(edo(ops(v.id), v))), Duration.Inf)
+      (ParChorus(res.map(_._1)), res.collect{case (_, _, Some(c)) => c}, ops.contains('?'), res.exists(_._2))}}
   
   case class Voice(id: Int, stk: LazyList[SafeLong]){
     def push(n: SafeLong): Voice = Voice(id, n #:: stk)
@@ -99,12 +98,10 @@ object Prelude extends Interpreter{
     def subt: Voice = stk match{
       case a +: b +: ns => Voice(id, (b - a) #:: ns)}
     def chk: Boolean = stk.head != 0
-    def head: SafeLong = stk.head
-  }
+    def head: SafeLong = stk.head}
   
   case class PrelProg(mat: Matrix[Char], jump: immutable.HashMap[Int, Int]){
-    val numVoices: Int = mat.xdim
+    val numVoices: Int = mat.ydim
     def apply(i: Int): Vector[Char] = mat.col(i)
-    def get(i: Int): Option[Vector[Char]] = mat.colOption(i)
-  }
+    def get(i: Int): Option[Vector[Char]] = mat.colOption(i)}
 }
