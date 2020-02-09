@@ -360,5 +360,9 @@ There's one blemish on Eso's LazyK interpreter at the moment: Its parser doesn't
 
 The parser also doesn't support mixing dialects in the same source file. That feature had only one mention in the entire spec, and the author put that mention there to say he didn't know how he felt about it -and implementing it with my current set of parser tools would mean bringing an ugly, inelegant monstrosity into this world where I otherwise have a parser so neat and tidy it make me smile. Sorry, I don't plan to implement that unless my parser tools evolve to the point where it becomes a 3-4 line solution.
 
+This interpreter is also a little unique in that it's the only interpreter in Eso that uses a mutable state. When an S combinator transforms (Sxyz) into (xz)(yz), the duplicated function z is wrapped into a special expression that collapses _both_ occurrences to the result when either one is evaluated. I did this because the performance gain is literally more than a thousand times.
+
+The reason I had to use mutable states to accomplish this is that I have to perform the evaluation in the same level as the rest of the expression in order to not blow up the call stack. If I simply made the result a `lazy val` that made a new call to `eval`, that would introduce a recursion that can't be optimized away with trampolining. The moment I figure out a way to do this without mutable state, though, I'm changing it.
+
 ### Building
 I use [SBT assembly](https://github.com/sbt/sbt-assembly). This repo should give you everything you need to build it, just put it in a folder, run SBT from that directory, let it do its thing, then run assembly.

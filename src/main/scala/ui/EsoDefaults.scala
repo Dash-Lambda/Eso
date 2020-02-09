@@ -9,7 +9,7 @@ import fractran.{FracTran, FracTranpp}
 import funge.{Befunge93, Befunge98}
 import glypho.{Glypho, GlyphoShorthand}
 import grass.Grass
-import lazyk.LazyK
+import lazyk.{BFToLazyK, LazyK}
 import metatape.{BFToMetatape, Metatape}
 import path.PATH
 import pdoubleprime.PDP
@@ -95,7 +95,7 @@ object EsoDefaults extends EsoObj{
     WordLang,
     LazyK)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly, GlyphoShorthand)
-  val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude)
+  val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude, BFToLazyK)
   
   val defBoolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](
     ("log", false, "toggle detailed console logging"),

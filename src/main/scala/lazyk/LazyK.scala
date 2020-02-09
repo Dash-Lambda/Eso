@@ -17,21 +17,21 @@ object LazyK extends Interpreter{
   val churchTrue: Func = K
   val churchFalse: Func = K1(iexp)
   
-  val unlParser: OrderedParser[Vector[Char], Expr] = {
+  val unlParser: OrderedParser[Seq[Char], Expr] = {
     val funcParser = {
-      OrderedPartialParser[Vector[Char], Expr]{
+      OrderedPartialParser[Seq[Char], Expr]{
         case 's' +: cs => (sexp, cs, 0, 1)
         case 'k' +: cs => (kexp, cs, 0, 1)
         case 'i' +: cs => (iexp, cs, 0, 1)}}
-    def recur(src: Vector[Char]): Option[(Vector[Char], Int, Int)] = src match{
+    def recur(src: Seq[Char]): Option[(Seq[Char], Int, Int)] = src match{
       case '`' +: cs => Some((cs, 0, 1))
       case _ => None}
     def collect(xs: Seq[Expr]): Expr = xs match{
       case x +: y +: _ => AppExpr(x, y)}
     OrderedRecurParser(2)(recur)(collect)(funcParser)}
-  val combParser: OrderedParser[Vector[Char], Expr] = {
+  val combParser: OrderedParser[Seq[Char], Expr] = {
     def collect(src: Seq[Expr]): Expr = src.reduceLeft(AppExpr)
-    def recur(src: Vector[Char]): ARPRet[Vector[Char], Expr] = src match{
+    def recur(src: Seq[Char]): ARPRet[Seq[Char], Expr] = src match{
       case c +: cs => c match{
         case '(' => ARPDown(cs, 0, 1)
         case ')' => ARPUp(cs, 0, 1)
@@ -41,17 +41,19 @@ object LazyK extends Interpreter{
         case _ => ARPFail}
       case _ => ARPUp(src, 0, 0)}
     ArbitraryRecurParser(recur _, collect)}
-  val iotaParser: OrderedParser[Vector[Char], Expr] = {
+  val iotaParser: OrderedParser[Seq[Char], Expr] = {
     val funcParser = {
-      OrderedPartialParser[Vector[Char], Expr]{
+      OrderedPartialParser[Seq[Char], Expr]{
         case 'i' +: cs => (FuncExpr(Pair(sexp, kexp)), cs, 0, 1)}}
-    def recur(src: Vector[Char]): Option[(Vector[Char], Int, Int)] = src match{
+    def recur(src: Seq[Char]): Option[(Seq[Char], Int, Int)] = src match{
       case '*' +: cs => Some((cs, 0, 1))
       case _ => None}
     def collect(xs: Seq[Expr]): Expr = xs match{
       case x +: y +: _ => AppExpr(x, y)}
     OrderedRecurParser(2)(recur)(collect)(funcParser)}
-  val totParser: OrderedParser[Vector[Char], Expr] = unlParser <+> combParser <+> iotaParser
+  val totParser: OrderedParser[Seq[Char], Expr] = {
+    (unlParser <+> combParser <+> iotaParser)
+      .withConditioning(p => filterContains(p.toVector, "`ski(SKI)01*"))}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = parse(progRaw) match{
     case None => Failure(EsoExcep("Invalid Expression"))
@@ -63,26 +65,20 @@ object LazyK extends Interpreter{
   
   def parse(progRaw: String): Option[Expr] = {
     def uncomment(str: String): String = str.replaceAll("""(?m)^#.*$""", "")
-    val conditioned = filterChars(uncomment(progRaw), "`ski(SKI)01*").toVector
-    totParser(conditioned).toOption}
+    totParser(uncomment(progRaw)).toOption}
   
   def run(expr: Expr): Option[(Char, Expr)] = {
-    val cur = eval(expr)
+    val cur = FuncExpr(eval(expr))
     val cexpr = {
       AppExpr(
         AppExpr(
-          AppExpr(
-            FuncExpr(cur),
-            FuncExpr(churchTrue)),
+          AppExpr(cur, FuncExpr(churchTrue)),
           FuncExpr(ChurchCounter)),
         FuncExpr(ChurchHalt))}
     val num = countChurchNum(eval(cexpr))
     if(0 > num || num > 255) None
     else{
-      val nexpr = {
-        AppExpr(
-          FuncExpr(cur),
-          FuncExpr(churchFalse))}
+      val nexpr = AppExpr(cur, FuncExpr(churchFalse))
       Some((num.toChar, nexpr))}}
   
   @tailrec
@@ -110,12 +106,25 @@ object LazyK extends Interpreter{
   case class AppExpr(x: Expr, y: Expr) extends Expr{
     def apply(cc: Cont): TailRec[Func] = tailcall(x(ExprCont(y, cc)))}
   
+  class DupExpr(var f: Expr) extends Expr{
+    def apply(cc: Cont): TailRec[Func] = f match{
+      case FuncExpr(fun) => tailcall(cc(fun))
+      case _ => tailcall(f(DupCont(this, cc)))}
+    def collapse(res: Func): Unit = f match{
+      case FuncExpr(_) => ()
+      case _ => f = FuncExpr(res)}}
+  
   //Continuations
   object EndCont extends Cont{
     def apply(f: Func): TailRec[Func] = done(f)}
   
   case class ExprCont(y: Expr, cc: Cont) extends Cont{
     def apply(f: Func): TailRec[Func] = tailcall(f(y, cc))}
+  
+  case class DupCont(u: DupExpr, cc: Cont) extends Cont{
+    def apply(f: Func): TailRec[Func] = {
+      u.collapse(f)
+      tailcall(cc(f))}}
   
   //Funcs
   object I extends Func{
@@ -127,8 +136,9 @@ object LazyK extends Interpreter{
     def apply(f: Expr, cc: Cont): TailRec[Func] = tailcall(cc(K1(f)))}
   
   case class S2(x: Expr, y: Expr) extends Func{
-    def apply(f: Expr, cc: Cont): TailRec[Func] = tailcall{
-      x(ExprCont(f, ExprCont(AppExpr(y, f), cc)))}}
+    def apply(f: Expr, cc: Cont): TailRec[Func] = {
+      val fex = new DupExpr(f)
+      tailcall(x(ExprCont(fex, ExprCont(AppExpr(y, fex), cc))))}}
   case class S1(x: Expr) extends Func{
     def apply(f: Expr, cc: Cont): TailRec[Func] = tailcall(cc(S2(x, f)))}
   object S extends Func{

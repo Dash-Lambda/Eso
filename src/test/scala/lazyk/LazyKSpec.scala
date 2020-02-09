@@ -1,11 +1,12 @@
 package lazyk
 
+import common.PrimeNumTools
 import common_test.EsoSpec
 
 class LazyKSpec extends EsoSpec{
-  testAllAgainstOutputWithLimit(LazyK)(
-    ("hworld.lazy", "", "Hello, world!\n", -1),
-    ("unlambda.lazy", grabFile("hworld.unl"), "Hello world\n", -1),
-    ("primes.lazy", "", "2\n3\n5\n7\n11\n13\n17", 16),
-    ("fib.lazy", "", Vector(0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55).map("*"*_).mkString("\n"), 153))
+  testAllAgainstOutputAutoLimit(LazyK)(
+    ("hworld.lazy", "", "Hello, world!\n", false),
+    ("unlambda.lazy", grabFile("hworld.unl"), "Hello world\n", false),
+    ("primes.lazy", "", PrimeNumTools.primesLazy.take(100).mkString("\n"), true),
+    ("fib.lazy", "", Vector(0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55).map("*"*_).mkString("\n"), true))
 }
