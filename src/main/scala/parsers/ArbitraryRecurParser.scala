@@ -1,6 +1,7 @@
 package parsers
 
 import scala.annotation.tailrec
+import scala.util.{Failure, Success, Try}
 
 trait ARPRet[+A, +B]
 case class ARPNext[+A, +B](res: B, rem: A, start: Int, end: Int) extends ARPRet[A, B]
@@ -30,6 +31,9 @@ case class ArbitraryRecurParser[A, B](func: PartialFunction[A, ARPRet[A, B]], co
       case Some(nxt) => nxt match{
         case ARPNext(res, rem, start, end) => comb(start, pdo(rem, end, Vector(res), Vector()))
         case ARPDown(rem, start, end) => comb(start, pdo(rem, end, Vector(), Vector()))
+        case ARPUp(rem, start, end) => Try{collect(Seq())} match{
+          case Success(res) => comb(start, ARPNext(res, rem, start, end))
+          case Failure(_) => EsoParseFail}
         case _ => EsoParseFail}}}
 }
 

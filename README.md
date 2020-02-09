@@ -81,7 +81,7 @@ Current native language support (mostly in chronological order):
 * [Glypho](https://esolangs.org/wiki/Glypho)
 * [Platts](https://esolangs.org/wiki/Platts)
 * [WordLang](https://github.com/WilliamRagstad/WordLang)
-* [LazyK](https://esolangs.org/wiki/Lazy_K) (Unlambda, CC, and Iota dialects)
+* [LazyK](https://esolangs.org/wiki/Lazy_K)
 * Scala
 
 ### Current features:
@@ -356,9 +356,7 @@ Of course, the Funge-98 interpreter also does not support file I/O or the system
 Expect more fingerprints to become available over time. ... Slowly, probably. Whenever I get bored between new language components.
 
 ### On the LazyK Interpreter
-There's one blemish on Eso's LazyK interpreter at the moment: Its parser doesn't yet support the Jot dialect. That's coming as soon as I can figure out how I want to parse it.
-
-The parser also doesn't support mixing dialects in the same source file. That feature had only one mention in the entire spec, and the author put that mention there to say he didn't know how he felt about it -and implementing it with my current set of parser tools would mean bringing an ugly, inelegant monstrosity into this world where I otherwise have a parser so neat and tidy it make me smile. Sorry, I don't plan to implement that unless my parser tools evolve to the point where it becomes a 3-4 line solution.
+The LazyK parser doesn't support mixing dialects in the same source file. That feature had only one mention in the entire spec, and the author put that mention there to say he didn't know how he felt about it -and implementing it with my current set of parser tools would mean bringing an ugly, inelegant monstrosity into this world where I otherwise have a parser so neat and tidy it makes me smile. Sorry, I don't plan to implement that unless my parser tools evolve to the point where it becomes a 3-4 line solution.
 
 This interpreter is also a little unique in that it's the only interpreter in Eso that uses a mutable state. When an S combinator transforms (Sxyz) into (xz)(yz), the duplicated function z is wrapped into a special expression that collapses _both_ occurrences to the result when either one is evaluated. I did this because the performance gain is literally more than a thousand times.
 
