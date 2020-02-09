@@ -26,6 +26,10 @@ abstract class EsoSpec extends AnyFlatSpec{
   def testInterp(intp: Interpreter, config: Config, prog: String, inp: Seq[Char] = Seq())(f: Try[LazyList[Char]] => Boolean): Boolean = f(intp(config)(prog) map (i => i(inp)))
   def outputEquals(exp: String)(lop: Try[LazyList[Char]]): Boolean = lop.map(lst => lst.mkString == exp).getOrElse(false)
   
+  def assertOutput(intp: Interpreter, prog: String, expected: String, inp: Seq[Char] = Seq(), config: Config = defaultConfig): Unit = {
+    val res = getOutputString(intp, prog, inp, config)
+    assertResult(Success(expected))(res)}
+  
   def testAgainstOutput(intp: Interpreter, config: Config = defaultConfig, first: Boolean = false)(nam: String, prog: String, inp: String, ref: String): Unit = {
     def runTest(): Unit = {
       val res = config.num("olen") match{
@@ -39,9 +43,13 @@ abstract class EsoSpec extends AnyFlatSpec{
       testAgainstOutput(intp, config, first=true)(nam1, grabFile(nam1), inp1, ref1)
       for((nam, inp, ref) <- rem){
         testAgainstOutput(intp, config)(nam, grabFile(nam), inp, ref)}}
-  def testAllAgainstOutputWithLimit(intp: Interpreter, config: Config = defaultConfig)(itms: (String, String, String, Int)*): Unit = itms match{
+  def testAllAgainstOutputLimited(intp: Interpreter, config: Config = defaultConfig)(itms: Seq[(String, String, String, Int)]): Unit = itms match{
     case (nam1, inp1, ref1, lim1) +: rem =>
       testAgainstOutput(intp, config.set("olen", lim1), first=true)(nam1, grabFile(nam1), inp1, ref1)
       for((nam, inp, ref, lim) <- rem){
         testAgainstOutput(intp, config.set("olen", lim))(nam, grabFile(nam), inp, ref)}}
+  def testAllAgainstOutputWithLimit(intp: Interpreter, config: Config = defaultConfig)(itms: (String, String, String, Int)*): Unit = {
+    testAllAgainstOutputLimited(intp, config)(itms)}
+  def testAllAgainstOutputAutoLimit(intp: Interpreter, config: Config = defaultConfig)(itms: (String, String, String, Boolean)*): Unit = {
+    testAllAgainstOutputLimited(intp, config)(itms.map{case (nam, inp, ref, lim) => (nam, inp, ref, if(lim) ref.length else -1)})}
 }
