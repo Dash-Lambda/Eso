@@ -1,11 +1,11 @@
 package glypho
 
-import parsers.OrderedRegexParser
+import parsers.RegexParser
 
 import scala.annotation.tailrec
 
 object GlyphoParser {
-  val normParse: OrderedRegexParser[Char] = OrderedRegexParser("(....)"){m => parseOne(m.group(1))}
+  val normParse: RegexParser[Char] = RegexParser("(....)"){ m => parseOne(m.group(1))}
   
   def parseAll(progRaw: String): Vector[Char] = normParse.parseAllValues(progRaw)
   def parseOne(tok: String): Char = {

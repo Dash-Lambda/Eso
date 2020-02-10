@@ -1,7 +1,7 @@
 package fractran
 
 import common.{EsoExcep, EsoObj, PrimeNumTools}
-import parsers.{OrderedParser, OrderedRegexParser}
+import parsers.{EsoParser, RegexParser}
 import spire.math.SafeLong
 
 import scala.util.{Failure, Success, Try}
@@ -13,8 +13,8 @@ object FracTranParser extends EsoObj{
   val vecReg: Regex = raw"""<([\d ]+)>""".r
   val elmReg: Regex = raw"""\s*(\d+)((?: .*)?)""".r
   val numReg: Regex = raw"""(-?\d+)""".r
-  lazy val fracParser: OrderedParser[String, (SafeLong, SafeLong)] = {
-    OrderedRegexParser[(SafeLong, SafeLong)](fracReg){m => (toNum(m.group(1)), toNum(m.group(2)))}
+  lazy val fracParser: EsoParser[String, (SafeLong, SafeLong)] = {
+    RegexParser[(SafeLong, SafeLong)](fracReg){ m => (toNum(m.group(1)), toNum(m.group(2)))}
   }
   
   private def toNum(str: String): SafeLong = str match{

@@ -1,7 +1,7 @@
 package platts
 
 import common.{Config, Interpreter}
-import parsers.{EsoParseFail, EsoParsed, OrderedRegexParser}
+import parsers.{EsoParseFail, EsoParsed, RegexParser}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -12,7 +12,7 @@ object Platts extends Interpreter{
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{parse(progRaw)} map{
     case (symLen, ruleMap, initData) =>
-      val stepper = OrderedRegexParser(raw"""(.{$symLen}).{$symLen}"""){m => ruleMap.getOrElse(m.group(1), REP("", toggle=false))}
+      val stepper = RegexParser(raw"""(.{$symLen}).{$symLen}"""){ m => ruleMap.getOrElse(m.group(1), REP("", toggle=false))}
       
       @tailrec
       def repInp(ac: String, inp: Seq[Char]): (String, Seq[Char]) = {

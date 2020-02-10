@@ -1,7 +1,7 @@
 package ui
 
 import common.EsoObj
-import parsers.{OrderedParser, OrderedRegexParser}
+import parsers.{EsoParser, RegexParser}
 
 import scala.collection.immutable
 
@@ -14,8 +14,8 @@ case class EsoCmd(cmd: String, args: immutable.HashMap[String, String]) extends 
 
 object EsoCommandParser extends EsoObj{
   private val cmdReg = raw"""^(\S+)(.*)\z""".r
-  private val argParser: OrderedParser[String, (String, String)] = {
-    OrderedRegexParser(raw"""[^-]*-(\S*) (\S*)""".r){
+  private val argParser: EsoParser[String, (String, String)] = {
+    RegexParser(raw"""[^-]*-(\S*) (\S*)""".r){
       m => (m.group(1), m.group(2))}}
   
   def apply(str: String): EsoParsed = str match{

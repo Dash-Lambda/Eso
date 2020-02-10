@@ -1,7 +1,7 @@
 package wordlang
 
 import common.{Config, Interpreter}
-import parsers.{OrderedParser, OrderedRegexParser}
+import parsers.{EsoParser, RegexParser}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -13,17 +13,17 @@ object WordLang extends Interpreter{
   
   val escapeReg: Regex = raw"""\\(.)""".r
   val commentReg: Regex = raw"""(?s)"[^"]*"""".r
-  val wordLangParser: OrderedParser[String, WOP] = {
+  val wordLangParser: EsoParser[String, WOP] = {
     def flipBack(str: String): String = str.map(_.abs)
-    val ibvParser = OrderedRegexParser[WOP](raw"""'(\S*)'""")(m => IncByVar(flipBack(m.group(1))))
-    val ivbParser = OrderedRegexParser[WOP](raw"""\>\s*(\S*)""")(m => IncVarBy(flipBack(m.group(1))))
-    val lblParser = OrderedRegexParser[WOP](raw"""\-\s*(\w*)""")(m => JumpLabel(flipBack(m.group(1))))
-    val jmpParser = OrderedRegexParser[WOP](raw"""(\w*)(\!{1,3})"""){m =>
+    val ibvParser = RegexParser[WOP](raw"""'(\S*)'""")(m => IncByVar(flipBack(m.group(1))))
+    val ivbParser = RegexParser[WOP](raw"""\>\s*(\S*)""")(m => IncVarBy(flipBack(m.group(1))))
+    val lblParser = RegexParser[WOP](raw"""\-\s*(\w*)""")(m => JumpLabel(flipBack(m.group(1))))
+    val jmpParser = RegexParser[WOP](raw"""(\w*)(\!{1,3})"""){ m =>
       m.group(2).length match{
         case 1 => Jump(flipBack(m.group(1)))
         case 2 => JumpLess(flipBack(m.group(1)))
         case 3 => JumpGreater(flipBack(m.group(1)))}}
-    val charParser = OrderedRegexParser[WOP](raw"""(\S)"""){m =>
+    val charParser = RegexParser[WOP](raw"""(\S)"""){ m =>
       m.group(1).head match{
         case ',' => IncToggle
         case '.' => PrintChar
@@ -32,7 +32,7 @@ object WordLang extends Interpreter{
         case c => CharOp(c.abs)}}
     
     val baseParser = ibvParser <+> ivbParser <+> lblParser <+> jmpParser <+> charParser
-    val parParser = OrderedRegexParser[WOP](raw"""\(([^\(\)]*)\)""")(m => PrintNum(baseParser.parseAllValues(m.group(1))))
+    val parParser = RegexParser[WOP](raw"""\(([^\(\)]*)\)""")(m => PrintNum(baseParser.parseAllValues(m.group(1))))
     baseParser <+> parParser}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{parse(progRaw)} map{

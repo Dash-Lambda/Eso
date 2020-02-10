@@ -9,7 +9,7 @@ case class ARPDown[+A, +B](rem: A, start: Int, end: Int) extends ARPRet[A, B]
 case class ARPUp[+A, +B](rem: A, start: Int, end: Int) extends ARPRet[A, B]
 object ARPFail extends ARPRet[Nothing, Nothing]
 
-case class ArbitraryRecurParser[A, B](func: PartialFunction[A, ARPRet[A, B]], collect: Seq[B] => B) extends OrderedParser[A, B]{
+case class ArbitraryRecurParser[A, B](func: PartialFunction[A, ARPRet[A, B]], collect: Seq[B] => B) extends EsoParser[A, B]{
   def apply(inp: A): EsoParseRes[A, B] = {
     @tailrec
     def pdo(src: A, end: Int, tmp: Vector[B], stk: Vector[Vector[B]]): ARPRet[A, B] = func.lift(src) match{

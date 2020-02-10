@@ -1,7 +1,7 @@
 package unlambda
 
 import common.{Config, EsoExcep, Interpreter}
-import parsers.{EsoParsed, OrderedParser, OrderedPartialParser, OrderedRecurParser}
+import parsers.{EsoParsed, EsoParser, PartialParser, DepthRecurParser}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -10,7 +10,7 @@ import scala.util.{Failure, Success, Try}
 object Unlambda extends Interpreter{
   val name: String = "Unlambda"
   
-  val funcParser: OrderedParser[Vector[Char], Expr] = {
+  val funcParser: EsoParser[Vector[Char], Expr] = {
     val funcMap = immutable.HashMap(
       'i' -> I,
       'v' -> V,
@@ -22,17 +22,17 @@ object Unlambda extends Interpreter{
       '@' -> AT,
       '|' -> PIPE,
       'e' -> E)
-    OrderedPartialParser.simple{
+    PartialParser.simple{
       case '.' +: c +: cs => (FuncExpr(OUT(c)), cs)
       case '?' +: c +: cs => (FuncExpr(QUES(c)), cs)
       case f +: cs if funcMap.isDefinedAt(f) => (FuncExpr(funcMap(f)), cs)}}
-  val unlParser: OrderedParser[Vector[Char], Expr] = {
+  val unlParser: EsoParser[Vector[Char], Expr] = {
     def recur(src: Vector[Char]): Option[(Vector[Char], Int, Int)] = src match{
       case '`' +: cs => Some((cs, 0, 1))
       case _ => None}
     def collect(xs: Seq[Expr]): Expr = xs match{
       case x +: y +: _ => AppExpr(x, y)}
-    OrderedRecurParser(2)(recur)(collect)(funcParser)}
+    DepthRecurParser(2)(recur)(collect)(funcParser)}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
     @tailrec

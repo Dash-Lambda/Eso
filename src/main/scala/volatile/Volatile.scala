@@ -1,7 +1,7 @@
 package volatile
 
 import common.{Config, Interpreter}
-import parsers.{OrderedParser, OrderedPartialParser}
+import parsers.{EsoParser, PartialParser}
 import spire.math.SafeLong
 
 import scala.annotation.tailrec
@@ -10,8 +10,8 @@ import scala.util.{Success, Try}
 object Volatile extends Interpreter{
   val name: String = "Volatile"
   
-  val volParser: OrderedParser[Vector[Char], VOP] = {
-    OrderedPartialParser.simple{
+  val volParser: EsoParser[Vector[Char], VOP] = {
+    PartialParser.simple{
       case c +: cs =>
         val op = c match{
           case '~' => PUSH

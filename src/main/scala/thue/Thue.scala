@@ -1,7 +1,7 @@
 package thue
 
 import common.{Config, EsoExcep, Interpreter}
-import parsers.{OrderedParser, OrderedRegexParser}
+import parsers.{EsoParser, RegexParser}
 
 import scala.annotation.tailrec
 import scala.util.matching.Regex
@@ -11,7 +11,7 @@ object Thue extends Interpreter{
   val name: String = "Thue"
   
   val initReg: Regex = raw"""(?s)(.*)\n\s*::=\s*\n(.*)\z""".r
-  val ruleParser: OrderedParser[String, (String, String)] = OrderedRegexParser(raw"""(?m)^(.*)::=(.*)$$""".r){m => (m.group(1), m.group(2))}
+  val ruleParser: EsoParser[String, (String, String)] = RegexParser(raw"""(?m)^(.*)::=(.*)$$""".r){ m => (m.group(1), m.group(2))}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = parse(progRaw) map{case (init, prog) => thi(init, prog, config.rands)}
   

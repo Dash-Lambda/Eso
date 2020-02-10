@@ -1,7 +1,7 @@
 package lazyk
 
 import common.{Config, EsoExcep, Interpreter}
-import parsers.{ARPDown, ARPFail, ARPNext, ARPRet, ARPUp, ArbitraryRecurParser, OrderedChunkParser, OrderedParser, OrderedPartialParser, OrderedRecurParser}
+import parsers.{ARPDown, ARPFail, ARPNext, ARPRet, ARPUp, ArbitraryRecurParser, ChunkParser, EsoParser, PartialParser, DepthRecurParser}
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Try}
@@ -13,15 +13,15 @@ object LazyK extends Interpreter{
   val churchTrue: Func = K
   val churchFalse: Func = K1(FuncExpr(I))
   
-  val lkParser: OrderedParser[Seq[Char], Expr] = {
+  val lkParser: EsoParser[Seq[Char], Expr] = {
     val sexp: Expr = FuncExpr(S)
     val kexp: Expr = FuncExpr(K)
     val iexp: Expr = FuncExpr(I)
     val iotaexp: Expr = FuncExpr(Pair(sexp, kexp))
     
-    val unlParser: OrderedParser[Seq[Char], Expr] = {
+    val unlParser: EsoParser[Seq[Char], Expr] = {
       val funcParser = {
-        OrderedPartialParser[Seq[Char], Expr]{
+        PartialParser[Seq[Char], Expr]{
           case 's' +: cs => (sexp, cs, 0, 1)
           case 'k' +: cs => (kexp, cs, 0, 1)
           case 'i' +: cs => (iexp, cs, 0, 1)}}
@@ -30,9 +30,9 @@ object LazyK extends Interpreter{
         case _ => None}
       def collect(xs: Seq[Expr]): Expr = xs match{
         case x +: y +: _ => AppExpr(x, y)}
-      OrderedRecurParser(2)(recur)(collect)(funcParser)}
+      DepthRecurParser(2)(recur)(collect)(funcParser)}
     
-    val combParser: OrderedParser[Seq[Char], Expr] = {
+    val combParser: EsoParser[Seq[Char], Expr] = {
       def collect(src: Seq[Expr]): Expr = src.foldLeft(iexp)(AppExpr)
       def recur(src: Seq[Char]): ARPRet[Seq[Char], Expr] = src match{
         case c +: cs => c match{
@@ -45,18 +45,18 @@ object LazyK extends Interpreter{
         case _ => ARPUp(src, 0, 0)}
       ArbitraryRecurParser(recur _, collect)}
     
-    val iotaParser: OrderedParser[Seq[Char], Expr] = {
+    val iotaParser: EsoParser[Seq[Char], Expr] = {
       val funcParser = {
-        OrderedPartialParser[Seq[Char], Expr]{
+        PartialParser[Seq[Char], Expr]{
           case 'i' +: cs => (iotaexp, cs, 0, 1)}}
       def recur(src: Seq[Char]): Option[(Seq[Char], Int, Int)] = src match{
         case '*' +: cs => Some((cs, 0, 1))
         case _ => None}
       def collect(xs: Seq[Expr]): Expr = xs match{
         case x +: y +: _ => AppExpr(x, y)}
-      OrderedRecurParser(2)(recur)(collect)(funcParser)}
+      DepthRecurParser(2)(recur)(collect)(funcParser)}
     
-    val jotParser: OrderedParser[Seq[Char], Expr] = {
+    val jotParser: EsoParser[Seq[Char], Expr] = {
       def collect(exps: Vector[Expr]): Expr = exps.foldLeft(iexp){case (x, y) => AppExpr(x, y)}
       @tailrec
       def jdo(src: Seq[Char], ac: Vector[Expr]): (Expr, Seq[Char]) = src match{
@@ -66,7 +66,7 @@ object LazyK extends Interpreter{
             case x +: y +: es => jdo(w, AppExpr(x, y) +: es)}
           case _ => (collect(ac), src)}
         case _ => (collect(ac), src)}
-      OrderedChunkParser[Seq[Char], Expr]{inp =>
+      ChunkParser[Seq[Char], Expr]{ inp =>
         val end = inp.lastIndexWhere("01".contains(_))
         if(end == -1) None
         else jdo(inp.take(end + 1), Vector()) match{

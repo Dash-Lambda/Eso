@@ -1,7 +1,7 @@
 package fractran
 
 import common.{Config, Interpreter, PrimeNumTools}
-import parsers.{OrderedParser, OrderedPartialParser}
+import parsers.{EsoParser, PartialParser}
 import spire.implicits._
 import spire.math.SafeLong
 
@@ -13,8 +13,8 @@ object FracTranpp extends Interpreter{
   val name: String = "FracTran++"
   val primes: LazyList[SafeLong] = PrimeNumTools.birdPrimes.to(LazyList)
   
-  val breakParser: OrderedParser[Vector[FOP], Vector[FOP]] = {
-    OrderedPartialParser.simple{
+  val breakParser: EsoParser[Vector[FOP], Vector[FOP]] = {
+    PartialParser.simple{
       case fops if fops.nonEmpty =>
         val ind = fops.indexWhere(_.isBreak)
         val brk = if(ind == -1) fops.length else ind
