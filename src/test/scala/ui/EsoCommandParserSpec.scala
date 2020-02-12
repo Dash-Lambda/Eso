@@ -7,20 +7,20 @@ import scala.collection.immutable
 class EsoCommandParserSpec extends EsoSpec{
   "EsoCommandParser" should "fail on empty input" in {
     val res1 = EsoCommandParser("")
-    assertResult(ParseFail)(res1)
+    assertResult(None)(res1)
     val res2 = EsoCommandParser(" \t\n")
-    assertResult(ParseFail)(res2)}
+    assertResult(None)(res2)}
   
   it should "recognize unary commands" in {
     val res1 = EsoCommandParser("test")
-    assertResult(EsoCmd("test", immutable.HashMap()))(res1)
+    assertResult(Some(EsoCmd("test", immutable.HashMap())))(res1)
     val res2 = EsoCommandParser("test2  \t")
-    assertResult(EsoCmd("test2", immutable.HashMap()))(res2)}
+    assertResult(Some(EsoCmd("test2", immutable.HashMap())))(res2)}
   
   it should "recognize commands followed by an argument" in {
     val res1 = EsoCommandParser("test -a A")
     res1 match{
-      case EsoCmd(cmd, args) =>
+      case Some(EsoCmd(cmd, args)) =>
         assertResult("test")(cmd)
         withClue(s"args=$args"){
           assertResult(Some("A"))(args.get("a"))}
@@ -31,7 +31,7 @@ class EsoCommandParserSpec extends EsoSpec{
     val str1 = s"test ${argRef.map{case (k, v) => s"-$k $v"}.mkString(" ")}"
     val res1 = EsoCommandParser(str1)
     res1 match{
-      case EsoCmd(cmd, args) =>
+      case Some(EsoCmd(cmd, args)) =>
         assertResult("test")(cmd)
         withClue(s"args=$args"){
           for((k, v) <- argRef){

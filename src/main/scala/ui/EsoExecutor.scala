@@ -10,19 +10,20 @@ case class EsoExecutor(cmds: Vector[InterfaceHandler]) extends EsoObj{
   val handlers: immutable.HashMap[String, InterfaceHandler] = mkMap(cmds map (h => (h.nam, h)))
   
   def apply(state: EsoRunState)(inp: String): EsoState = parse(state.binds)(inp) match{
-    case EsoCmd("help", _) =>
-      showHelp()
-      state
-    case EsoCmd(cmd, args) => handlers.get(cmd) match{
-      case Some(h) => h(state)(args)
-      case None =>
-        println("Error: Invalid Command")
-        state}
-    case ParseFail =>
+    case Some(res) => res match{
+      case EsoCmd("help", _) =>
+        showHelp()
+        state
+      case EsoCmd(cmd, args) => handlers.get(cmd) match{
+        case Some(h) => h(state)(args)
+        case None =>
+          println("Error: Invalid Command")
+          state}}
+    case _ =>
       println("Error: Invalid Command")
       state}
   
-  def parse(binds: immutable.HashMap[String, String])(inp: String): EsoParsed = inp match{
+  def parse(binds: immutable.HashMap[String, String])(inp: String): Option[EsoCmd] = inp match{
     case boundReg(b, ops) if binds.isDefinedAt(b) => EsoCommandParser(s"${binds(b)}$ops")
     case _ => EsoCommandParser(inp)}
   
