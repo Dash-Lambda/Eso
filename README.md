@@ -147,11 +147,15 @@ So, Eso has two general forms of parsers: Bespoke parsers, which are written by 
 
 The parser tools are a collection of function classes that take an input and return either a parse failure or a structure with the next parsed token, the remaining input, and information on where the token was found.
 
-The parent class additionally implements a method to parse _all_ valid tokens to a vector of results, to lazily parse all tokens to a LazyList, and a set of combinators and modifiers that currently consist of:
-* `map`: Maps the output of the parser (the output is an Option[T])
-* `<+>`: If the left-hand parser fails, the right-hand parser is used (equivalent to PartialFunction's orElse)
+The parent class additionally implements methods to iterate through matches and a set of combinators and modifiers that currently consist of:
+* `map`: Maps the output of the parser
+* `<+>`: Groups parsers such that the result comes from the earliest and longest match
+* `|`: If the left-hand parser fails, the right-hand parser is used
+* `~`: Turns the result into the product of the left-hand and right-hand parsers (the right-hand parses the remaining input after the left-hand)
+* `<~`: Gives the left-hand result only if both parsers succeed (basically `~` but selecting the left)
+* `~>`: Gives the right-hand result only if both parsers succeed (basically `~` but selecting the right)
 
-There are currently 5 parser classes:
+There are currently 5 primary parser classes:
 * ChunkParser: Takes a function which returns an `Option`
 * PartialParser: Similar to a ChunkParser except it takes a PartialFunction
 * RecurParser: This one is for parsing to tree structures, currently used in Unlambda. It takes a `recur` function that decides when to go down a level, a `collect` function to turn a set of leaves into a node, and another parser for the non-branching tokens.

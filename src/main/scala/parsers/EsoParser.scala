@@ -1,6 +1,6 @@
 package parsers
 
-import common.EsoObj
+import common.{EsoExcep, EsoObj}
 
 trait EsoParseRes[+A, +B]{
   def passed: Boolean
@@ -11,6 +11,12 @@ trait EsoParseRes[+A, +B]{
   def mapAll[C, D](f: (B, A, Int, Int) => (D, C, Int, Int)): EsoParseRes[C, D]
   def flatMapAll[C, D](f: (B, A, Int, Int) => EsoParseRes[C, D]): EsoParseRes[C, D]
   def toOption: Option[B]
+  def get: B
+  def next: A
+  
+  def getOrElse[U >: B](default: U): U = toOption match{
+    case Some(res) => res
+    case None => default}
 }
 object EsoParseFail extends EsoParseRes[Nothing, Nothing]{
   def passed: Boolean = false
@@ -21,6 +27,8 @@ object EsoParseFail extends EsoParseRes[Nothing, Nothing]{
   def mapAll[C, D](f: (Nothing, Nothing, Int, Int) => (D, C, Int, Int)): EsoParseRes[C, D] = EsoParseFail
   def flatMapAll[C, D](f: (Nothing, Nothing, Int, Int) => EsoParseRes[C, D]): EsoParseRes[C, D] = EsoParseFail
   def toOption: Option[Nothing] = None
+  def get: Nothing = throw EsoExcep("No Such Element")
+  def next: Nothing = throw EsoExcep("No Such Element")
 }
 case class EsoParsed[+A, +B](res: B, rem: A, start: Int, end: Int) extends EsoParseRes[A, B]{
   def passed: Boolean = true
@@ -30,6 +38,8 @@ case class EsoParsed[+A, +B](res: B, rem: A, start: Int, end: Int) extends EsoPa
     case (nres, nrem, ns, ne) => EsoParsed(nres, nrem, ns, ne)}
   def flatMapAll[C, D](f: (B, A, Int, Int) => EsoParseRes[C, D]): EsoParseRes[C, D] = f(res, rem, start, end)
   def toOption: Option[B] = Some(res)
+  def get: B = res
+  def next: A = rem
 }
 
 abstract class EsoParser[A, B] extends (A => EsoParseRes[A, B]) with EsoObj{
