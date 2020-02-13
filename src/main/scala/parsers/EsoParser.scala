@@ -74,6 +74,8 @@ abstract class EsoParser[A, B] extends (A => EsoParseRes[A, B]) with EsoObj{
   def map[C](f: B => C): EsoParser[A, C] = MappedParser(this, f)
   def withConditioning(f: A => A): EsoParser[A, B] = ConditioningParser(this, f)
   
+  def andThen[C](q: EsoParser[B, C]): EsoParser[A, C] = ChainedParser(this, q)
+  
   def toBulk: BulkParser[A, B] = BulkParser(this)
   
   def |(q: EsoParser[A, B]): AlternativeParser[A, B] = q match{

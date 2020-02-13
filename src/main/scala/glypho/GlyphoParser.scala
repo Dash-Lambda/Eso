@@ -12,7 +12,7 @@ object GlyphoParser {
         case -1 => normalize(cs, ac :+ maps.size, maps :+ c)
         case n => normalize(cs, ac :+ n, maps)}
       case _ => ac.mkString}
-    RegexParser("(....)")(m => normalize(m.group(1))).map{
+    RegexParser("(....)")(m => normalize(m.group(1))) map {
       case "0000" => 'n'
       case "0001" => 'i'
       case "0010" => '>'
