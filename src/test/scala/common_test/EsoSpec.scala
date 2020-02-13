@@ -1,11 +1,11 @@
 package common_test
 
-import common.{Config, Interpreter}
+import common.{Config, Interpreter, Translator}
 import org.scalatest.flatspec.AnyFlatSpec
 import ui.{EsoFileReader, EsoRunState}
 
 import scala.collection.immutable
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 abstract class EsoSpec extends AnyFlatSpec{
   val defaultConfig: Config = EsoRunState.default.config
@@ -15,10 +15,26 @@ abstract class EsoSpec extends AnyFlatSpec{
     assume(tried.isSuccess)
     tried.get}
   
+  def filterChars(str: String, cs: Seq[Char]): String = str.filter(cs.contains(_))
   def mkMap[A, B](vec: Vector[(A, B)]): immutable.HashMap[A, B] = {
     val builder = immutable.HashMap.newBuilder[A, B]
     builder ++= vec
     builder.result}
+  
+  def testTranslatorAgainstOutput(trans: Translator, rev: Boolean, prog: String, expected: String, config: Config = defaultConfig): Unit = {
+    val restry = {
+      if(rev) trans.unapply(config)(prog)
+      else trans(config)(prog)}
+    restry match{
+      case Success(res) => assertResult(expected)(res)
+      case Failure(e) => fail(s"Translation Failed ($e)")}}
+  def testTranslatorAgainstProgramResult(intp: Interpreter, trans: Translator, rev: Boolean, prog: String, expected: String, canBeSame: Boolean = false, config: Config = defaultConfig): Unit = {
+    val restry = {
+      if(rev) trans.unapply(config)(prog)
+      else trans(config)(prog)}
+    restry match{
+      case Success(res) if canBeSame || res != prog => assertOutput(intp, res, expected, config=config)
+      case Failure(e) => fail(s"Translation Failed ($e)")}}
   
   def getOutput(intp: Interpreter, prog: String, inp: Seq[Char] = Seq(), config: Config = defaultConfig): Try[LazyList[Char]] = intp(config)(prog) map (i => i(inp))
   def getOutputString(intp: Interpreter, prog: String, inp: Seq[Char] = Seq(), config: Config = defaultConfig): Try[String] = getOutput(intp, prog, inp, config) flatMap (l => Try{l.mkString})
