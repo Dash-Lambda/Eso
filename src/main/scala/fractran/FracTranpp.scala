@@ -1,115 +1,96 @@
 package fractran
 
-import common.{Config, Interpreter, PrimeNumTools}
-import parsers.{EsoParser, PartialParser}
-import spire.implicits._
+import common.{Config, Interpreter}
+import common.PrimeNumTools.factor
 import spire.math.SafeLong
+import spire.implicits._
 
 import scala.annotation.tailrec
-import scala.collection.immutable.ArraySeq
 import scala.util.Try
 
 object FracTranpp extends Interpreter{
+  import FracTranParser.primes
   val name: String = "FracTran++"
-  val primes: LazyList[SafeLong] = PrimeNumTools.birdPrimes.to(LazyList)
   
-  val breakParser: EsoParser[Vector[FOP], Vector[FOP]] = {
-    PartialParser.simple{
-      case fops if fops.nonEmpty =>
-        val ind = fops.indexWhere(_.isBreak)
-        val brk = if(ind == -1) fops.length else ind
-        (fops.take(brk), fops.drop(brk + 1))}}
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = FracTranParser.parseFOP(progRaw) flatMap{
+    case (initNum, prog) => Try{fppRun(initNum, prog)}}
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = parse(progRaw) map{
-    case (init, prog) => fti(init, prog)}
-  
-  def fti(init: SafeLong, blk: Vector[Vector[FOP]]): Seq[Char] => LazyList[Char] = {
+  def fppRun(initNum: SafeLong, blk: Vector[Vector[FOP]]): Seq[Char] => LazyList[Char] = {
     def collapse(exps: Seq[Int]): SafeLong = exps.zip(primes).map{case (e, p) => p**e}.reduce(_+_)
-    def getLine(inp: Seq[Char]): String = inp.takeWhile(_ != '\n').mkString
-    def dropLine(inp: Seq[Char]): Seq[Char] = {
-      val tl = inp.span(_ == '\n')._2
-      if(tl.nonEmpty) tl.tail
-      else Seq[Char]()}
-    
+    def splitLine(inp: Seq[Char]): (String, Seq[Char]) = inp.span(_ == '\n') match{
+      case (hd, tl) => (hd.mkString, tl.drop(1))}
     @tailrec
-    def nxt(num: SafeLong, src: Vector[FOP], bid: Int, calls: List[(Option[SafeLong], Vector[FOP], Int)], inp: Seq[Char]): Option[(String, (SafeLong, Vector[FOP], Int, List[(Option[SafeLong], Vector[FOP], Int)], Seq[Char]))] = src match{
-      case op +: ops =>
-        if(op.i) op.ext match{
-          case 1 => nxt(SafeLong(BigInt(getLine(inp))), blk(bid), bid, calls, dropLine(inp))
-          case 2 => nxt(collapse(ArraySeq.unsafeWrapArray(getLine(inp).split(" ").map(_.toInt))), blk(bid), bid, calls, dropLine(inp))
-          case 3 => nxt(SafeLong(inp.head.toInt), blk(bid), bid, calls, inp.tail)
-          case 4 => nxt(collapse(getLine(inp).map(_.toInt)), blk(bid), bid, calls, dropLine(inp))}
-        else if(op.o){
-          val str = op.ext match{
+    def fdo(num: SafeLong, src: Vector[FOP], bid: Int, inp: Seq[Char], call: Call): Option[(String, (SafeLong, Vector[FOP], Int, Seq[Char], Call))] = src match{
+      case op +: ops if op.canDo(num) => op match{
+        case INP(ext) => ext match{
+          case 3 => fdo(SafeLong(inp.head.toInt), blk(bid), bid, inp.tail, call)
+          case _ => splitLine(inp) match{
+            case (hd, tl) => ext match{
+              case 1 => fdo(SafeLong(BigInt(hd)), blk(bid), bid, tl, call)
+              case 2 => fdo(collapse(hd.split(" ").toVector.map(_.toInt)), blk(bid), bid, tl, call)
+              case 4 => fdo(collapse(hd.map(_.toInt)), blk(bid), bid, tl, call)}}}
+        case OUT(ext) =>
+          val str = ext match{
             case 1 => num.toString
-            case 2 => FOP.factor(num).mkString(" ")
+            case 2 => factor(num).mkString(" ")
             case 3 => num.toChar.toString
-            case 4 => FOP.factor(num).map(_.toChar).mkString}
-          Some((str, (num, ops, bid, calls, inp)))}
-        else if(op.canDo(num)){
-          if(op.j) nxt(num, blk(op.ext), op.ext, calls, inp)
-          else if(op.ext == -1) nxt(op*num, blk(bid), bid, calls, inp)
-          else{
-            lazy val nxnum = op*num
-            lazy val numf = FOP.factor(num).padTo(op.ext + 1, 0)
-            lazy val nump = numf(op.ext)
-            op.pat match{
-              case 1 => nxt(collapse(numf.updated(op.ext, getLine(inp).toInt)), blk(bid), bid, calls, dropLine(inp))
-              case 2 => Some((numf(op.ext).toString, (nxnum, ops, bid, calls, inp)))
-              case 3 => nxt(collapse(numf.updated(op.ext, inp.head.toInt)), blk(bid), bid, calls, inp.tail)
-              case 4 => Some((nump.toChar.toString, (nxnum, ops, bid, calls, inp)))
-              case 5 => nxt(nxnum, blk(nump), nump, (None, blk(bid), bid) +: calls, inp)
-              case 6 => nxt(num, blk(nump), nump, calls, inp)
-              case 7 => nxt(nxnum, blk(bid), bid, (Some(num), ops, bid) +: calls, inp)
-              case 8 => nxt(nxnum, blk(nump), nump, (Some(num), ops, bid) +: calls, inp)}}}
-        else nxt(num, ops, bid, calls, inp)
-      case _ => calls match{
-        case (cop, cprog, cbid) +: cs => cop match{
-          case Some(cnum) => nxt(cnum, cprog, cbid, cs, inp)
-          case None => nxt(num, cprog, cbid, cs, inp)}
+            case 4 => factor(num).map(_.toChar).mkString}
+          Some((str, (num, ops, bid, inp, call)))
+        case JMP(_, ind) => fdo(num, blk(ind), ind, inp, call)
+        case MSC(_, _, pat, ext) =>
+          lazy val numf = factor(num).padTo(ext + 1, 0)
+          pat match{
+            case 1 => splitLine(inp) match{
+              case (hd, tl) => fdo(collapse(numf.updated(ext, hd.toInt)), blk(bid), bid, tl, call)}
+            case 2 => Some((numf(ext).toString, (op*num, ops, bid, inp, call)))
+            case 3 => fdo(collapse(numf.updated(ext, inp.head.toInt)), blk(bid), bid, inp.tail, call)
+            case 4 => Some((numf(ext).toChar.toString, (op*num, ops, bid, inp, call)))
+            case 5 => fdo(op*num, blk(numf(ext)), numf(ext), inp, PassCall(blk(bid), bid, call))
+            case 6 => fdo(num, blk(numf(ext)), numf(ext), inp, call)
+            case 7 => fdo(op*num, blk(bid), bid, inp, StatCall(num, ops, bid, call))
+            case 8 => fdo(op*num, blk(numf(ext)), numf(ext), inp, StatCall(num, ops, bid, call))}
+        case _ => fdo(op*num, blk(bid), bid, inp, call)}
+      case _ +: ops => fdo(num, ops, bid, inp, call)
+      case _ => call match{
+        case PassCall(np, nb, cc) => fdo(num, np, nb, inp, cc)
+        case StatCall(nn, np, nb, cc) => fdo(nn, np, nb, inp, cc)
         case _ => None}}
-    inputs => LazyList.unfold((init, blk.head, 0: Int, List[(Option[SafeLong], Vector[FOP], Int)](), inputs)){
-      case (num, ops, bid, calls, inp) => nxt(num, ops, bid, calls, inp)}.flatten}
+    inputs => LazyList.unfold((initNum, blk.head, 0: Int, inputs, RetCall: Call)){
+      case (num, ops, bid, inp, call) => fdo(num, ops, bid, inp, call)}.flatten}
   
-  def parse(progRaw: String): Try[(SafeLong, Vector[Vector[FOP]])] = {
-    FracTranParser.parse(progRaw) map{
-      case (initNum, fracs) =>
-        val fops = fracs.map{case (n, d) => FOP.make(n, d)}.collect{case Some(fop) => fop}
-        (initNum, breakParser.parseAllValues(fops))}}
+  trait Call
+  object RetCall extends Call
+  case class PassCall(prog: Vector[FOP], bid: Int, cc: Call) extends Call
+  case class StatCall(num: SafeLong, prog: Vector[FOP], bid: Int, cc: Call) extends Call
   
-  case class FOP(n: SafeLong, d: SafeLong, exp: Vector[Int], ext: Int, j: Boolean, i: Boolean, o: Boolean){
-    val isBreak: Boolean = n == 0 && d == 0
-    lazy val pat: Int = exp(ext)
+  trait FOP{
+    def canDo(num: SafeLong): Boolean
+    def *(num: SafeLong): SafeLong}
+  
+  object BRK extends FOP{
+    def canDo(num: SafeLong): Boolean = false
+    def *(num: SafeLong): SafeLong = num
+    override def toString: String = "BRK"}
+  
+  case class INP(ext: Int) extends FOP{
+    def canDo(num: SafeLong): Boolean = true
+    def *(num: SafeLong): SafeLong = num}
+  
+  case class OUT(ext: Int) extends FOP{
+    def canDo(num: SafeLong): Boolean = true
+    def *(num: SafeLong): SafeLong = num}
+  
+  case class JMP(d: SafeLong, ind: Int) extends FOP{
     def canDo(num: SafeLong): Boolean = num%d == 0
-    def *(num: SafeLong): SafeLong = n*num/d}
+    def *(num: SafeLong): SafeLong = num
+    override def toString: String = s"JMP(ind=$ind,d=$d)"}
   
-  object FOP{
-    def make(n: SafeLong, d: SafeLong): Option[FOP] = {
-      lazy val gcd = n.abs.gcd(d.abs)
-      lazy val facs = factor(n, d)
-      lazy val ind = getInd(gcd)
-      
-      if(n == 0 && 1 <= d && 4 >= d) Some(new FOP(n, d, Vector[Int](), d.toInt, false, true, false))
-      else if(d == 0 && 1 <= n && 4 >= n) Some(new FOP(n, d, Vector[Int](), n.toInt, false, false, true))
-      else if(n == 0 && d == 0) Some(new FOP(n, d, Vector[Int](), -1, false, false, false))
-      else if(n == 0 || d == 0) None
-      else if(n < 0 || d < 0) Some(new FOP(n.abs, d.abs, facs, n.abs.toInt, true, false, false))
-      else if(gcd == 1) Some(new FOP(n, d, facs, -1, false, false, false))
-      else if(1 <= facs(ind) && 8 >= facs(ind)) Some(new FOP(n/gcd, d/gcd, facs.padTo(ind + 1, 0), ind, false, false, false))
-      else None}
-    
-    def getInd(gcd: SafeLong): Int = factor(gcd).zipWithIndex.collect{case (p, i) if p != 0 => i}.head
-    def factor(n: SafeLong, d: SafeLong): Vector[Int] = factor(n).zipAll(factor(d), 0, 0).map{case (a, b) => a - b}
-    def factor(num: SafeLong): Vector[Int] = {
-      @tailrec
-      def fdo(init: SafeLong, f: SafeLong, c: Int = 0): (SafeLong, Int) = {
-        if (init % f == 0) fdo(init / f, f, c + 1)
-        else (init, c)}
-      @tailrec
-      def fgo(n: SafeLong, ac: Vector[Int] = Vector[Int](), src: LazyList[SafeLong] = primes): Vector[Int] = fdo(n, src.head) match {
-        case (nxt, 0) if nxt == 1 => ac
-        case (nxt, p) =>
-          if (nxt == 1) ac :+ p
-          else fgo(nxt, ac :+ p, src.tail)}
-      fgo(num.abs)}}
+  case class MSC(n: SafeLong, d: SafeLong, pat: Int, ext: Int) extends FOP{
+    def canDo(num: SafeLong): Boolean = (num*n)%d == 0
+    def *(num: SafeLong): SafeLong = (num*n)/d
+    override def toString: String = s"MSC(n=$n,d=$d,pat=$pat,ext=$ext)"}
+  
+  case class MLT(n: SafeLong, d: SafeLong) extends FOP{
+    def canDo(num: SafeLong): Boolean = (num*n)%d == 0
+    def *(num: SafeLong): SafeLong = (num*n)/d}
 }

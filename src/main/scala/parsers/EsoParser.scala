@@ -90,4 +90,6 @@ abstract class EsoParser[A, B] extends (A => EsoParseRes[A, B]) with EsoObj{
   def ~>[U](q: => EsoParser[A, U]): RightImplicationParser[A, B, U] = RightImplicationParser(this, q)
   
   def ~[U](q: => EsoParser[A, U]): SequentialParser[A, B, U] = SequentialParser(this, q)
+  
+  def streamInto[U](q: => EsoParser[Seq[B], U]): StreamedParser[A, B, U] = StreamedParser(this, q)
 }

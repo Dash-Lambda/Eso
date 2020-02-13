@@ -42,4 +42,17 @@ object PrimeNumTools {
       else if(f*f >= n) true
       else pdo(f + 2)}
     n == 2 || (n.emod(2) == 0 && pdo(3))}
+  
+  def factor(num: SafeLong): Vector[Int] = {
+    @tailrec
+    def fdo(init: SafeLong, f: SafeLong, c: Int = 0): (SafeLong, Int) = {
+      if (init % f == 0) fdo(init / f, f, c + 1)
+      else (init, c)}
+    @tailrec
+    def fgo(n: SafeLong, ac: Vector[Int] = Vector[Int](), src: LazyList[SafeLong] = birdPrimes.to(LazyList)): Vector[Int] = fdo(n, src.head) match {
+      case (nxt, 0) if nxt == 1 => ac
+      case (nxt, p) =>
+        if (nxt == 1) ac :+ p
+        else fgo(nxt, ac :+ p, src.tail)}
+    fgo(num.abs)}
 }
