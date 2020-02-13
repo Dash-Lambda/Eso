@@ -9,7 +9,7 @@ object EsoCommandParser extends EsoObj{
   val cmdParser: EsoParser[String, (String, immutable.HashMap[String, String])] = {
     val opParser = RegexParser(raw"""^(\S+)\s*""")(m => m.group(1))
     val argParser = RegexParser(raw"""[^-]*-(\S*) (\S*)""")(m => (m.group(1), m.group(2)))
-    opParser ~ argParser.toBulk.map(mkMap(_))}
+    opParser <&> argParser.*.map(mkMap(_))}
   
   def apply(str: String): Option[(String, immutable.HashMap[String, String])] = cmdParser(str).toOption
 }

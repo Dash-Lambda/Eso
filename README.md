@@ -149,11 +149,16 @@ The parser tools are a collection of function classes that take an input and ret
 
 The parent class additionally implements methods to iterate through matches and a set of combinators and modifiers that currently consist of:
 * `map`: Maps the output of the parser
+* `withConditioning`: Modifies the input before it's parsed
+* `>>`: Pipes the result of the left-hand parser into the right-hand one (one left result is a whole right input)
 * `<+>`: Groups parsers such that the result comes from the earliest and longest match
 * `|`: If the left-hand parser fails, the right-hand parser is used
-* `~`: Turns the result into the product of the left-hand and right-hand parsers (the right-hand parses the remaining input after the left-hand)
-* `<~`: Gives the left-hand result only if both parsers succeed (basically `~` but selecting the left)
-* `~>`: Gives the right-hand result only if both parsers succeed (basically `~` but selecting the right)
+* `<&>`: Turns the result into the product of the left-hand and right-hand parsers (the right-hand parses the remaining input after the left-hand)
+* `<&`: Gives the left-hand result only if both parsers succeed (basically `<&>` but selecting the left)
+* `&>`: Gives the right-hand result only if both parsers succeed (basically `<&>` but selecting the right)
+* `~>`: Streams the output of the left-hand parser into the right-hand one (Like `>>` except across all matches)
+* `*`: Returns a parser that parses the entire input (basically making parseAllValues the result)
+* `+`: Like `*` except it fails if there are no matches
 
 There are currently 5 primary parser classes:
 * ChunkParser: Takes a function which returns an `Option`

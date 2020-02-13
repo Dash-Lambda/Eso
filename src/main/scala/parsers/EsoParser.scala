@@ -74,9 +74,10 @@ abstract class EsoParser[A, B] extends (A => EsoParseRes[A, B]) with EsoObj{
   def map[C](f: B => C): EsoParser[A, C] = MappedParser(this, f)
   def withConditioning(f: A => A): EsoParser[A, B] = ConditioningParser(this, f)
   
-  def andThen[C](q: EsoParser[B, C]): EsoParser[A, C] = ChainedParser(this, q)
+  def >>[C](q: EsoParser[B, C]): EsoParser[A, C] = ChainedParser(this, q)
   
-  def toBulk: BulkParser[A, B] = BulkParser(this)
+  def * : BulkParser[A, B] = BulkParser(this, 0)
+  def + : BulkParser[A, B] = BulkParser(this, 1)
   
   def |(q: EsoParser[A, B]): AlternativeParser[A, B] = q match{
     case AlternativeParser(qs) => AlternativeParser(this +: qs)
@@ -86,10 +87,10 @@ abstract class EsoParser[A, B] extends (A => EsoParseRes[A, B]) with EsoObj{
     case LongestMatchAlternativeParser(ps) => LongestMatchAlternativeParser(this +: ps)
     case _ => LongestMatchAlternativeParser(Vector(this, p))}
   
-  def <~[U](q: => EsoParser[A, U]): LeftImplicationParser[A, B, U] = LeftImplicationParser(this, q)
-  def ~>[U](q: => EsoParser[A, U]): RightImplicationParser[A, B, U] = RightImplicationParser(this, q)
+  def <&[U](q: => EsoParser[A, U]): LeftImplicationParser[A, B, U] = LeftImplicationParser(this, q)
+  def &>[U](q: => EsoParser[A, U]): RightImplicationParser[A, B, U] = RightImplicationParser(this, q)
   
-  def ~[U](q: => EsoParser[A, U]): SequentialParser[A, B, U] = SequentialParser(this, q)
+  def <&>[U](q: => EsoParser[A, U]): SequentialParser[A, B, U] = SequentialParser(this, q)
   
-  def streamInto[U](q: => EsoParser[Seq[B], U]): StreamedParser[A, B, U] = StreamedParser(this, q)
+  def ~>[U](q: => EsoParser[Seq[B], U]): StreamedParser[A, B, U] = StreamedParser(this, q)
 }

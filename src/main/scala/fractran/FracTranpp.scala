@@ -1,6 +1,6 @@
 package fractran
 
-import common.{Config, Interpreter}
+import common.{Config, Interpreter, PrimeNumTools}
 import common.PrimeNumTools.factor
 import spire.math.SafeLong
 import spire.implicits._
@@ -9,13 +9,13 @@ import scala.annotation.tailrec
 import scala.util.Try
 
 object FracTranpp extends Interpreter{
-  import FracTranParser.primes
   val name: String = "FracTran++"
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = FracTranParser.parseFOP(progRaw) flatMap{
     case (initNum, prog) => Try{fppRun(initNum, prog)}}
   
   def fppRun(initNum: SafeLong, blk: Vector[Vector[FOP]]): Seq[Char] => LazyList[Char] = {
+    val primes = PrimeNumTools.birdPrimes
     def collapse(exps: Seq[Int]): SafeLong = exps.zip(primes).map{case (e, p) => p**e}.reduce(_+_)
     def splitLine(inp: Seq[Char]): (String, Seq[Char]) = inp.span(_ == '\n') match{
       case (hd, tl) => (hd.mkString, tl.drop(1))}
