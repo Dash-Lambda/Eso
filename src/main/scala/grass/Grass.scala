@@ -15,8 +15,8 @@ object Grass extends Interpreter{
     def absArity(n: Int, p: Vector[Expr]): Vector[Expr] = {
       if(n > 0) absArity(n - 1, Vector(AbsExpr(p)))
       else p}
-    val appParser = RegexParser(raw"""(W+)(w+)""".r){ m => AppExpr(m.group(1).length, m.group(2).length)}
-    RegexParser(raw"""([Ww]+)""".r){ m =>
+    val appParser = RegexParser(raw"""(W+)(w+)""")(m => AppExpr(m.group(1).length, m.group(2).length))
+    RegexParser(raw"""([Ww]+)"""){m =>
       m.group(1) match{
         case absReg(arw, apps) => absArity(arw.length, appParser.parseAllValues(apps))}}}
   

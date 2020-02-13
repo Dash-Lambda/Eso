@@ -5,15 +5,11 @@ import parsers.{EsoParser, RegexParser}
 
 import scala.collection.immutable
 
-case class EsoCmd(cmd: String, args: immutable.HashMap[String, String])
-
 object EsoCommandParser extends EsoObj{
-  private val cmdReg = raw"""^(\S+)(.*)\z""".r
-  private val argParser: EsoParser[String, (String, String)] = {
-    RegexParser(raw"""[^-]*-(\S*) (\S*)""".r){
-      m => (m.group(1), m.group(2))}}
+  val cmdParser: EsoParser[String, (String, immutable.HashMap[String, String])] = {
+    val opParser = RegexParser(raw"""^(\S+)\s*""")(m => m.group(1))
+    val argParser = RegexParser(raw"""[^-]*-(\S*) (\S*)""")(m => (m.group(1), m.group(2)))
+    opParser ~ argParser.toBulk.map(mkMap(_))}
   
-  def apply(str: String): Option[EsoCmd] = str match{
-    case cmdReg(c, as) => Some(EsoCmd(c, mkMap(argParser.parseAllValues(as))))
-    case _ => None}
+  def apply(str: String): Option[(String, immutable.HashMap[String, String])] = cmdParser(str).toOption
 }

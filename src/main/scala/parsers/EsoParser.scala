@@ -2,6 +2,8 @@ package parsers
 
 import common.{EsoExcep, EsoObj}
 
+import scala.util.{Failure, Success, Try}
+
 trait EsoParseRes[+A, +B]{
   def passed: Boolean
   def start: Int
@@ -17,6 +19,9 @@ trait EsoParseRes[+A, +B]{
   def getOrElse[U >: B](default: U): U = toOption match{
     case Some(res) => res
     case None => default}
+  def toTry(err: String = "Parse Failed"): Try[B] = toOption match{
+    case Some(res) => Success(res)
+    case None => Failure(EsoExcep(err))}
 }
 object EsoParseFail extends EsoParseRes[Nothing, Nothing]{
   def passed: Boolean = false
@@ -44,6 +49,9 @@ case class EsoParsed[+A, +B](res: B, rem: A, start: Int, end: Int) extends EsoPa
 
 abstract class EsoParser[A, B] extends (A => EsoParseRes[A, B]) with EsoObj{
   def apply(inp: A): EsoParseRes[A, B]
+  def parseOne(inp: A): B = apply(inp) match{
+    case EsoParsed(res, _, _, _) => res
+    case _ => throw EsoExcep("Parse Failed")}
   
   def parseAllValues(inp: A): Vector[B] = parseValuesIterator(inp).toVector
   def parseAllValuesLazy(inp: A): LazyList[B] = parseValuesIterator(inp).to(LazyList)
@@ -65,6 +73,8 @@ abstract class EsoParser[A, B] extends (A => EsoParseRes[A, B]) with EsoObj{
   
   def map[C](f: B => C): EsoParser[A, C] = MappedParser(this, f)
   def withConditioning(f: A => A): EsoParser[A, B] = ConditioningParser(this, f)
+  
+  def toBulk: BulkParser[A, B] = BulkParser(this)
   
   def |(q: EsoParser[A, B]): AlternativeParser[A, B] = q match{
     case AlternativeParser(qs) => AlternativeParser(this +: qs)

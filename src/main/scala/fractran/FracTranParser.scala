@@ -1,32 +1,20 @@
 package fractran
 
-import common.{EsoExcep, EsoObj, PrimeNumTools}
+import common.{EsoObj, PrimeNumTools}
 import parsers.{EsoParser, RegexParser}
 import spire.math.SafeLong
 
-import scala.util.{Failure, Success, Try}
-import scala.util.matching.Regex
+import scala.util.Try
 
 object FracTranParser extends EsoObj{
-  val fracReg: Regex = raw"""(?m)^(-?(?:<[\d ]+>|\d+))\/(-?(?:<[\d ]+>|\d+))$$""".r
-  val initReg: Regex = raw"""(?m)^(-?(?:\d+|<[\d ]+>))$$""".r
-  val vecReg: Regex = raw"""<([\d ]+)>""".r
-  val elmReg: Regex = raw"""\s*(\d+)((?: .*)?)""".r
-  val numReg: Regex = raw"""(-?\d+)""".r
-  lazy val fracParser: EsoParser[String, (SafeLong, SafeLong)] = {
-    RegexParser[(SafeLong, SafeLong)](fracReg){ m => (toNum(m.group(1)), toNum(m.group(2)))}
-  }
+  val fppParser: EsoParser[String, (SafeLong, Vector[(SafeLong, SafeLong)])] = {
+    val elmParser = RegexParser(raw"""(\d+)""")(m => m.group(1).toInt).toBulk.map(v => (PrimeNumTools.birdPrimes zip v).map{case (p, e) => p**e}.reduce(_*_))
+    val vecParser = RegexParser(raw"""<([\d ]+)>""")(m => elmParser(m.group(1)).get)
+    val numParser = RegexParser(raw"""(-?\d+)""")(m => SafeLong(BigInt(m.group(1))))
+    val termParser = vecParser | numParser
+    val fracParser = RegexParser(raw"""(?m)^(-?(?:<[\d ]+>|\d+))\/(-?(?:<[\d ]+>|\d+))$$""")(m => (termParser.parseOne(m.group(1)), termParser.parseOne(m.group(2))))
+    val initParser = RegexParser(raw"""(?m)^(-?(?:\d+|<[\d ]+>))$$""")(m => termParser.parseOne(m.group(1)))
+    initParser ~ fracParser.toBulk}
   
-  private def toNum(str: String): SafeLong = str match{
-    case numReg(n) => SafeLong(BigInt(n))
-    case vecReg(lst) =>
-      val nums = Iterator.unfold(lst){
-        case elmReg(n, tl) => Some((n.toInt, tl))
-        case _ => None}
-      (PrimeNumTools.birdPrimes zip nums).map{case (p, e) => p**e}.reduce(_*_)}
-  
-  def parse(progRaw: String): Try[(SafeLong, Vector[(SafeLong, SafeLong)])] = {
-    initReg.findFirstIn(progRaw) match{
-      case Some(init) => Success((toNum(init), fracParser.parseAllValues(progRaw)))
-      case None => Failure(EsoExcep("Malformed Program"))}}
+  def parse(progRaw: String): Try[(SafeLong, Vector[(SafeLong, SafeLong)])] = fppParser(progRaw).toTry("Malformed Program")
 }
