@@ -11,13 +11,13 @@ import scala.util.Try
 object FracTranpp extends Interpreter{
   val name: String = "FracTran++"
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = FracTranParser.parseFOP(progRaw) flatMap{
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{FracTranParser.fppParser.parseOne(progRaw)} flatMap{
     case (initNum, prog) => Try{fppRun(initNum, prog)}}
   
   def fppRun(initNum: SafeLong, blk: Vector[Vector[FOP]]): Seq[Char] => LazyList[Char] = {
     val primes = PrimeNumTools.birdPrimes
     def collapse(exps: Seq[Int]): SafeLong = exps.zip(primes).map{case (e, p) => p**e}.reduce(_+_)
-    def splitLine(inp: Seq[Char]): (String, Seq[Char]) = inp.span(_ == '\n') match{
+    def splitLine(inp: Seq[Char]): (String, Seq[Char]) = inp.span(_ != '\n') match{
       case (hd, tl) => (hd.mkString, tl.drop(1))}
     @tailrec
     def fdo(num: SafeLong, src: Vector[FOP], bid: Int, inp: Seq[Char], call: Call): Option[(String, (SafeLong, Vector[FOP], Int, Seq[Char], Call))] = src match{
@@ -69,8 +69,7 @@ object FracTranpp extends Interpreter{
   
   object BRK extends FOP{
     def canDo(num: SafeLong): Boolean = false
-    def *(num: SafeLong): SafeLong = num
-    override def toString: String = "BRK"}
+    def *(num: SafeLong): SafeLong = num}
   
   case class INP(ext: Int) extends FOP{
     def canDo(num: SafeLong): Boolean = true
@@ -82,13 +81,11 @@ object FracTranpp extends Interpreter{
   
   case class JMP(d: SafeLong, ind: Int) extends FOP{
     def canDo(num: SafeLong): Boolean = num%d == 0
-    def *(num: SafeLong): SafeLong = num
-    override def toString: String = s"JMP(ind=$ind,d=$d)"}
+    def *(num: SafeLong): SafeLong = num}
   
   case class MSC(n: SafeLong, d: SafeLong, pat: Int, ext: Int) extends FOP{
     def canDo(num: SafeLong): Boolean = (num*n)%d == 0
-    def *(num: SafeLong): SafeLong = (num*n)/d
-    override def toString: String = s"MSC(n=$n,d=$d,pat=$pat,ext=$ext)"}
+    def *(num: SafeLong): SafeLong = (num*n)/d}
   
   case class MLT(n: SafeLong, d: SafeLong) extends FOP{
     def canDo(num: SafeLong): Boolean = (num*n)%d == 0

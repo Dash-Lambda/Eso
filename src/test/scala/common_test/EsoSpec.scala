@@ -45,6 +45,9 @@ abstract class EsoSpec extends AnyFlatSpec{
   def assertOutput(intp: Interpreter, prog: String, expected: String, inp: Seq[Char] = Seq(), config: Config = defaultConfig): Unit = {
     val res = getOutputString(intp, prog, inp, config)
     assertResult(Success(expected))(res)}
+  def assertOutputAutoLimit(intp: Interpreter, prog: String, expected: String, inp: Seq[Char] = Seq(), config: Config = defaultConfig): Unit = {
+    val res = getOutput(intp, prog) map (_.take(expected.length).mkString)
+    assertResult(Success(expected))(res)}
   
   def testAgainstOutput(intp: Interpreter, config: Config = defaultConfig, first: Boolean = false)(nam: String, prog: String, inp: String, ref: String): Unit = {
     def runTest(): Unit = {

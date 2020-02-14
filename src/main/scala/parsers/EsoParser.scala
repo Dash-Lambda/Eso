@@ -35,6 +35,19 @@ object EsoParseFail extends EsoParseRes[Nothing, Nothing]{
   def get: Nothing = throw EsoExcep("No Such Element")
   def next: Nothing = throw EsoExcep("No Such Element")
 }
+case class EsoParseErr(e: Throwable) extends EsoParseRes[Nothing, Nothing]{
+  def passed: Boolean = false
+  def start: Int = -1
+  def end: Int = -1
+  def map[C](f: Nothing => C): EsoParseRes[Nothing, C] = this
+  def flatMap[C, D](f: Nothing => EsoParseRes[C, D]): EsoParseRes[C, D] = this
+  def mapAll[C, D](f: (Nothing, Nothing, Int, Int) => (D, C, Int, Int)): EsoParseRes[C, D] = this
+  def flatMapAll[C, D](f: (Nothing, Nothing, Int, Int) => EsoParseRes[C, D]): EsoParseRes[C, D] = this
+  def toOption: Option[Nothing] = None
+  def get: Nothing = throw EsoExcep("No Such Element")
+  def next: Nothing = throw EsoExcep("No Such Element")
+  override def toTry(err: String = "Parse Failed"): Try[Nothing] = Failure(e)
+}
 case class EsoParsed[+A, +B](res: B, rem: A, start: Int, end: Int) extends EsoParseRes[A, B]{
   def passed: Boolean = true
   def map[C](f: B => C): EsoParseRes[A, C] = EsoParsed(f(res), rem, start, end)
@@ -73,6 +86,7 @@ abstract class EsoParser[A, B] extends (A => EsoParseRes[A, B]) with EsoObj{
   
   def map[C](f: B => C): EsoParser[A, C] = MappedParser(this, f)
   def withConditioning(f: A => A): EsoParser[A, B] = ConditioningParser(this, f)
+  def withErrors: ErrorParser[A, B] = ErrorParser(this)
   
   def >>[C](q: EsoParser[B, C]): EsoParser[A, C] = ChainedParser(this, q)
   
