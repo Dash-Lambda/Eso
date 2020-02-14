@@ -2,7 +2,7 @@ package lazyk
 
 import common.EsoObj
 import lazyk.LazyKFuncs._
-import parsers.{ARPDown, ARPFail, ARPNext, ARPRet, ARPUp, ArbitraryRecurParser, ChunkParser, DepthRecurParser, EsoParser, PartialParser}
+import parsers.{ARPDown, ARPFail, ARPNext, ARPRet, ARPUp, ArbitraryRecurParser, DepthRecurParser, EsoParseFail, EsoParsed, EsoParser, PartialParser}
 
 import scala.annotation.tailrec
 
@@ -49,7 +49,7 @@ object LazyKParsers extends EsoObj{
       case x +: y +: _ => AppExpr(x, y)}
     DepthRecurParser(2)(recur)(collect)(funcParser)}
   
-  val jotParser: EsoParser[Seq[Char], Expr] = {
+  val jotParser: EsoParser[Seq[Char], Expr] = (inp: Seq[Char]) => {
     def collect(exps: Vector[Expr]): Expr = exps.foldLeft(iexp){case (x, y) => AppExpr(x, y)}
     @tailrec
     def jdo(src: Seq[Char], ac: Vector[Expr]): (Expr, Seq[Char]) = src match{
@@ -59,11 +59,10 @@ object LazyKParsers extends EsoObj{
           case x +: y +: es => jdo(w, AppExpr(x, y) +: es)}
         case _ => (collect(ac), src)}
       case _ => (collect(ac), src)}
-    ChunkParser[Seq[Char], Expr]{ inp =>
-      val end = inp.lastIndexWhere("01".contains(_))
-      if(end == -1) None
-      else jdo(inp.take(end + 1), Vector()) match{
-        case (res, rem) => Some((res, rem, rem.size - 1, end + 1))}}}
+    val end = inp.lastIndexWhere("01".contains(_))
+    if (end == -1) EsoParseFail
+    else jdo(inp.take(end + 1), Vector()) match{
+      case (res, rem) => EsoParsed(res, rem, rem.size - 1, end + 1)}}
   
   val lkParser: EsoParser[Seq[Char], Expr] = {
     (unlParser <+> combParser <+> iotaParser <+> jotParser)
