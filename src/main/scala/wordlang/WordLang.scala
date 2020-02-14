@@ -33,7 +33,14 @@ object WordLang extends Interpreter{
     
     val baseParser = ibvParser <+> ivbParser <+> lblParser <+> jmpParser <+> charParser
     val parParser = RegexParser[WOP](raw"""\(([^\(\)]*)\)""")(m => PrintNum(baseParser.parseAllValues(m.group(1))))
-    baseParser <+> parParser}
+    (baseParser <+> parParser)
+      .withConditioning{str =>
+        val escaped = escapeReg
+          .replaceAllIn(str, m => (-m.group(1).head).toChar.toString)
+        commentReg
+          .replaceAllIn(escaped, "")
+          .linesIterator
+          .mkString(" ")}}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{parse(progRaw)} map{
     case (prog, jumps) =>
@@ -68,20 +75,13 @@ object WordLang extends Interpreter{
         case (cur, heap, mode, src, inp) => rdo(cur, heap, mode, src, inp)}.flatten}
   
   def parse(progRaw: String): (Vector[WOP], immutable.HashMap[String, Int]) = {
-    val escaped = escapeReg
-      .replaceAllIn(progRaw, m => (-m.group(1).head).toChar.toString)
-    val uncommented = commentReg
-      .replaceAllIn(escaped, "")
-      .linesIterator
-      .mkString(" ")
-    
     @tailrec
     def pdo(src: Seq[WOP], ac: Vector[WOP], acm: immutable.HashMap[String, Int]): (Vector[WOP], immutable.HashMap[String, Int]) = src match{
       case op +: ops => op match{
         case JumpLabel(nam) => pdo(ops, ac, acm + ((nam, ac.size)))
         case _ => pdo(ops, ac :+ op, acm)}
       case _ => (ac, acm)}
-    pdo(wordLangParser.parseAllValuesLazy(uncommented), Vector(), immutable.HashMap())}
+    pdo(wordLangParser.parseAllValuesLazy(progRaw), Vector(), immutable.HashMap())}
   
   trait WOP
   case class CharOp(c: Char) extends WOP

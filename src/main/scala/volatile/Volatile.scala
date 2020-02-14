@@ -1,7 +1,7 @@
 package volatile
 
 import common.{Config, Interpreter}
-import parsers.{EsoParser, PartialParser}
+import parsers.{EsoParser, PartialElementwiseParser, PartialParser}
 import spire.math.SafeLong
 
 import scala.annotation.tailrec
@@ -10,20 +10,17 @@ import scala.util.{Success, Try}
 object Volatile extends Interpreter{
   val name: String = "Volatile"
   
-  val volParser: EsoParser[Vector[Char], VOP] = {
-    PartialParser.simple{
-      case c +: cs =>
-        val op = c match{
-          case '~' => PUSH
-          case '+' => ADD
-          case '-' => SUBT
-          case '*' => MULT
-          case '/' => DIV
-          case ':' => DUP
-          case '.' => OUT
-          case '(' => LSTART(-1)
-          case ')' => LEND(-1)}
-        (op, cs)}}
+  val volParser: EsoParser[Seq[Char], VOP] = {
+    PartialElementwiseParser[Char, VOP]{
+      case '~' => PUSH
+      case '+' => ADD
+      case '-' => SUBT
+      case '*' => MULT
+      case '/' => DIV
+      case ':' => DUP
+      case '.' => OUT
+      case '(' => LSTART(-1)
+      case ')' => LEND(-1)}}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
     val prog = parse(progRaw)

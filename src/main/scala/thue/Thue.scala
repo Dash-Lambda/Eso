@@ -1,19 +1,21 @@
 package thue
 
-import common.{Config, EsoExcep, Interpreter}
+import common.{Config, Interpreter}
 import parsers.{EsoParser, RegexParser}
 
 import scala.annotation.tailrec
-import scala.util.matching.Regex
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 object Thue extends Interpreter{
   val name: String = "Thue"
   
-  val initReg: Regex = raw"""(?s)(.*)\n\s*::=\s*\n(.*)\z""".r
-  val ruleParser: EsoParser[String, (String, String)] = RegexParser(raw"""(?m)^(.*)::=(.*)$$""".r){ m => (m.group(1), m.group(2))}
+  val thueParser: EsoParser[String, (Vector[(String, String)], String)] = {
+    val spcReg = """\s*""".r
+    val pairParser = RegexParser("""(?m)^(.*)::=(.*)$$""")(m => (m.group(1), m.group(2)))
+    val ruleParser = pairParser.onlyIf{case (a, b) => !spcReg.matches(a ++ b)}
+    ruleParser.* <&> pairParser.after}
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = parse(progRaw) map{case (init, prog) => thi(init, prog, config.rands)}
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = thueParser(progRaw).toTry() map{case (prog, init) => thi(init, prog, config.rands)}
   
   def thi(init: String, prog: Vector[(String, String)], initRands: LazyList[Int]): Seq[Char] => LazyList[Char] = {
     def collapse(inp: Seq[Char]): Seq[String] = LazyList.unfold(inp){lst =>
@@ -35,9 +37,4 @@ object Thue extends Interpreter{
               if(v.startsWith("~")) Some((v.tail, (ac.replaceAllLiterally(k, ""), inp, rs)))
               else tdo(ac.replaceAllLiterally(k, v), inp, rs)}}}
     inputs => LazyList.unfold((init, collapse(inputs), initRands)){case (ac, inp, rs) => tdo(ac, inp, rs)}.flatten}
-  
-  def parse(progRaw: String): Try[(String, Vector[(String, String)])] = {
-    progRaw match{
-      case initReg(rls, init) => Success((init, ruleParser.parseAllValues(rls)))
-      case _ => Failure(EsoExcep("Malformed Program"))}}
 }

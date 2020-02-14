@@ -160,12 +160,13 @@ The parent class additionally implements methods to iterate through matches and 
 * `*`: Returns a parser that parses the entire input (basically making parseAllValues the result)
 * `+`: Like `*` except it fails if there are no matches
 
-There are currently 5 primary parser classes:
+There are currently 6 primary parser classes:
 * ChunkParser: Takes a function which returns an `Option`
 * PartialParser: Similar to a ChunkParser except it takes a PartialFunction
 * RecurParser: This one is for parsing to tree structures, currently used in Unlambda. It takes a `recur` function that decides when to go down a level, a `collect` function to turn a set of leaves into a node, and another parser for the non-branching tokens.
 * RegexParser: This takes a regex and a function to turn a match into the output. This one lets me condense a lot of parsers into a single line, which makes me giddy.
 * ArbitraryRecurParser: This one's called "arbitrary" because the depth isn't constant. It's given a function that can either parse the next token or tell it to go up or down a level.
+* ElementwiseParser: This one parses a sequence element by element
 
 ### How the Interface Works
 It's always a challenge to handle UI functionally. Everything behind the scenes is fair game, but actually receiving input from and sending output to the user is by definition a side-effect.

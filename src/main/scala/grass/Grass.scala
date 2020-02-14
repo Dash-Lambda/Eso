@@ -10,17 +10,25 @@ object Grass extends Interpreter{
   val name: String = "Grass"
   
   val grassParser: EsoParser[String, Vector[Expr]] = {
-    val absReg = raw"""(w*)([Ww]*)""".r
     @tailrec
     def absArity(n: Int, p: Vector[Expr]): Vector[Expr] = {
       if(n > 0) absArity(n - 1, Vector(AbsExpr(p)))
       else p}
-    val appParser = RegexParser(raw"""(W+)(w+)""")(m => AppExpr(m.group(1).length, m.group(2).length))
-    RegexParser(raw"""([Ww]+)"""){m =>
-      m.group(1) match{
-        case absReg(arw, apps) => absArity(arw.length, appParser.parseAllValues(apps))}}}
+    val appParser = RegexParser(raw"""(W+)(w+)""")(m => AppExpr(m.group(1).length, m.group(2).length)).*
+    RegexParser(raw"""(w*)([Ww]*)""")(m => absArity(m.group(1).length, appParser.parseOne(m.group(2)))).*
+      .map{res =>
+        res.flatten match{
+          case as :+ (a: AbsExpr) => as :+ a :+ AppExpr(1, 1)
+          case as => as}}
+      .withConditioning{str =>
+        filterChars(str
+          .replaceAllLiterally("\uff37", "W")
+          .replaceAllLiterally("\uff57", "w")
+          .replaceAllLiterally("\uFF56", "v")
+          .replaceAllLiterally("\uFF36", "v"),
+          "vwW").dropWhile(_ != 'w')}}
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{eval(parse(progRaw))}
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{eval(grassParser.parseOne(progRaw))}
   
   def eval(prog: Vector[Expr]): Seq[Char] => LazyList[Char] = {
     @tailrec
@@ -29,19 +37,6 @@ object Grass extends Interpreter{
       case HaltState => None
       case _ => edo(state.run())}
     inputs => LazyList.unfold(RunState(prog, Env(Vector(Out, Succ, CharFun('w'), In)), inputs, HaltState): State)(edo)}
-  
-  def parse(progRaw: String): Vector[Expr] = {
-    val conditioned = filterChars(progRaw
-      .replaceAllLiterally("\uff37", "W")
-      .replaceAllLiterally("\uff57", "w")
-      .replaceAllLiterally("\uFF56", "v")
-      .replaceAllLiterally("\uFF36", "v"),
-      "vwW")
-      .dropWhile(_ != 'w')
-    
-    grassParser.parseAllValues(conditioned).flatten match{
-      case as :+ (a: AbsExpr) => as :+ a :+ AppExpr(1, 1)
-      case as => as}}
   
   case class Env(stk: Vector[Func]){
     def apply(i: Int): Func = stk(i)
