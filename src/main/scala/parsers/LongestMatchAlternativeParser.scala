@@ -1,6 +1,6 @@
 package parsers
 
-case class LongestMatchAlternativeParser[A, B](parsers: Vector[EsoParser[A, B]]) extends EsoParser[A, B]{
+case class LongestMatchAlternativeParser[A, +B](parsers: Vector[EsoParser[A, B]]) extends EsoParser[A, B]{
   def apply(inp: A): EsoParseRes[A, B] = {
     parsers
       .map(p => p(inp))
@@ -11,7 +11,7 @@ case class LongestMatchAlternativeParser[A, B](parsers: Vector[EsoParser[A, B]])
   
   override def map[C](f: B => C): EsoParser[A, C] = LongestMatchAlternativeParser(parsers.map(_.map(f)))
   
-  override def <+>(p: EsoParser[A, B]): LongestMatchAlternativeParser[A, B] = p match{
+  override def <+>[U >: B](p: EsoParser[A, U]): LongestMatchAlternativeParser[A, U] = p match{
     case LongestMatchAlternativeParser(ps) => LongestMatchAlternativeParser(parsers :++ ps)
     case _ => LongestMatchAlternativeParser(parsers :+ p)}
 }

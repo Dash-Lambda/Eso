@@ -12,7 +12,7 @@ object Thue extends Interpreter{
   val thueParser: EsoParser[String, (Vector[(String, String)], String)] = {
     val spcReg = """\s*""".r
     val pairParser = RegexParser("""(?m)^(.*)::=(.*)$$""")(m => (m.group(1), m.group(2)))
-    val ruleParser = pairParser.onlyIf{case (a, b) => !spcReg.matches(a ++ b)}
+    val ruleParser = pairParser.onlyIf(p => !spcReg.matches(p._1 ++ p._2))
     ruleParser.* <&> pairParser.after}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = thueParser(progRaw).toTry() map{case (prog, init) => thi(init, prog, config.rands)}

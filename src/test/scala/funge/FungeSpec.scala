@@ -1,5 +1,7 @@
 package funge
 
+import java.io.{File, PrintWriter}
+
 import common_test.EsoSpec
 
 import scala.util.Success
@@ -26,6 +28,10 @@ class FungeSpec extends EsoSpec{
     getOutputString(Befunge98, mycology) match{
       case Success(str) =>
         val bads = getBadLines(str)
-        assert(bads.isEmpty)
-      case _ => fail}}
+        val oFile = new PrintWriter(new File("mycologyReport.txt"))
+        oFile.print(str)
+        oFile.close()
+        if(bads.isEmpty) succeed
+        else fail("Mycology Report Contains BAD Lines")
+      case _ => fail("Interpreter Failed")}}
 }
