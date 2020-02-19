@@ -11,21 +11,23 @@ import scala.util.control.TailCalls._
 object ALPL extends Interpreter{
   val name: String = "ALPL"
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{parse(progRaw)} map{prog =>
-    inputs => {
-      val initEnv = Env(immutable.HashMap(), binInp(inputs), 0, 0)
-      val initExpr: TailRec[Ret] = prog(EndCont, initEnv)
-      LazyList.unfold(initExpr)(nxt => nxt.result.resolve)}}
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{parse(progRaw)} map{
+    case prog +: es =>
+      inputs => {
+        val initEnv = Env(immutable.HashMap(), binInp(inputs), 0, 7)
+        val initExpr: TailRec[Ret] = prog(PassCont(es), initEnv)
+        LazyList.unfold(initExpr)(nxt => nxt.result.resolve)}}
   
   def binInp(inp: Seq[Char]): Seq[Boolean] = inp flatMap (c => c.toBinaryString.toVector.map(_ == '1'))
   
-  def parse(progRaw: String): Expr = {
-    val asnParser = RegexParser(raw"""=(.)""")(m => FuncExpr(Assign(m.group(1).head)))
-    val prmParser = RegexParser(raw"""([\?01])"""){m =>
+  def parse(progRaw: String): Vector[Expr] = {
+    val asnParser = RegexParser(raw"""=(.)"""){m => FuncExpr(Assign(m.group(1).head))}
+    val prmParser = RegexParser(raw"""([^\[\]\.\`\=])"""){m =>
       m.group(1) match{
         case "?" => FuncExpr(Inp)
         case "0" => FuncExpr(Print(false))
-        case "1" => FuncExpr(Print(true))}}
+        case "1" => FuncExpr(Print(true))
+        case str => RefExpr(str.head)}}
     val lamParser = RegexParser(raw"""\[([^\.]*)\.([^\]]*)\]"""){m =>
       val binds = m.group(1).toVector
       val ops = m.group(2).toVector.map{
@@ -40,18 +42,16 @@ object ALPL extends Interpreter{
               case i => BoundExpr(i)}}
           Some(expr)}
       FuncExpr(Lambda(ops, Vector(), binds.size))}
-    val termParser = asnParser <+> prmParser <+> lamParser
+    val termParser = asnParser.withErrors <+> prmParser.withErrors <+> lamParser.withErrors
     
     val recReg = raw"""`(.*)""".r
     def recur(src: String): Option[(String, Int, Int)] = src match{
       case recReg(rem) => Some((rem, 0, 1))
       case _ => None}
-    def collect(xs: Seq[Expr]): Expr = xs match{
-      case x +: y +: _ => AppExpr(x, y)}
+    def collect(xs: Seq[Expr]): Expr = xs.reduceLeft(AppExpr)
     
-    val allParser = DepthRecurParser(2)(recur)(collect)(termParser)
-    
-    allParser.parseOne(progRaw)}
+    val allParser = DepthRecurParser(2)(recur)(collect)(termParser).withConditioning(_.replaceAll("""\s+""", ""))
+    allParser.parseAllValues(progRaw)}
   
   case class Env(funcs: immutable.HashMap[Char, Expr], inp: Seq[Boolean], oac: Int, onum: Int){
     def apply(c: Char): Expr = funcs(c)
@@ -76,27 +76,37 @@ object ALPL extends Interpreter{
   
   //Returns
   object HaltRet extends Ret{
-    def resolve: Option[(Char, TailRec[Ret])] = None
-  }
+    def resolve: Option[(Char, TailRec[Ret])] = None}
+  
   case class PrintRet(c: Char, nxt: TailRec[Ret]) extends Ret {
     def resolve: Option[(Char, TailRec[Ret])] = Some((c, nxt))}
   
   //Expressions
   case class FuncExpr(f: Func) extends Expr{
-    def apply(cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(f, env))}
+    def apply(cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(f, env))
+    override def toString: String = f.toString}
   
   case class RefExpr(c: Char) extends Expr{
-    def apply(cc: Cont, env: Env): TailRec[Ret] = tailcall(env(c)(cc, env))}
+    def apply(cc: Cont, env: Env): TailRec[Ret] = tailcall(env(c)(cc, env))
+    override def toString: String = s"($c)"}
   
   case class BoundExpr(n: Int) extends Expr{
-    def apply(cc: Cont, env: Env): TailRec[Ret] = done(HaltRet)}
+    private val chars = ('a' to 'z').toVector
+    def apply(cc: Cont, env: Env): TailRec[Ret] = done(HaltRet)
+    override def toString: String = s"{${chars(n)}}"}
   
   case class AppExpr(x: Expr, y: Expr) extends Expr{
-    def apply(cc: Cont, env: Env): TailRec[Ret] = tailcall(x(ExprCont(y, cc), env))}
+    def apply(cc: Cont, env: Env): TailRec[Ret] = tailcall(x(ExprCont(y, cc), env))
+    override def toString: String = s"`$x$y"}
   
   //Continuations
   object EndCont extends Cont{
     def apply(f: Func, env: Env): TailRec[Ret] = done(HaltRet)}
+  
+  case class PassCont(exps: Seq[Expr]) extends Cont{
+    def apply(f: Func, env: Env): TailRec[Ret] = exps match{
+      case e +: es => tailcall(e(PassCont(es), env))
+      case _ => done(HaltRet)}}
   
   case class ExprCont(y: Expr, cc: Cont) extends Cont{
     def apply(f: Func, env: Env): TailRec[Ret] = tailcall(f(y, cc, env))}
@@ -108,16 +118,19 @@ object ALPL extends Interpreter{
         if(bit) tailcall(x(cc, nenv))
         else tailcall(f(cc, nenv))}}
   object Inp extends Func{
-    def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(Inp1(f), env))}
+    def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(Inp1(f), env))
+    override def toString: String = "?"}
   
   case class Print(bit: Boolean) extends Func{
     def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = env.write(if(bit) 1 else 0) match{
       case (res, nenv) => res match{
         case Some(c) => done(PrintRet(c, tailcall(f(cc, nenv))))
-        case None => tailcall(f(cc, nenv))}}}
+        case None => tailcall(f(cc, nenv))}}
+    override def toString: String = if(bit) "1" else "0"}
   
   case class Assign(c: Char) extends Func{
-    def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = tailcall(f(cc, env.add(c, f)))}
+    def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = tailcall(f(cc, env.add(c, f)))
+    override def toString: String = s"=$c"}
   
   case class Lambda(ops: Vector[Option[Expr]], bound: Vector[Expr], rem: Int) extends Func{
     def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = {
@@ -145,5 +158,10 @@ object ALPL extends Interpreter{
         case _ => cc match{
           case RPC(res) => res}}
       cdo(ops, EPC)}
-  }
+    
+    override def toString: String = {
+      val strs = ops.map{
+        case Some(exp) => exp.toString
+        case None => "`"}
+      s"[${strs.mkString}]"}}
 }

@@ -64,6 +64,7 @@ abstract class EsoParser[A, +B] extends (A => EsoParseRes[A, B]) with EsoObj{
   def apply(inp: A): EsoParseRes[A, B]
   def parseOne(inp: A): B = apply(inp) match{
     case EsoParsed(res, _, _, _) => res
+    case EsoParseErr(e) => throw e
     case _ => throw EsoExcep("Parse Failed")}
   
   def parseAllValues(inp: A): Vector[B] = parseValuesIterator(inp).toVector

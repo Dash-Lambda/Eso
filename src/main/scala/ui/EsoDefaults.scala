@@ -66,7 +66,8 @@ object EsoDefaults extends EsoObj{
     ("glos", "GlyphoShorthand"),
     ("plts", "Platts"),
     ("wl", "WordLang"),
-    ("lazy", "LazyK"))
+    ("lazy", "LazyK"),
+    ("alpl", "ALPL"))
   val fileExtensionMap: immutable.HashMap[String, String] = mkMap(fileExtensionsVec)
   
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](
