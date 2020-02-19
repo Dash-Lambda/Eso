@@ -1,5 +1,6 @@
 package ui
 
+import alpl.ALPL
 import null_lang.NULL
 import brainfuck.{BFManaged, BFToCPP, BFToScala, FlufflePuff, Ook}
 import common.{EsoObj, Interpreter, Translator, Transpiler}
@@ -93,7 +94,8 @@ object EsoDefaults extends EsoObj{
     Glypho,
     Platts,
     WordLang,
-    LazyK)
+    LazyK,
+    ALPL)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly, GlyphoShorthand, LazyKUnlToCC)
   val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude, BFToLazyK)
   
