@@ -82,7 +82,7 @@ Current native language support (mostly in chronological order):
 * [Platts](https://esolangs.org/wiki/Platts)
 * [WordLang](https://github.com/WilliamRagstad/WordLang)
 * [LazyK](https://esolangs.org/wiki/Lazy_K)
-* [alpl](https://esolangs.org/wiki/ALPL)
+* [ALPL](https://esolangs.org/wiki/ALPL)
 * Scala
 
 ### Current features:
