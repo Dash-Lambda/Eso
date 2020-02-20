@@ -7,10 +7,7 @@ import parsers.{ARPDown, ARPFail, ARPNext, ARPRet, ARPUp, ArbitraryRecurParser, 
 import scala.annotation.tailrec
 
 object LazyKParsers extends EsoObj{
-  val sexp: Expr = FuncExpr(S)
-  val kexp: Expr = FuncExpr(K)
-  val iexp: Expr = FuncExpr(I)
-  val iotaexp: Expr = FuncExpr(Pair(sexp, kexp))
+  val iotaexp: Expr = FuncExpr(churchPair(sexp, kexp))
   
   val unlParser: EsoParser[Seq[Char], Expr] = {
     val funcParser = {

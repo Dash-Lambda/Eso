@@ -2,11 +2,9 @@ package lazyk
 
 import common.{Config, EsoExcep, Interpreter}
 import lazyk.LazyKFuncs._
-import parsers.{ARPDown, ARPFail, ARPNext, ARPRet, ARPUp, ArbitraryRecurParser, ChunkParser, DepthRecurParser, EsoParser, PartialParser}
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Try}
-import scala.util.control.TailCalls._
 
 object LazyK extends Interpreter{
   val name: String = "LazyK"
