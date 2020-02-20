@@ -1,5 +1,6 @@
 package ui
 
+import alpl.ALPL
 import null_lang.NULL
 import brainfuck.{BFManaged, BFToCPP, BFToScala, FlufflePuff, Ook}
 import common.{EsoObj, Interpreter, Translator, Transpiler}
@@ -65,7 +66,8 @@ object EsoDefaults extends EsoObj{
     ("glos", "GlyphoShorthand"),
     ("plts", "Platts"),
     ("wl", "WordLang"),
-    ("lazy", "LazyK"))
+    ("lazy", "LazyK"),
+    ("alpl", "ALPL"))
   val fileExtensionMap: immutable.HashMap[String, String] = mkMap(fileExtensionsVec)
   
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](
@@ -93,7 +95,8 @@ object EsoDefaults extends EsoObj{
     Glypho,
     Platts,
     WordLang,
-    LazyK)
+    LazyK,
+    ALPL)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly, GlyphoShorthand, LazyKUnlToCC)
   val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude, BFToLazyK)
   
@@ -118,7 +121,7 @@ object EsoDefaults extends EsoObj{
     ("init", 40000, "initial tape size for interpreters with a data tape"),
     ("olen", -1, "maximum output length, useful for non-terminating programs, -1=infinite"),
     ("methSize", 1000, "maximum number of blocks in a generated method (for compiling interpreters"),
-    ("mtCharWidth", 8, "bit width of input characters for Metatape"),
+    ("charWidth", 8, "bit width of input characters for languages that do bitwise I/O"),
     ("fileEOF", 0, "character value to end file input strings with"))
   val defDesc: immutable.HashMap[String, String] = mkMap((defBoolVec ++ defNumVec).map{case (id, _, dc) => (id, dc)})
   

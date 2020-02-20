@@ -82,6 +82,7 @@ Current native language support (mostly in chronological order):
 * [Platts](https://esolangs.org/wiki/Platts)
 * [WordLang](https://github.com/WilliamRagstad/WordLang)
 * [LazyK](https://esolangs.org/wiki/Lazy_K)
+* [alpl](https://esolangs.org/wiki/ALPL)
 * Scala
 
 ### Current features:
@@ -271,7 +272,7 @@ The environment maintained by Eso has collected quite a few parameters, detailed
     * fileEOF: The ASCII code of the character Eso sticks at the end of file input. Most languages expect 0, but sometimes it needs to be something else. For instance, cgbfi.b expects a program terminated by `!`, and anything following is considered input.  
     * init: Initial length of memory tape, where applicable.
     * methSize: The maximum number of blocks allowed in a method when breaking up generated code to fit in the JVM's nonsensical limits.
-    * mtCharWidth: Bit-width of characters used by Metatape.
+    * charWidth: Bit-width of characters used by Metatape.
     * olen: Maximum number of characters to print. This is primarily useful for non-terminating programs. Some transpilers ignore this. 
 
 Boolean values can be set to true with an argument matching the regex `(true|yes|t|y|[1-9])` and false matching `(false|no|f|n|0)`, both case-insensitive.

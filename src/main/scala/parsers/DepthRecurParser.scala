@@ -2,7 +2,7 @@ package parsers
 
 import scala.annotation.tailrec
 
-case class DepthRecurParser[A, B](depth: Int, priority: Int = 0)(recur: A => Option[(A, Int, Int)])(collect: Seq[B] => B)(endParser: EsoParser[A, B]) extends EsoParser[A, B]{
+case class DepthRecurParser[A, B](endParser: EsoParser[A, B])(depth: Int)(recur: A => Option[(A, Int, Int)])(collect: Seq[B] => B) extends EsoParser[A, B]{
   def apply(inp: A): EsoParseRes[A, B] = {
     trait Cont{
       def apply(x: B): Cont}
@@ -16,13 +16,14 @@ case class DepthRecurParser[A, B](depth: Int, priority: Int = 0)(recur: A => Opt
         else cc(collect(ac :+ x))}}
     
     @tailrec
-    def pdo(src: A, len: Int, cc: Cont): EsoParseRes[A, B] = {
-      recur(src) match{
+    def pdo(src: A, len: Int, cc: Cont): EsoParseRes[A, B] = cc match{
+      case ResCont(res) => EsoParsed(res, src, 0, len)
+      case _ => recur(src) match{
         case Some((nxt, _, ne)) => pdo(nxt, len + ne, RecCont(depth, Vector(), cc))
         case None => endParser(src) match{
           case EsoParsed(res, rem, _, ne) => pdo(rem, len + ne, cc(res))
           case EsoParseFail => cc match{
-            case ResCont(res) => EsoParsed(res, src, priority, len)
+            case ResCont(res) => EsoParsed(res, src, 0, len)
             case _ => EsoParseFail}}}}
     recur(inp) match{
       case Some((nxt, start, end)) => pdo(nxt, end, RecCont(depth, Vector(), FinCont)) match{

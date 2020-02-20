@@ -23,7 +23,7 @@ object LazyKParsers extends EsoObj{
       case _ => None}
     def collect(xs: Seq[Expr]): Expr = xs match{
       case x +: y +: _ => AppExpr(x, y)}
-    DepthRecurParser(2)(recur)(collect)(funcParser)}
+    DepthRecurParser(funcParser)(2)(recur)(collect)}
   
   val combParser: EsoParser[Seq[Char], Expr] = {
     def collect(src: Seq[Expr]): Expr = src.foldLeft(iexp)(AppExpr)
@@ -36,7 +36,7 @@ object LazyKParsers extends EsoObj{
         case 'I' => ARPNext(iexp, cs, 0, 1)
         case _ => ARPFail}
       case _ => ARPUp(src, 0, 0)}
-    ArbitraryRecurParser(recur _, collect)}
+    ArbitraryRecurParser(recur _)(collect)}
   
   val iotaParser: EsoParser[Seq[Char], Expr] = {
     val funcParser = {
@@ -47,7 +47,7 @@ object LazyKParsers extends EsoObj{
       case _ => None}
     def collect(xs: Seq[Expr]): Expr = xs match{
       case x +: y +: _ => AppExpr(x, y)}
-    DepthRecurParser(2)(recur)(collect)(funcParser)}
+    DepthRecurParser(funcParser)(2)(recur)(collect)}
   
   val jotParser: EsoParser[Seq[Char], Expr] = (inp: Seq[Char]) => {
     def collect(exps: Vector[Expr]): Expr = exps.foldLeft(iexp){case (x, y) => AppExpr(x, y)}
