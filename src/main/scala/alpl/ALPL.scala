@@ -1,7 +1,7 @@
 package alpl
 
 import common.{Config, Interpreter}
-import parsers.{DepthRecurParser, RegexParser}
+import parsers.{DepthRecurParser, EsoParser, RegexParser}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -11,24 +11,15 @@ import scala.util.control.TailCalls._
 object ALPL extends Interpreter{
   val name: String = "ALPL"
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{parse(progRaw)} map{
-    case prog +: es =>
-      inputs => {
-        val initEnv = Env(immutable.HashMap(), binInp(inputs), 0, 7)
-        val initExpr: TailRec[Ret] = prog(PassCont(es), initEnv)
-        LazyList.unfold(initExpr)(nxt => nxt.result.resolve)}}
-  
-  def binInp(inp: Seq[Char]): Seq[Boolean] = inp flatMap (c => c.toBinaryString.toVector.map(_ == '1'))
-  
-  def parse(progRaw: String): Vector[Expr] = {
-    val asnParser = RegexParser(raw"""=(.)"""){m => FuncExpr(Assign(m.group(1).head))}
-    val prmParser = RegexParser(raw"""([^\[\]\.\`\=])"""){m =>
+  val allParser: EsoParser[String, Vector[Expr]] = {
+    val asnParser = RegexParser[Expr](raw"""=(.)"""){m => FuncExpr(Assign(m.group(1).head))}
+    val prmParser = RegexParser[Expr](raw"""([^\[\]\.\`\=])"""){m =>
       m.group(1) match{
         case "?" => FuncExpr(Inp)
         case "0" => FuncExpr(Print(false))
         case "1" => FuncExpr(Print(true))
         case str => RefExpr(str.head)}}
-    val lamParser = RegexParser(raw"""\[([^\.]*)\.([^\]]*)\]"""){m =>
+    val lamParser = RegexParser[Expr](raw"""\[([^\.]*)\.([^\]]*)\]"""){m =>
       val binds = m.group(1).toVector
       val ops = m.group(2).toVector.map{
         case '`' => None
@@ -42,16 +33,27 @@ object ALPL extends Interpreter{
               case i => BoundExpr(i)}}
           Some(expr)}
       FuncExpr(Lambda(ops, Vector(), binds.size))}
-    val termParser = asnParser.withErrors <+> prmParser.withErrors <+> lamParser.withErrors
     
-    val recReg = raw"""`(.*)""".r
-    def recur(src: String): Option[(String, Int, Int)] = src match{
-      case recReg(rem) => Some((rem, 0, 1))
-      case _ => None}
+    def recur(str: String): Option[(String, Int, Int)] = if(str.startsWith("`")) Some((str.tail, 0, 1)) else None
     def collect(xs: Seq[Expr]): Expr = xs.reduceLeft(AppExpr)
-    
-    val allParser = DepthRecurParser(2)(recur)(collect)(termParser).withConditioning(_.replaceAll("""\s+""", ""))
-    allParser.parseAllValues(progRaw)}
+    DepthRecurParser(asnParser.withErrors <+> prmParser.withErrors <+> lamParser.withErrors)(2)(recur)(collect)
+      .withConditioning(_.replaceAll("""\s+""", ""))
+      .withErrors.*}
+  
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = allParser(progRaw).toTry() map{
+    case prog +: es =>
+      inputs => {
+        val width = config.num("charWidth")
+        val initEnv = Env(immutable.HashMap(), binInp(inputs, width), 0, width - 1)
+        val initRet: TailRec[Ret] = prog(PassCont(es), initEnv)
+        LazyList.unfold(initRet)(nxt => nxt.result.resolve)}}
+  
+  def binInp(inp: Seq[Char], wid: Int = 8): Seq[Boolean] = {
+    @tailrec
+    def toBin(src: Int, ac: Vector[Boolean] = Vector()): Vector[Boolean] = {
+      if(ac.sizeIs == wid) ac
+      else toBin(src/2, (src%2 == 1) +: ac)}
+    inp flatMap (c => toBin(c.toInt))}
   
   case class Env(funcs: immutable.HashMap[Char, Expr], inp: Seq[Boolean], oac: Int, onum: Int){
     def apply(c: Char): Expr = funcs(c)
@@ -83,21 +85,16 @@ object ALPL extends Interpreter{
   
   //Expressions
   case class FuncExpr(f: Func) extends Expr{
-    def apply(cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(f, env))
-    override def toString: String = f.toString}
+    def apply(cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(f, env))}
   
   case class RefExpr(c: Char) extends Expr{
-    def apply(cc: Cont, env: Env): TailRec[Ret] = tailcall(env(c)(cc, env))
-    override def toString: String = s"($c)"}
+    def apply(cc: Cont, env: Env): TailRec[Ret] = tailcall(env(c)(cc, env))}
   
   case class BoundExpr(n: Int) extends Expr{
-    private val chars = ('a' to 'z').toVector
-    def apply(cc: Cont, env: Env): TailRec[Ret] = done(HaltRet)
-    override def toString: String = s"{${chars(n)}}"}
+    def apply(cc: Cont, env: Env): TailRec[Ret] = done(HaltRet)}
   
   case class AppExpr(x: Expr, y: Expr) extends Expr{
-    def apply(cc: Cont, env: Env): TailRec[Ret] = tailcall(x(ExprCont(y, cc), env))
-    override def toString: String = s"`$x$y"}
+    def apply(cc: Cont, env: Env): TailRec[Ret] = tailcall(x(ExprCont(y, cc), env))}
   
   //Continuations
   object EndCont extends Cont{
@@ -118,26 +115,23 @@ object ALPL extends Interpreter{
         if(bit) tailcall(x(cc, nenv))
         else tailcall(f(cc, nenv))}}
   object Inp extends Func{
-    def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(Inp1(f), env))
-    override def toString: String = "?"}
+    def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(Inp1(f), env))}
   
   case class Print(bit: Boolean) extends Func{
     def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = env.write(if(bit) 1 else 0) match{
       case (res, nenv) => res match{
         case Some(c) => done(PrintRet(c, tailcall(f(cc, nenv))))
-        case None => tailcall(f(cc, nenv))}}
-    override def toString: String = if(bit) "1" else "0"}
+        case None => tailcall(f(cc, nenv))}}}
   
   case class Assign(c: Char) extends Func{
-    def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = tailcall(f(cc, env.add(c, f)))
-    override def toString: String = s"=$c"}
+    def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = tailcall(f(cc, env.add(c, f)))}
   
   case class Lambda(ops: Vector[Option[Expr]], bound: Vector[Expr], rem: Int) extends Func{
     def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = {
-      if(rem == 0) tailcall(AppExpr(collapse, f)(cc, env))
+      if(rem == 1) tailcall(collapse(bound :+ f)(cc, env))
       else tailcall(cc(Lambda(ops, bound :+ f, rem - 1), env))}
     
-    def collapse: Expr = {
+    def collapse(binds: Vector[Expr]): Expr = {
       trait PC{
         def apply(ex: Expr): PC}
       object EPC extends PC{
@@ -152,16 +146,10 @@ object ALPL extends Interpreter{
       @tailrec
       def cdo(src: Vector[Option[Expr]], cc: PC): Expr = src match{
         case e +: es => e match{
-          case Some(BoundExpr(n)) => cdo(es, cc(bound(n)))
+          case Some(BoundExpr(n)) => cdo(es, cc(binds(n)))
           case Some(ex) => cdo(es, cc(ex))
           case None => cdo(es, APC(cc))}
         case _ => cc match{
           case RPC(res) => res}}
-      cdo(ops, EPC)}
-    
-    override def toString: String = {
-      val strs = ops.map{
-        case Some(exp) => exp.toString
-        case None => "`"}
-      s"[${strs.mkString}]"}}
+      cdo(ops, EPC)}}
 }

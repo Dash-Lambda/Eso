@@ -22,7 +22,7 @@ object BFToMetatape extends Transpiler{
     '_' -> "n")
   
   def apply(config: Config)(progRaw: String): Try[String] = {
-    val wid: Int = config.num("mtCharWidth")
+    val wid: Int = config.num("charWidth")
     val prog = filterChars(progRaw, "[]<>+-,.")
       .replaceAll("""\[[+\-]\]""", "_")
       .toVector

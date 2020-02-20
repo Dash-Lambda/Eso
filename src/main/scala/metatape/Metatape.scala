@@ -15,7 +15,7 @@ object Metatape extends Interpreter{
   val namReg: Regex = raw"""^ ?((?:\S|\S.*\S)) ?\z""".r
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{parse(progRaw)} map{
-    case (prog, subs) => runProg(prog, subs, config.rands, config.num("mtCharWidth"))}
+    case (prog, subs) => runProg(prog, subs, config.rands, config.num("charWidth"))}
   
   def runProg(prog: Vector[MTOP], subVec: Vector[MSub], rands: LazyList[Int], padLen: Int): Seq[Char] => LazyList[Char] = {
     val subs = mkMap(subVec.map{case MSub(nam, sub) => (nam, sub)})

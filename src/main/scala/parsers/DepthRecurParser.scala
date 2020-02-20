@@ -2,7 +2,7 @@ package parsers
 
 import scala.annotation.tailrec
 
-case class DepthRecurParser[A, B](depth: Int)(recur: A => Option[(A, Int, Int)])(collect: Seq[B] => B)(endParser: EsoParser[A, B]) extends EsoParser[A, B]{
+case class DepthRecurParser[A, B](endParser: EsoParser[A, B])(depth: Int)(recur: A => Option[(A, Int, Int)])(collect: Seq[B] => B) extends EsoParser[A, B]{
   def apply(inp: A): EsoParseRes[A, B] = {
     trait Cont{
       def apply(x: B): Cont}

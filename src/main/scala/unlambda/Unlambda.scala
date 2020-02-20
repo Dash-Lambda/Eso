@@ -32,7 +32,7 @@ object Unlambda extends Interpreter{
       case _ => None}
     def collect(xs: Seq[Expr]): Expr = xs match{
       case x +: y +: _ => AppExpr(x, y)}
-    DepthRecurParser(2)(recur)(collect)(funcParser)}
+    DepthRecurParser(funcParser)(2)(recur)(collect)}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
     @tailrec
