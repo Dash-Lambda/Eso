@@ -9,11 +9,10 @@ import scala.util.{Failure, Try}
 object LazyK extends Interpreter{
   val name: String = "LazyK"
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = LazyKParsers.parse(progRaw) match{
-    case None => Failure(EsoExcep("Invalid Expression"))
-    case Some(initExpr) => Try{
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = LazyKParsers.parse(progRaw) flatMap{initExpr =>
+    Try{
       inputs =>
-        val cinp = ChurchList(inputs.to(LazyList).map(_.toInt).takeWhile(_ <= 255) #::: LazyList.continually(256))
+        val cinp = churchList(inputs.to(LazyList).map(_.toInt).takeWhile(_ <= 255) #::: LazyList.continually(256))
         val fexpr: Expr = AppExpr(initExpr, FuncExpr(cinp))
         LazyList.unfold(fexpr)(run)}}
   

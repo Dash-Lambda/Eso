@@ -3,27 +3,27 @@ package lazyk
 import scala.util.control.TailCalls._
 
 object LazyKFuncs {
-  val sexp: Expr = FuncExpr((x, c1) => tailcall(
+  val icomb: Func = (f, cc) => tailcall(f(cc))
+  val kcomb: Func = (x, c1) => tailcall(c1((_, c2) => x(c2)))
+  val scomb: Func = (x, c1) => tailcall(
     c1((y, c2) =>
       tailcall(c2{(z, c3) =>
         val zex = new DupExpr(z)
-        tailcall(x(ExprCont(zex, ExprCont(AppExpr(y, zex), c3))))}))))
-  val kexp: Expr = FuncExpr((x, c1) => tailcall(c1((_, c2) => x(c2))))
-  val iexp: Expr = FuncExpr((f, cc) => tailcall(f(cc)))
+        tailcall(x(ExprCont(zex, ExprCont(AppExpr(y, zex), c3))))})))
+  
+  val sexp: Expr = FuncExpr(scomb)
+  val kexp: Expr = FuncExpr(kcomb)
+  val iexp: Expr = FuncExpr(icomb)
   
   val churchPair: (Expr, Expr) => Func = (x, y) => (f, cc) => tailcall(f(ExprCont(x, ExprCont(y, cc))))
+  val churchList: Seq[Int] => Func = lst => (f, cc) => tailcall(churchPair(FuncExpr(churchNum(lst.head)), FuncExpr(churchList(lst.tail)))(f, cc))
   val churchNum: Int => Func = num => (f, c1) => tailcall(c1((x, c2) => Iterator.fill(num)(f).foldLeft(x){case (b, a) => AppExpr(a, b)}(c2)))
   val churchTrue: Func = (x, c1) => tailcall(c1((_, c2) => x(c2)))
   val churchFalse: Func = (_, c1) => tailcall(c1((y, c2) => y(c2)))
   
-  abstract class Expr{
-    def apply(cc: Cont): TailRec[Func]}
-  
-  abstract class Cont{
-    def apply(f: Func): TailRec[Func]}
-  
-  abstract class Func extends ((Expr, Cont) => TailRec[Func]){
-    def apply(f: Expr, cc: Cont): TailRec[Func]}
+  abstract class Expr extends (Cont => TailRec[Func])
+  abstract class Cont extends (Func => TailRec[Func])
+  abstract class Func extends ((Expr, Cont) => TailRec[Func])
   
   //Expressions
   case class FuncExpr(f: Func) extends Expr{
@@ -53,10 +53,6 @@ object LazyKFuncs {
       tailcall(cc(f))}}
   
   //Funcs
-  case class ChurchList(lst: Seq[Int]) extends Func{
-    def apply(f: Expr, cc: Cont): TailRec[Func] = lst match{
-      case n +: ns => tailcall(churchPair(FuncExpr(churchNum(n)), FuncExpr(ChurchList(ns)))(f, cc))}}
-  
   object ChurchHalt extends Func{
     def apply(f: Expr, cc: Cont): TailRec[Func] = done(ChurchCounter)}
   case class ChurchReturn(exp: Expr) extends Func{
