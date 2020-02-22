@@ -1,8 +1,7 @@
 package ui
 
 import alpl.ALPL
-import null_lang.NULL
-import brainfuck.{BFManaged, BFToCPP, BFToScala, FlufflePuff, Ook}
+import brainfuck._
 import common.{EsoObj, Interpreter, Translator, Transpiler}
 import deadfish.Deadfish
 import emmental.Emmental
@@ -10,8 +9,9 @@ import fractran.{FracTran, FracTranpp}
 import funge.{Befunge93, Befunge98}
 import glypho.{Glypho, GlyphoShorthand}
 import grass.Grass
-import lazyk.{BFToLazyK, LazyK}
+import lazyk._
 import metatape.{BFToMetatape, Metatape}
+import null_lang.NULL
 import path.PATH
 import pdoubleprime.PDP
 import platts.Platts
@@ -97,7 +97,7 @@ object EsoDefaults extends EsoObj{
     WordLang,
     LazyK,
     ALPL)
-  val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly, GlyphoShorthand)
+  val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly, GlyphoShorthand, LazyKAnyToUnl, LazyKAnyToIota, LazyKAnyToCC)
   val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude, BFToLazyK)
   
   val defBoolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](

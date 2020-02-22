@@ -7,7 +7,8 @@ object LazyKFuncs {
     case AppExpr(e1, e2) => s"`${mkUnlambdaString(e1)}${mkUnlambdaString(e2)}"
     case `scomb` => "s"
     case `kcomb` => "k"
-    case `icomb` => "i"}
+    case `icomb` => "i"
+    case `iotaexp` => "``s``si`ks`kk"}
   
   trait Expr extends (Cont => TailRec[Func])
   abstract class Cont extends (Func => TailRec[Func])
@@ -50,7 +51,7 @@ object LazyKFuncs {
   val churchFalse: Func = (_, c1) => tailcall(c1((y, c2) => y(c2)))
   def churchList(lst: Seq[Int]): Func = (f, cc) => tailcall(churchPair(churchNum(lst.head), churchList(lst.tail))(f, cc))
   def churchNum(num: Int): Func = (f, c1) => tailcall(c1((x, c2) => Iterator.fill(num)(f).foldLeft(x){case (b, a) => AppExpr(a, b)}(c2)))
-  
+  val iotaexp: Func = churchPair(scomb, kcomb)
   
   val churchFail: Func = (_, _) => done(churchFail)
   val churchHalt: Func = (_, _) => done(churchFail)
