@@ -28,13 +28,28 @@ abstract class EsoSpec extends AnyFlatSpec{
     restry match{
       case Success(res) => assertResult(expected)(res)
       case Failure(e) => fail(s"Translation Failed ($e)")}}
-  def testTranslatorAgainstProgramResult(intp: Interpreter, trans: Translator, rev: Boolean, prog: String, expected: String, canBeSame: Boolean = false, config: Config = defaultConfig): Unit = {
+  def testAllTranslatedAgainstOutput(trans: Translator, config: Config = defaultConfig)(itms: (String, String, Boolean)*): Unit = {
+    itms match{
+      case (nam1, ref1, rev1) +: rem =>
+        trans.toString should s"Preserve the behavior of $nam1 when translating from ${if(rev1) s"${trans.name} to ${trans.baseLang}" else s"${trans.baseLang} to ${trans.name}"}" in{
+          testTranslatorAgainstOutput(trans, rev1, grabFile(nam1), ref1, config)}
+        for((nam, ref, rev) <- rem){
+          it should s"Preserve the behavior of $nam when translating from ${if(rev) s"${trans.name} to ${trans.baseLang}" else s"${trans.baseLang} to ${trans.name}"}" in{
+            testTranslatorAgainstOutput(trans, rev, grabFile(nam), ref, config)}}}}
+  def testTranslatorAgainstProgramResult(intp: Interpreter, trans: Translator, rev: Boolean, prog: String, expected: String, inp: Seq[Char] = Seq(), canBeSame: Boolean = false, config: Config = defaultConfig): Unit = {
     val restry = {
       if(rev) trans.unapply(config)(prog)
       else trans(config)(prog)}
     restry match{
       case Success(res) if canBeSame || res != prog => assertOutput(intp, res, expected, config=config)
+      case Success(_) => fail("Output Identical")
       case Failure(e) => fail(s"Translation Failed ($e)")}}
+  def testAllTranslatedAgainstProgramResult(intp: Interpreter, trans: Translator, canBeSame: Boolean = false, config: Config = defaultConfig)(itms: (String, String, String, Boolean)*): Unit = {
+    itms match{
+      case (nam1, inp1, ref1, rev1) +: rem =>
+        trans.toString should s"preserve the behavior of $nam1 when translating from ${if(rev1) s"${trans.name} to ${trans.baseLang}" else s"${trans.baseLang} to ${trans.name}"}" in testTranslatorAgainstProgramResult(intp, trans, rev1, grabFile(nam1), ref1, inp1.toSeq, canBeSame, config)
+        for((nam, inp, ref, rev) <- rem){
+          it should s"preserve the behavior of $nam when translating from ${if(rev) s"${trans.name} to ${trans.baseLang}" else s"${trans.baseLang} to ${trans.name}"}" in testTranslatorAgainstProgramResult(intp, trans, rev, grabFile(nam), ref, inp, canBeSame, config)}}}
   
   def getOutput(intp: Interpreter, prog: String, inp: Seq[Char] = Seq(), config: Config = defaultConfig): Try[LazyList[Char]] = intp(config)(prog) map (i => i(inp))
   def getOutputString(intp: Interpreter, prog: String, inp: Seq[Char] = Seq(), config: Config = defaultConfig): Try[String] = getOutput(intp, prog, inp, config) flatMap (l => Try{l.mkString})

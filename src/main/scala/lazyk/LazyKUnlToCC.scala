@@ -14,17 +14,17 @@ object LazyKUnlToCC extends Translator{
     val expr = unlParser.parseOne(prog)
     def mkstr(exp: Expr): String = exp match{
       case AppExpr(e1, e2) => s"(${mkstr(e1)}${mkstr(e2)})"
-      case `sexp` => "S"
-      case `kexp` => "K"
-      case `iexp` => "I"}
+      case `scomb` => "S"
+      case `kcomb` => "K"
+      case `icomb` => "I"}
     Try{mkstr(expr)}}
   
   def unapply(config: Config)(prog: String): Try[String] = {
     val expr = combParser.parseOne(prog)
     def mkstr(exp: Expr): String = exp match{
       case AppExpr(e1, e2) => s"`${mkstr(e1)}${mkstr(e2)}"
-      case `sexp` => "s"
-      case `kexp` => "k"
-      case `iexp` => "i"}
+      case `scomb` => "s"
+      case `kcomb` => "k"
+      case `icomb` => "i"}
     Try{mkstr(expr)}}
 }

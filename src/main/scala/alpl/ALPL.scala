@@ -12,12 +12,12 @@ object ALPL extends Interpreter{
   val name: String = "ALPL"
   
   val allParser: EsoParser[String, Vector[Expr]] = {
-    val asnParser = RegexParser[Expr](raw"""=(.)"""){m => FuncExpr(Assign(m.group(1).head))}
+    val asnParser = RegexParser[Expr](raw"""=(.)"""){m => FuncExpr(assign(m.group(1).head))}
     val prmParser = RegexParser[Expr](raw"""([^\[\]\.\`\=])"""){m =>
       m.group(1) match{
-        case "?" => FuncExpr(Inp)
-        case "0" => FuncExpr(Print(false))
-        case "1" => FuncExpr(Print(true))
+        case "?" => FuncExpr(inpFunc)
+        case "0" => FuncExpr(printFunc(false))
+        case "1" => FuncExpr(printFunc(true))
         case str => RefExpr(str.head)}}
     val lamParser = RegexParser[Expr](raw"""\[([^\.]*)\.([^\]]*)\]"""){m =>
       val binds = m.group(1).toVector
@@ -25,9 +25,9 @@ object ALPL extends Interpreter{
         case '`' => None
         case c =>
           val expr = c match{
-            case '?' => FuncExpr(Inp)
-            case '0' => FuncExpr(Print(false))
-            case '1' => FuncExpr(Print(true))
+            case '?' => FuncExpr(inpFunc)
+            case '0' => FuncExpr(printFunc(false))
+            case '1' => FuncExpr(printFunc(true))
             case _ => binds.indexOf(c) match{
               case -1 => RefExpr(c)
               case i => BoundExpr(i)}}
@@ -45,7 +45,7 @@ object ALPL extends Interpreter{
       inputs => {
         val width = config.num("charWidth")
         val initEnv = Env(immutable.HashMap(), binInp(inputs, width), 0, width - 1)
-        val initRet: TailRec[Ret] = prog(PassCont(es), initEnv)
+        val initRet: TailRec[Ret] = prog(passCont(es), initEnv)
         LazyList.unfold(initRet)(nxt => nxt.result.resolve)}}
   
   def binInp(inp: Seq[Char], wid: Int = 8): Seq[Boolean] = {
@@ -62,19 +62,15 @@ object ALPL extends Interpreter{
     def write(bit: Int): (Option[Char], Env) = {
       val nac = (oac*2) + bit
       if(onum == 0) (Some(nac.toChar), Env(funcs, inp, 0, 7))
-      else (None, Env(funcs, inp, nac, onum - 1))}}
+      else (None, Env(funcs, inp, nac, onum - 1))}
+    def head: Boolean = inp.head
+    def tail: Env = Env(funcs, inp.tail, oac, onum)}
   
   trait Ret{
     def resolve: Option[(Char, TailRec[Ret])]}
-  
-  trait Expr{
-    def apply(cc: Cont, env: Env): TailRec[Ret]}
-  
-  trait Cont{
-    def apply(f: Func, env: Env): TailRec[Ret]}
-  
-  trait Func{
-    def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret]}
+  abstract class Expr extends ((Cont, Env) => TailRec[Ret])
+  abstract class Cont extends ((Func, Env) => TailRec[Ret])
+  abstract class Func extends ((Expr, Cont, Env) => TailRec[Ret])
   
   //Returns
   object HaltRet extends Ret{
@@ -94,37 +90,23 @@ object ALPL extends Interpreter{
     def apply(cc: Cont, env: Env): TailRec[Ret] = done(HaltRet)}
   
   case class AppExpr(x: Expr, y: Expr) extends Expr{
-    def apply(cc: Cont, env: Env): TailRec[Ret] = tailcall(x(ExprCont(y, cc), env))}
+    def apply(cc: Cont, env: Env): TailRec[Ret] = tailcall(x(exprCont(y, cc), env))}
   
   //Continuations
-  object EndCont extends Cont{
-    def apply(f: Func, env: Env): TailRec[Ret] = done(HaltRet)}
-  
-  case class PassCont(exps: Seq[Expr]) extends Cont{
-    def apply(f: Func, env: Env): TailRec[Ret] = exps match{
-      case e +: es => tailcall(e(PassCont(es), env))
+  def passCont(exps: Seq[Expr]): Cont = {
+    (_, env) => exps match{
+      case e +: es => tailcall(e(passCont(es), env))
       case _ => done(HaltRet)}}
-  
-  case class ExprCont(y: Expr, cc: Cont) extends Cont{
-    def apply(f: Func, env: Env): TailRec[Ret] = tailcall(f(y, cc, env))}
+  def exprCont(y: Expr, cc: Cont): Cont = (f, env) => tailcall(f(y, cc, env))
   
   //Functions
-  case class Inp1(x: Expr) extends Func{
-    def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = env.read match{
-      case (bit, nenv) =>
-        if(bit) tailcall(x(cc, nenv))
-        else tailcall(f(cc, nenv))}}
-  object Inp extends Func{
-    def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(Inp1(f), env))}
-  
-  case class Print(bit: Boolean) extends Func{
-    def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = env.write(if(bit) 1 else 0) match{
+  def assign(c: Char): Func = (f, cc, env) => tailcall(f(cc, env.add(c, f)))
+  def inpFunc: Func = (x, c1, en1) => c1((y, c2, en2) => if(en2.head) tailcall(x(c2, en2.tail)) else tailcall(y(c2, en2.tail)), en1)
+  def printFunc(bit: Boolean): Func = {
+    (f, cc, env) => env.write(if(bit) 1 else 0) match{
       case (res, nenv) => res match{
         case Some(c) => done(PrintRet(c, tailcall(f(cc, nenv))))
         case None => tailcall(f(cc, nenv))}}}
-  
-  case class Assign(c: Char) extends Func{
-    def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = tailcall(f(cc, env.add(c, f)))}
   
   case class Lambda(ops: Vector[Option[Expr]], bound: Vector[Expr], rem: Int) extends Func{
     def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = {

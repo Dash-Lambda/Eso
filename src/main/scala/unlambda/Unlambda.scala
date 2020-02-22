@@ -13,19 +13,19 @@ object Unlambda extends Interpreter{
   
   val funcParser: EsoParser[Vector[Char], Expr] = {
     val funcMap = immutable.HashMap(
-      'i' -> I,
-      'v' -> V,
-      'k' -> K,
-      's' -> S,
-      'c' -> C,
+      'i' -> icomb,
+      'v' -> vcomb,
+      'k' -> kcomb,
+      's' -> scomb,
+      'c' -> ccomb,
       'd' -> D,
-      'r' -> OUT('\n'),
-      '@' -> AT,
-      '|' -> PIPE,
-      'e' -> E)
+      'r' -> outcomb('\n'),
+      '@' -> atcomb,
+      '|' -> pipecomb,
+      'e' -> ecomb)
     PartialParser.simple{
-      case '.' +: c +: cs => (FuncExpr(OUT(c)), cs)
-      case '?' +: c +: cs => (FuncExpr(QUES(c)), cs)
+      case '.' +: c +: cs => (FuncExpr(outcomb(c)), cs)
+      case '?' +: c +: cs => (FuncExpr(quescomb(c)), cs)
       case f +: cs if funcMap.isDefinedAt(f) => (FuncExpr(funcMap(f)), cs)}}
   val unlParser: EsoParser[Vector[Char], Expr] = {
     val toks = "ivkscdr@|e`.?#".toVector
@@ -52,17 +52,11 @@ object Unlambda extends Interpreter{
       case c +: cs => Env(Some(c), cs)
       case _ => Env(None, inp)}}
   
-  trait Ret{
+  abstract class Ret{
     def resolve: Option[(Char, TailRec[Ret])]}
-  
-  trait Expr{
-    def apply(cc: Cont, env: Env): TailRec[Ret]}
-  
-  trait Cont{
-    def apply(f: Func, env: Env): TailRec[Ret]}
-  
-  trait Func{
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret]}
+  abstract class Expr extends ((Cont, Env) => TailRec[Ret])
+  abstract class Cont extends ((Func, Env) => TailRec[Ret])
+  abstract class Func extends ((Func, Cont, Env) => TailRec[Ret])
   
   //Returns
   object HaltRet extends Ret{
@@ -94,54 +88,27 @@ object Unlambda extends Interpreter{
     def apply(f: Func, env: Env): TailRec[Ret] = tailcall(f(y, cc, env))}
   
   //Functions
-  object I extends Func{
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(f, env))}
+  def icomb: Func = (f, cc, env) => tailcall(cc(f, env))
+  def scomb: Func = (x, c1, en1) => tailcall(c1((y, c2, en2) => tailcall(c2((z, c3, en3) => tailcall(AppExpr(AppExpr(FuncExpr(x), FuncExpr(z)), AppExpr(FuncExpr(y), FuncExpr(z)))(c3, en3)), en2)), en1))
+  def kcomb: Func = (x, c1, en1) => tailcall(c1((_, c2, en2) => tailcall(c2(x, en2)), en1))
+  def vcomb: Func = (_, cc, env) => tailcall(cc(vcomb, env))
+  def outcomb(c: Char): Func = (f, cc, env) => done(PrintRet(c, tailcall(cc(f, env))))
+  def D1(x: Expr): Func = (f, cc, env) => tailcall(x(DCont(f, cc), env))
+  def ccomb: Func = (f, c1, en1) => tailcall(f((g, _, en2) => c1(g, en2), c1, en1))
+  def ecomb: Func = (_, _, _) => done(HaltRet)
+  def atcomb: Func = {
+    (f, cc, env) => env.cur match{
+      case None => tailcall(f(vcomb, cc, env.read))
+      case _ => tailcall(f(icomb, cc, env.read))}}
+  def quescomb(c: Char): Func = {
+    (f, cc, env) => env.cur match{
+      case Some(`c`) => tailcall(f(icomb, cc, env))
+      case _ => tailcall(f(vcomb, cc, env))}}
+  def pipecomb: Func = {
+    (f, cc, env) => env.cur match{
+      case Some(c) => tailcall(f(outcomb(c), cc, env))
+      case None => tailcall(f(vcomb, cc, env))}}
   
-  object V extends Func {
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(V, env))}
-  
-  case class OUT(c: Char) extends Func{
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = done(PrintRet(c, tailcall(cc(f, env))))}
-  
-  case class D1(x: Expr) extends Func{
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = tailcall(x(DCont(f, cc), env))}
   object D extends Func{
     def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(D1(FuncExpr(f)), env))}
-  
-  case class S2(x: Func, y: Func) extends Func{
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = {
-      val expr = AppExpr(AppExpr(FuncExpr(x), FuncExpr(f)), AppExpr(FuncExpr(y), FuncExpr(f)))
-      tailcall(expr(cc, env))}}
-  case class S1(x: Func) extends Func{
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(S2(x, f), env))}
-  object S extends Func {
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(S1(f), env))}
-  
-  case class K1(x: Func) extends Func{
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(x, env))}
-  object K extends Func {
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(K1(f), env))}
-  
-  case class C1(cc1: Cont) extends Func{
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = tailcall(cc1(f, env))}
-  object C extends Func {
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = tailcall(f(C1(cc), cc, env))}
-  
-  object E extends Func {
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = done(HaltRet)}
-  
-  object AT extends Func {
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = env.cur match{
-      case None => tailcall(f(V, cc, env.read))
-      case _ => tailcall(f(I, cc, env.read))}}
-  
-  case class QUES(c: Char) extends Func{
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = env.cur match{
-      case Some(`c`) => tailcall(f(I, cc, env))
-      case _ => tailcall(f(V, cc, env))}}
-  
-  object PIPE extends Func {
-    def apply(f: Func, cc: Cont, env: Env): TailRec[Ret] = env.cur match{
-      case Some(c) => tailcall(f(OUT(c), cc, env))
-      case None => tailcall(f(V, cc, env))}}
 }

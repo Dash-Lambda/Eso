@@ -8,13 +8,13 @@ import scala.annotation.tailrec
 import scala.util.Try
 
 object LazyKParsers extends EsoObj{
-  val iotaexp: Expr = FuncExpr(churchPair(sexp, kexp))
+  val iotaexp: Expr = churchPair(scomb, kcomb)
   
   val unlParser: EsoParser[Seq[Char], Expr] = {
     val funcParser = PartialElementwiseParser[Char, Expr]{
-      case 's' => sexp
-      case 'k' => kexp
-      case 'i' => iexp}
+      case 's' => scomb
+      case 'k' => kcomb
+      case 'i' => icomb}
     def recur(src: Seq[Char]): Option[(Seq[Char], Int, Int)] = src match{
       case '`' +: cs => Some((cs, 0, 1))
       case _ => None}
@@ -27,9 +27,9 @@ object LazyKParsers extends EsoObj{
       case c +: cs => c match{
         case '(' => ARPDown(cs, 0, 1)
         case ')' => ARPUp(cs, 0, 1)
-        case 'S' => ARPNext(sexp, cs, 0, 1)
-        case 'K' => ARPNext(kexp, cs, 0, 1)
-        case 'I' => ARPNext(iexp, cs, 0, 1)
+        case 'S' => ARPNext(scomb, cs, 0, 1)
+        case 'K' => ARPNext(kcomb, cs, 0, 1)
+        case 'I' => ARPNext(icomb, cs, 0, 1)
         case _ => ARPFail}
       case _ => ARPUp(src, 0, 0)}
     ArbitraryRecurParser(recur _)(collect)}
@@ -42,13 +42,15 @@ object LazyKParsers extends EsoObj{
     DepthRecurParser(PartialElementwiseParser[Char, Expr]{case 'i' => iotaexp})(2)(recur)(collect)}
   
   val jotParser: EsoParser[Seq[Char], Expr] = inp => {
-    def collect(exps: Vector[Expr]): Expr = exps.foldLeft(iexp){case (x, y) => AppExpr(x, y)}
+    def collect(exps: Vector[Expr]): Expr = exps.foldLeft(icomb: Expr){case (x, y) => AppExpr(x, y)}
     @tailrec
     def jdo(src: Seq[Char], ac: Vector[Expr]): (Expr, Seq[Char]) = src match{
       case w :+ j => j match{
-        case '0' => jdo(w, sexp +: kexp +: ac)
+        case '0' => jdo(w, scomb +: kcomb +: ac)
         case '1' => ac match{
-          case x +: y +: es => jdo(w, AppExpr(x, y) +: es)}
+          case x +: y +: es => jdo(w, AppExpr(x, y) +: es)
+          case x +: es => jdo(w, AppExpr(x, icomb) +: es)
+          case _ => jdo(w, AppExpr(icomb, icomb) +: ac)}
         case _ => (collect(ac), src)}
       case _ => (collect(ac), src)}
     val end = inp.lastIndexWhere("01".contains(_))
@@ -56,7 +58,7 @@ object LazyKParsers extends EsoObj{
     else jdo(inp.take(end + 1), Vector()) match{
       case (res, rem) => EsoParsed(res, rem, rem.size - 1, end + 1)}}
   
-  val emptyParser: EsoParser[Seq[Char], Expr] = inp => if(inp.isEmpty) EsoParsed(iexp, Seq(), 0, 0) else EsoParseFail
+  val emptyParser: EsoParser[Seq[Char], Expr] = inp => if(inp.isEmpty) EsoParsed(icomb, Seq(), 0, 0) else EsoParseFail
   
   val lkParser: EsoParser[Seq[Char], Expr] = {
     (unlParser <+> combParser <+> iotaParser <+> jotParser <+> emptyParser)
