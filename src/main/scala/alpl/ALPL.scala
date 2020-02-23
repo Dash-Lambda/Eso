@@ -45,7 +45,7 @@ object ALPL extends Interpreter{
       inputs => {
         val width = config.num("charWidth")
         val initEnv = Env(immutable.HashMap(), binInp(inputs, width), 0, width - 1)
-        val initRet: TailRec[Ret] = prog(passCont(es), initEnv)
+        val initRet: TailRec[Ret] = tailcall(prog(passCont(es), initEnv))
         LazyList.unfold(initRet)(nxt => nxt.result.resolve)}}
   
   def binInp(inp: Seq[Char], wid: Int = 8): Seq[Boolean] = {

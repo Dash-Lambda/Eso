@@ -17,26 +17,23 @@ object LazyKFuncs {
   
   //Expressions
   case class AppExpr(x: Expr, y: Expr) extends Expr{
-    def apply(cc: Cont): TailRec[Func] = tailcall(x(ExprCont(y, cc)))}
+    def apply(cc: Cont): TailRec[Func] = tailcall(x(exprCont(y, cc)))}
   
   class DupExpr(var f: Expr) extends Expr{
     def apply(cc: Cont): TailRec[Func] = f match{
       case fun: Func => tailcall(cc(fun))
-      case _ => tailcall(f(DupCont(this, cc)))}
+      case _ => tailcall(f(dupCont(this, cc)))}
     def collapse(res: Func): Unit = f match{
       case _: Func => ()
       case _ => f = res}}
   
   //Continuations
   val endCont: Cont = f => done(f)
-  
-  case class ExprCont(y: Expr, cc: Cont) extends Cont{
-    def apply(f: Func): TailRec[Func] = tailcall(f(y, cc))}
-  
-  case class DupCont(u: DupExpr, cc: Cont) extends Cont{
-    def apply(f: Func): TailRec[Func] = {
+  def exprCont(y: Expr, cc: Cont): Cont = x => tailcall(x(y, cc))
+  def dupCont(u: DupExpr, cc: Cont): Cont = {
+    f =>
       u.collapse(f)
-      tailcall(cc(f))}}
+      tailcall(cc(f))}
   
   //Funcs
   val icomb: Func = (f, cc) => tailcall(f(cc))
@@ -44,13 +41,13 @@ object LazyKFuncs {
   val scomb: Func = (x, c1) => tailcall(c1((y, c2) =>
     tailcall(c2{(z, c3) =>
       val zex = new DupExpr(z)
-      tailcall(x(ExprCont(zex, ExprCont(AppExpr(y, zex), c3))))})))
+      tailcall(x(exprCont(zex, exprCont(AppExpr(y, zex), c3))))})))
   
-  val churchPair: (Expr, Expr) => Func = (x, y) => (f, cc) => tailcall(f(ExprCont(x, ExprCont(y, cc))))
+  val churchPair: (Expr, Expr) => Func = (x, y) => (f, cc) => tailcall(f(exprCont(x, exprCont(y, cc))))
   val churchTrue: Func = kcomb
   val churchFalse: Func = (_, c1) => tailcall(c1((y, c2) => y(c2)))
   def churchList(lst: Seq[Int]): Func = (f, cc) => tailcall(churchPair(churchNum(lst.head), churchList(lst.tail))(f, cc))
-  def churchNum(num: Int): Func = (f, c1) => tailcall(c1((x, c2) => Iterator.fill(num)(f).foldLeft(x){case (b, a) => AppExpr(a, b)}(c2)))
+  def churchNum(num: Int): Func = (f, c1) => tailcall(c1((x, c2) => tailcall(Iterator.fill(num)(f).foldLeft(x){case (b, a) => AppExpr(a, b)}(c2))))
   val iotaexp: Func = churchPair(scomb, kcomb)
   
   val churchFail: Func = (_, _) => done(churchFail)

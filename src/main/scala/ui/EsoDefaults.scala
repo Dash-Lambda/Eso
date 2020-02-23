@@ -9,6 +9,7 @@ import fractran.{FracTran, FracTranpp}
 import funge.{Befunge93, Befunge98}
 import glypho.{Glypho, GlyphoShorthand}
 import grass.Grass
+import lazybird.LazyBird
 import lazyk._
 import metatape.{BFToMetatape, Metatape}
 import null_lang.NULL
@@ -67,7 +68,8 @@ object EsoDefaults extends EsoObj{
     ("plts", "Platts"),
     ("wl", "WordLang"),
     ("lazy", "LazyK"),
-    ("alpl", "ALPL"))
+    ("alpl", "ALPL"),
+    ("lzb", "LazyBird"))
   val fileExtensionMap: immutable.HashMap[String, String] = mkMap(fileExtensionsVec)
   
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](
@@ -96,7 +98,8 @@ object EsoDefaults extends EsoObj{
     Platts,
     WordLang,
     LazyK,
-    ALPL)
+    ALPL,
+    LazyBird)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly, GlyphoShorthand, LazyKAnyToUnl, LazyKAnyToIota, LazyKAnyToCC)
   val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude, BFToLazyK)
   

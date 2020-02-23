@@ -83,6 +83,7 @@ Current native language support (mostly in chronological order):
 * [WordLang](https://github.com/WilliamRagstad/WordLang)
 * [LazyK](https://esolangs.org/wiki/Lazy_K)
 * [ALPL](https://esolangs.org/wiki/ALPL)
+* [LazyBird](https://esolangs.org/wiki/Lazy_Bird)
 * Scala
 
 ### Current features:
@@ -168,6 +169,7 @@ There are currently 6 primary parser classes:
 * RegexParser: This takes a regex and a function to turn a match into the output. This one lets me condense a lot of parsers into a single line, which makes me giddy.
 * ArbitraryRecurParser: This one's called "arbitrary" because the depth isn't constant. It's given a function that can either parse the next token or tell it to go up or down a level.
 * ElementwiseParser: This one parses a sequence element by element
+* ScanParsers: These are a few parsers that take a function that transforms two collections at once. They're meant for parsing algorithms that transform the input like a zipper.
 
 ### How the Interface Works
 It's always a challenge to handle UI functionally. Everything behind the scenes is fair game, but actually receiving input from and sending output to the user is by definition a side-effect.

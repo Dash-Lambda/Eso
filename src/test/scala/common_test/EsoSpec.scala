@@ -59,17 +59,23 @@ abstract class EsoSpec extends AnyFlatSpec{
   
   def assertOutput(intp: Interpreter, prog: String, expected: String, inp: Seq[Char] = Seq(), config: Config = defaultConfig): Unit = {
     val res = getOutputString(intp, prog, inp, config)
-    assertResult(Success(expected))(res)}
+    res match{
+      case Success(str) => assertResult(expected)(str)
+      case Failure(e) => fail(e)}}
   def assertOutputAutoLimit(intp: Interpreter, prog: String, expected: String, inp: Seq[Char] = Seq(), config: Config = defaultConfig): Unit = {
     val res = getOutput(intp, prog) map (_.take(expected.length).mkString)
-    assertResult(Success(expected))(res)}
+    res match{
+      case Success(str) => assertResult(expected)(str)
+      case Failure(e) => fail(e)}}
   
   def testAgainstOutput(intp: Interpreter, config: Config = defaultConfig, first: Boolean = false)(nam: String, prog: String, inp: String, ref: String): Unit = {
     def runTest(): Unit = {
       val res = config.num("olen") match{
         case -1 => getOutputString(intp, prog, inp, config)
         case n => getOutput(intp, prog, inp, config) map (_.take(n).mkString)}
-      assertResult(Success(ref))(res)}
+      res match{
+        case Success(str) => assertResult(ref)(str)
+        case Failure(e) => fail(e)}}
     if(first) intp.name should s"run $nam correctly" in runTest()
     else it should s"run $nam correctly" in runTest}
   def testAllAgainstOutput(intp: Interpreter, config: Config = defaultConfig)(itms: (String, String, String)*): Unit = itms match{
