@@ -100,7 +100,7 @@ object EsoDefaults extends EsoObj{
     LazyK,
     ALPL,
     LazyBird)
-  val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly, GlyphoShorthand, LazyKAnyToUnl, LazyKAnyToIota, LazyKAnyToCC)
+  val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly, GlyphoShorthand, LazyKAnyToUnl, LazyKAnyToIota, LazyKAnyToCC, LazyKAnyToJot)
   val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude, BFToLazyK)
   
   val defBoolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](
