@@ -1,0 +1,228 @@
+Run starting. Expected test count is: 0
+EsoCommandParserSpec:
+EsoCommandParser
+- should fail on empty input
+- should recognize unary commands
+- should recognize commands followed by an argument
+- should recognize commands followed by multiple arguments
+LazyKAnyToCCSpec:
+LazyK_CC <=> LazyK
+- should preserve the behavior of hworldCC.lazy when translating from LazyK_CC to LazyK
+- should preserve the behavior of hworldIota.lazy when translating from LazyK to LazyK_CC
+- should preserve the behavior of hworldJot.lazy when translating from LazyK to LazyK_CC
+- should preserve the behavior of hworld.lazy when translating from LazyK to LazyK_CC
+BFToMetatapeSpec:
+BFToMetatape
+- should preserve the behavior of bitWidth.b
+EmmentalSpec:
+Emmental
+- should run hworld.emm correctly
+GlyphoSpec:
+Glypho
+- should run hworld.glo correctly
+LazyBirdSpec:
+LazyBird
+- should run hworld.lzb correctly
+- should run fib.lzb correctly
+- should run fibComb.lzb correctly
+- should run asciiCat.lzb correctly
+- should run equals.lzb correctly
+- should interpret named combinators correctly
+BFToLazyKSpec:
+BFToLazyK
+- should preserve the behavior of bitWidth.b
+SNUSPSpec:
+SNUSP
+- should run hworld.snusp correctly
+- should run bitWidth.snusp correctly
+ThueSpec:
+Thue
+- should run hworld.th correctly
+LazyKAnyToUnlSpec:
+LazyK_Unlambda <=> LazyK
+- should preserve the behavior of hworldCC.lazy when translating from LazyK to LazyK_Unlambda
+- should preserve the behavior of hworldIota.lazy when translating from LazyK to LazyK_Unlambda
+- should preserve the behavior of hworldJot.lazy when translating from LazyK to LazyK_Unlambda
+- should preserve the behavior of hworld.lazy when translating from LazyK_Unlambda to LazyK
+RunProgHandlerSpec:
+RunProgHandler
+- should fail on an unknown file extension
+- should run hworldb.txt correctly with language override arg
+- should recognize known file extensions
+- should print ASCII values if printNum is on
+- should print detailed information if log is on
+- should print the program duration if time is on
+- should fail to read input if an inaccessible file is given
+- should read input from a file if given one
+- should correctly append console input to file input if appendInp is on
+- should not append console input to file input if appendInp is off
+- should limit output length if olen >= 0
+- should build a translator path if needed
+DeadfishSpec:
+Deadfish
+- should run hworld.df correctly
+NULLSpec:
+NULL
+- should run hworld.nul correctly
+WierdSpec:
+Wierd
+- should run quine.wd correctly
+TranslateHandlerSpec:
+TranslateHandler
+- should fail on unknown file extensions
+- should translate hworldfl.txt to BrainFuck correctly with language override
+- should recognize known file extensions
+- should chain translators if needed
+WhiteSpaceSpec:
+WhiteSpace
+- should run hworld.ws correctly
+OokSpec:
+Ook <=> BrainFuck
+- should Preserve the behavior of hworld.ook when translating from BrainFuck to Ook
+- should Preserve the behavior of hworld.b when translating from Ook to BrainFuck
+PreludeSpec:
+Prelude
+- should run hworld.pld correctly in parallel
+- should run hworld.pld correctly in sequence
+MemTapeSpec:
+MemTape
+- should respect static size
+- should respect out-of-bounds gets when dynamic
+- should respect out-of-bounds sets when dynamic
+ShowSyntaxHandlerSpec:
+ShowSyntaxHandler
+- should correctly display syntax for FlufflePuff
+DefineBFLangHandlerSpec:
+DefineBFLangHandler
+- should correctly define a BF lang
+FungeSpec:
+Befunge-93
+- should pass mycology
+Befunge-98
+- should pass mycology
+LazyKSpec:
+LazyK
+- should run hworld.lazy correctly
+- should run unlambda.lazy correctly
+- should run primes.lazy correctly
+- should run fib.lazy correctly
+- should run reverse.lazy correctly
+- should run cat.lazy correctly
+TranspileHandlerSpec:
+TranspileHandler
+- should fail on unknown file extensions
+- should transpile hworldb.txt to Metatape correctly with language override
+- should recognize known file extensions
+- should build a translator path if needed
+GlyphoShorthandSpec:
+GlyphoShorthand <=> Glypho
+- should preserve the behavior of hworld.glos when translating from Glypho to GlyphoShorthand
+- should preserve the behavior of hworld.glo
+FlufflePuffSpec:
+FlufflePuff <=> BrainFuck
+- should Preserve the behavior of hworld.fl when translating from BrainFuck to FlufflePuff
+- should Preserve the behavior of hworld.b when translating from FlufflePuff to BrainFuck
+VolatileSpec:
+Volatile
+- should run hworld.vol correctly
+BFToPreludeSpec:
+BFToPrelude
+- should preserve the behavior of hworld.b
+BFToSNUSPSpec:
+BFToSNUSP
+- should preserve the behavior of bitWidth.b
+LazyKAnyToIotaSpec:
+LazyK_Iota <=> LazyK
+- should preserve the behavior of hworldCC.lazy when translating from LazyK to LazyK_Iota
+- should preserve the behavior of hworldIota.lazy when translating from LazyK_Iota to LazyK
+- should preserve the behavior of hworldJot.lazy when translating from LazyK to LazyK_Iota
+- should preserve the behavior of hworld.lazy when translating from LazyK to LazyK_Iota
+LoadBFLangsHandlerSpec:
+LoadBFLangsHandlerSpec
+- should fail on an inaccessible file
+- should correctly load languages from a file
+ALPLSpec:
+ALPL
+- should run hworld.alpl correctly
+- should run cat.alpl correctly
+UnlambdaSpec:
+Unlambda
+- should run hworld.unl correctly
+- should run alphatest.unl correctly
+- should run adventure.unl correctly
+WSAssemblySpec:
+WSAssembly
+- should preserve the behavior of hworld.wsa
+- should preserve the structure of hworld.ws
+PlattsSpec:
+Platts
+- should run hworld.plts correctly
+FracTranSpec:
+FracTran++
+- should run hworld.ftp correctly
+- should run primes.ftp correctly
+FracTran
+- should run primes.ft correctly
+SlashesSpec:
+///
+- should run hworld.slash correctly
+LazyKToJotSpec:
+LazyK_Jot <=> LazyK
+- should preserve the behavior of hworldCC.lazy when translating from LazyK to LazyK_Jot
+- should preserve the behavior of hworldIota.lazy when translating from LazyK to LazyK_Jot
+- should preserve the behavior of hworldJot.lazy when translating from LazyK_Jot to LazyK
+- should preserve the behavior of hworld.lazy when translating from LazyK to LazyK_Jot
+PDPSpec:
+P''
+- should run hworld.pdp correctly
+BFISpec:
+BFBase
+- should run hworld.b correctly
+- should run hworldBugTest.b correctly
+- should run bitWidth.b correctly
+- should respect dynamic tape size setting
+bfOpt
+- should run hworld.b correctly
+- should run hworldBugTest.b correctly
+- should run bitWidth.b correctly
+- should respect dynamic tape size setting
+BFComp
+- should run hworld.b correctly
+- should run hworldBugTest.b correctly
+- should run bitWidth.b correctly
+- should respect dynamic tape size setting
+GrassSpec:
+Grass
+- should run hworld.grs correctly
+PrimeNumToolsSpec:
+PrimeNumTools
+- should generate a list of prime number Ints by trial division
+- should generate a list of prime number SafeLongs by trial division
+- should generate a list of prime number SafeLongs by incremental SOE
+PATHSpec:
+PATH
+- should run hworld.path correctly
+WordLangSpec:
+WordLang
+- should run helloo.wl correctly
+- should run camo.wl correctly
+- should run listing.wl correctly
+- should run flag.wl correctly
+SetVarHandlerSpec:
+SetVarHandler
+- should recognize all true keywords
+- should recognize all false keywords
+- should recognize positive and negative numbers
+- should recognize character input
+- should recognize multiple assignments
+- should report invalid variable names
+- should report invalid value types
+MetatapeSpec:
+Metatape
+- should run hworld.mt correctly
+- should run bitWidth.mt correctly
+Run completed in 1 minute, 35 seconds.
+Total number of tests run: 126
+Suites: completed 46, aborted 0
+Tests: succeeded 126, failed 0, canceled 0, ignored 0, pending 0
+All tests passed.

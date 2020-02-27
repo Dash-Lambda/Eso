@@ -10,7 +10,7 @@ lazy val root = (project in file("."))
     parallelExecution in Test := false,
     assemblyJarName in assembly := "Eso.jar",
     scalacOptions ++= Seq("-deprecation", "-feature"),
-    testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oF"),
+    testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-fFW", "esoTestLog.txt", "-o"),
     resolvers ++= Seq(
       Resolver.sonatypeRepo("releases")),
     libraryDependencies ++= Seq(
