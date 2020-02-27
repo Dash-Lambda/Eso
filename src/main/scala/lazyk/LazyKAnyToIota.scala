@@ -11,9 +11,10 @@ object LazyKAnyToIota extends LazyKDialectTranslator{
   def unapply(config: Config)(prog: String): Try[String] = {
     def mkStr(exp: Expr): String = exp match{
       case AppExpr(e1, e2) => s"*${mkStr(e1)}${mkStr(e2)}"
-      case `scomb` => "*i*i*i*ii"
-      case `kcomb` => "*i*i*ii"
-      case `icomb` => "*ii"
-      case `iotaexp` => "i"}
+      case FuncExpr(fun) => fun match{
+        case `scomb` => "*i*i*i*ii"
+        case `kcomb` => "*i*i*ii"
+        case `icomb` => "*ii"
+        case `iotacomb` => "i"}}
     LazyKParsers.parse(prog).flatMap(expr => Try{mkStr(expr)})}
 }
