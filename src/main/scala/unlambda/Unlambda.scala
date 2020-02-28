@@ -39,18 +39,17 @@ object Unlambda extends Interpreter{
       .withConditioning(src => condition(src))}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = unlParser(progRaw.toVector).toTry("Invalid Unlambda Expression") map {prog =>
-    inputs => LazyList.unfold(prog(endCont, Env(None, inputs)))(nxt => nxt.result.resolve)}
+    inputs => LazyList.unfold(prog(endCont, Env(None, inputs)))(_.result.resolve)}
   
   case class Env(cur: Option[Char], inp: Seq[Char]){
     def read: Env = inp match{
       case c +: cs => Env(Some(c), cs)
-      case _ => Env(None, inp)}
-  }
+      case _ => Env(None, inp)}}
   
   abstract class Ret{
     def resolve: Option[(Char, TailRec[Ret])]}
-  abstract class Expr extends ((Cont, Env) => TailRec[Ret])
   abstract class Cont extends ((Func, Env) => TailRec[Ret])
+  abstract class Expr extends ((Cont, Env) => TailRec[Ret])
   abstract class Func extends ((Func, Cont, Env) => TailRec[Ret])
   
   //Returns
@@ -60,22 +59,30 @@ object Unlambda extends Interpreter{
   case class PrintRet(c: Char, nxt: TailRec[Ret]) extends Ret{
     def resolve: Option[(Char, TailRec[Ret])] = Some((c, nxt))}
   
-  //Expressions
-  def funcExpr(f: Func): Expr = (cc, env) => tailcall(cc(f, env))
-  def appExpr(x: Expr, y: Expr): Expr = (cc, env) => tailcall(x(exprCont(y, cc), env))
-  
   //Continuations
   def endCont: Cont = (_, _) => done(HaltRet)
   def funcCont(x: Func, cc: Cont): Cont = (y, env) => tailcall(x(y, cc, env))
   def dCont(y: Func, cc: Cont): Cont = (x, env) => tailcall(x(y, cc, env))
   def exprCont(y: Expr, cc: Cont): Cont = {
-    (f, env) => f match{
-      case `dcomb` => tailcall(cc(D1(y), env))
-      case _ => tailcall(y(funcCont(f, cc), env))}}
+    (f, env) => tailcall{
+      if(f == dcomb) cc(D1(y), env)
+      else y(funcCont(f, cc), env)}}
+  
+  //Expressions
+  def funcExpr(f: Func): Expr = (cc, env) => tailcall(cc(f, env))
+  def appExpr(x: Expr, y: Expr): Expr = (cc, env) => tailcall(x(exprCont(y, cc), env))
+  def appExpr(x: Func, y: Func): Expr = (cc, env) => tailcall(x(y, cc, env))
   
   //Functions
-  def scomb: Func = (x, c1, en1) => tailcall(c1((y, c2, en2) => tailcall(c2((z, c3, en3) => tailcall(appExpr(appExpr(funcExpr(x), funcExpr(z)), appExpr(funcExpr(y), funcExpr(z)))(c3, en3)), en2)), en1))
-  def kcomb: Func = (x, c1, en1) => tailcall(c1((_, c2, en2) => tailcall(c2(x, en2)), en1))
+  def scomb: Func = {
+    (x, c1, en1) => tailcall(
+      c1((y, c2, en2) => tailcall(
+        c2((z, c3, en3) => tailcall(
+          x(z, exprCont(appExpr(y, z), c3), en3)), en2)), en1))}
+  def kcomb: Func = {
+    (x, c1, en1) => tailcall(
+      c1((_, c2, en2) => tailcall(
+        c2(x, en2)), en1))}
   def icomb: Func = (f, cc, env) => tailcall(cc(f, env))
   def vcomb: Func = (_, cc, env) => tailcall(cc(vcomb, env))
   def outcomb(c: Char): Func = (f, cc, env) => done(PrintRet(c, tailcall(cc(f, env))))
