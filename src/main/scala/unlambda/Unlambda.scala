@@ -64,9 +64,9 @@ object Unlambda extends Interpreter{
   def funcCont(x: Func, cc: Cont): Cont = (y, env) => tailcall(x(y, cc, env))
   def dCont(y: Func, cc: Cont): Cont = (x, env) => tailcall(x(y, cc, env))
   def exprCont(y: Expr, cc: Cont): Cont = {
-    (f, env) => tailcall{
+    (f, env) => tailcall(
       if(f == dcomb) cc(D1(y), env)
-      else y(funcCont(f, cc), env)}}
+      else y(funcCont(f, cc), env))}
   
   //Expressions
   def funcExpr(f: Func): Expr = (cc, env) => tailcall(cc(f, env))
@@ -75,10 +75,10 @@ object Unlambda extends Interpreter{
   
   //Functions
   def scomb: Func = {
-    (x, c1, en1) => tailcall(
-      c1((y, c2, en2) => tailcall(
-        c2((z, c3, en3) => tailcall(
-          x(z, exprCont(appExpr(y, z), c3), en3)), en2)), en1))}
+    (x, c1, e1) => tailcall(
+      c1((y, c2, e2) => tailcall(
+        c2((z, c3, e3) => tailcall(
+          x(z, exprCont(appExpr(y, z), c3), e3)), e2)), e1))}
   def kcomb: Func = {
     (x, c1, en1) => tailcall(
       c1((_, c2, en2) => tailcall(
