@@ -150,6 +150,7 @@ Unlambda
 - should run hworld.unl correctly
 - should run alphatest.unl correctly
 - should run adventure.unl correctly
+- should run primes.unl correctly
 WSAssemblySpec:
 WSAssembly
 - should preserve the behavior of hworld.wsa
@@ -221,8 +222,8 @@ MetatapeSpec:
 Metatape
 - should run hworld.mt correctly
 - should run bitWidth.mt correctly
-Run completed in 1 minute, 51 seconds.
-Total number of tests run: 126
+Run completed in 1 minute, 37 seconds.
+Total number of tests run: 127
 Suites: completed 46, aborted 0
-Tests: succeeded 126, failed 0, canceled 0, ignored 0, pending 0
+Tests: succeeded 127, failed 0, canceled 0, ignored 0, pending 0
 All tests passed.

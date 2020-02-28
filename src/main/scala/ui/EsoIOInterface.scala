@@ -7,6 +7,8 @@ import scala.io.StdIn
 trait EsoIOInterface extends EsoObj{
   def readLine: String
   def readLine(str: String): String
+  def linesIterator: Iterator[String] = Iterator.continually(readLine)
+  def charsIterator: Iterator[Char] = linesIterator.flatMap(ln => ln + '\n')
   
   def print(x: Any): Unit
   def println(x: Any): Unit

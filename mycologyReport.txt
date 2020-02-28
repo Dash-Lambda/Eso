@@ -79,10 +79,10 @@ y claims all of the following:
 	That the offset of the IP was ( 0 0 )
 	That the least point containing a non-space cell is ( -3 -2 )
 	That the greatest point, relative to that point, is ( 183 911 )
-	That the day of the month is 27 
+	That the day of the month is 28 
 	That the month is 2 
 	That the year is 2020 
-	That the time is 07 : 36 : 53 
+	That the time is 04 : 39 : 47 
 	That the size of the stack stack is 1 
 	That the stack sizes are [ 0 ] from top to bottom
 	That the command-line arguments were: [ null ]
@@ -148,8 +148,8 @@ GOOD: all of A-Z reflected
 Testing fingerprint HRTI... loaded.
 UNDEF: G gives clock granularity as 1000 microseconds
 GOOD: T reflected when called before M
-UNDEF: S pushed 530000 
-UNDEF: T after M pushed 0 and a second T, after 675 ys, pushed 11827000 
+UNDEF: S pushed 217000 
+UNDEF: T after M pushed 1000 and a second T, after 675 ys, pushed 12146000 
 GOOD: ET reflected
 
 Testing fingerprint MODE... not loaded.

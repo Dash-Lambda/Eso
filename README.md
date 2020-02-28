@@ -375,5 +375,37 @@ This interpreter is also a little unique in that it's the only interpreter in Es
 
 The reason I had to use mutable states to accomplish this is that I have to perform the evaluation in the same level as the rest of the expression in order to not blow up the call stack. If I simply made the result a `lazy val` that made a new call to `eval`, that would introduce a recursion that can't be optimized away with trampolining. The moment I figure out a way to do this without mutable state, though, I'm changing it.
 
+### How the Interface Code Works
+You may notice odd-looking structures like this in the code for several interface handlers:
+```scala
+Trampoline.doOrElse(state){
+  DoOrOp(args.get("s"), "Missing Source File", eio){src =>
+    DoOrOp(getLang(args, "l", "s"), "Unrecognized Language or File Extension", eio){lang =>
+      DoOrOp(findTranslator(state, lang, state.interpNames), "Language Not Recognized", eio){
+        case (inam, t) =>
+          DoOrErr(EsoFileReader.readFile(src, normLineFlag), eio){progRaw =>
+            DoOrErr(t(progRaw), eio){prog =>
+              TimeIt(state.interps(inam)(state.config)(prog)) match{
+                case (i, dur) =>
+                  DoOrErr(i, eio){r =>
+                    DoOrErr(inputs, eio){inp =>
+                      TimeIt{tryAll{printer(olim(r(inp)))}} match{
+                        case (flg, rdr) => flg match{
+                          case Failure(e) =>
+                            if(timeFlg) eio.println(s"\nError: $e\nProgram failed in ${rdr}ms")
+                            else eio.println(s"\nError: $e")
+                          case Success(_) =>
+                            if(timeFlg) eio.println(s"\nProgram completed in ${rdr}ms")
+                            else eio.println()}}
+                      Done{state}}}}}}}}}}
+```
+These actually represent most of the core logic. Eso uses `Try` monads for most of its error handling, as well as `Option`s for a lot of faillable tasks, so if the code were to use a normal imperative or structural style there would be a lot of redundant code for checking whether or not something failed and breaking the flow.
+
+These structures just nest each step into the previous one it's dependent on. You can see that the first layer tries to get the source file, then the second layer tries to find the language to use, and so-on. Each layer tries to do something, and either passes the result to the next layer or short-circuits with a failure. This works out to be quite an elegant way to represent multi-step IO interactions.
+
+You'll also notice that the whole thing is wrapped in a `Trampoline` method. If you were to just arbitrarily nest things like this, you would be pointlessly eating up the call stack -so instead, each layer is actually a wrapper that returns the next layer. So, during execution it's actually going into a layer then coming out of that layer with the next one, only ever going down into one layer at a time. This is called trampolining, and it's a common way to optimize recursive structures that could otherwise blow up the call stack.
+
+Of course, Eso wouldn't need special handling of trampolines if it had full TCE, but that's a matter for future JVM versions to address.
+
 ### Building
 I use [SBT assembly](https://github.com/sbt/sbt-assembly). This repo should give you everything you need to build it, just put it in a folder, run SBT from that directory, let it do its thing, then run assembly.

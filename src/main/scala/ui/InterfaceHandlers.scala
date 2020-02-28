@@ -79,9 +79,9 @@ case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface) extends Int
     def inputs: Try[LazyList[Char]] = args.get("i") match{
       case Some(fnam) =>
         val fStr = EsoFileReader.readFile(fnam, normLineFlag) map (s => (s + state.nums("fileEOF").toChar).to(LazyList).map{c => if(echoFInp) eio.print(c); c})
-        if(appFlg) fStr map (s => s :++ LazyList.continually(eio.readLine + '\n').flatten)
+        if(appFlg) fStr map (s => s :++ eio.charsIterator)
         else fStr
-      case None => Success(LazyList.continually(eio.readLine + '\n').flatten)}
+      case None => Success(eio.charsIterator.to(LazyList))}
     
     def printer(out: Seq[Char]): Unit = args.get("o") match{
       case Some(onam) =>

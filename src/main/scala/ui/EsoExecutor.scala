@@ -30,7 +30,8 @@ case class EsoExecutor(cmds: Vector[InterfaceHandler]) extends EsoObj{
   def showHelp(): Unit = {
     val cStr = cmds.map(h => s"- ${h.nam} ${h.helpStr}").sorted.mkString("\n")
     val hStr =
-      s"""|Commands:
+      s"""|Version: ${getClass.getPackage.getImplementationVersion}
+          |Commands:
           |$cStr
           |
           |Syntax:
