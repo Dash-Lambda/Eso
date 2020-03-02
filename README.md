@@ -28,6 +28,7 @@
     - [P'' Program Format](#p-program-format)
     - [On the Befunge-98 Interpreter](#on-the-befunge-98-interpreter)
     - [On the LazyK Interpreter](#on-the-lazyk-interpreter)
+    - [How the Interface Code Works](#how-the-interface-code-works)
     - [Building](#building)
 
 ## Purpose of Eso
