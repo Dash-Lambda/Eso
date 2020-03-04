@@ -10,7 +10,9 @@ object LazyKAnyToCC extends LazyKDialectTranslator{
   
   def unapply(config: Config)(prog: String): Try[String] = {
     def mkStr(exp: Expr): String = exp match{
-      case AppExpr(e1, e2) => s"(${mkStr(e1)}${mkStr(e2)})"
+      case AppExpr(e1, e2) => e2 match{
+        case FuncExpr(_) => s"${mkStr(e1)}${mkStr(e2)}"
+        case _ => s"${mkStr(e1)}(${mkStr(e2)})"}
       case FuncExpr(fun) => fun match{
         case `scomb` => "S"
         case `kcomb` => "K"

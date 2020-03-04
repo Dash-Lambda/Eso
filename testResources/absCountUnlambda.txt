@@ -1,0 +1,4 @@
+```^a^b^c``abc
+`r``^f^x`fx.1i
+`r``^f^x`f`fx.2i
+``^f^x`f`f`fx.3i

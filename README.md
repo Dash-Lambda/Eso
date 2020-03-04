@@ -29,6 +29,7 @@
     - [On the Befunge-98 Interpreter](#on-the-befunge-98-interpreter)
     - [On the LazyK Interpreter](#on-the-lazyk-interpreter)
     - [How the Interface Code Works](#how-the-interface-code-works)
+    - [Abstraction Eliminators](#abstraction-eliminators)
     - [Building](#building)
 
 ## Purpose of Eso
@@ -407,6 +408,12 @@ These structures just nest each step into the previous one it's dependent on. Yo
 You'll also notice that the whole thing is wrapped in a `Trampoline` method. If you were to just arbitrarily nest things like this, you would be pointlessly eating up the call stack -so instead, each layer is actually a wrapper that returns the next layer. So, during execution it's actually going into a layer then coming out of that layer with the next one, only ever going down into one layer at a time. This is called trampolining, and it's a common way to optimize recursive structures that could otherwise blow up the call stack.
 
 Of course, Eso wouldn't need special handling of trampolines if it had full TCE, but that's a matter for future JVM versions to address.
+
+###Abstraction Eliminators
+For some combinator-calculus languages without support for lambda expressions, Eso provides abstraction eliminators. These are special transpilers that turn all lambda expressions into combinator expressions. For example, if you wanted to run abstraction elimination on an Unlambda program, you would type:
+```
+Eso> transpile -s example.txt -o example.unl -sl Lambda_Calculus
+```
 
 ### Building
 I use [SBT assembly](https://github.com/sbt/sbt-assembly). This repo should give you everything you need to build it, just put it in a folder, run SBT from that directory, let it do its thing, then run assembly.

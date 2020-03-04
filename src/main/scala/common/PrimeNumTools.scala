@@ -41,8 +41,9 @@ object PrimeNumTools {
       if(n.emod(f) == 0) false
       else if(f*f >= n) true
       else pdo(f + 2)}
-    n == 2 || (n.emod(2) == 0 && pdo(3))}
+    n == 2 || n == 3 || (n > 1 && n.emod(2) == 1 && pdo(3))}
   
+  def factor(num: Int): Vector[Int] = factor(SafeLong(num))
   def factor(num: SafeLong): Vector[Int] = {
     @tailrec
     def fdo(init: SafeLong, f: SafeLong, c: Int = 0): (SafeLong, Int) = {

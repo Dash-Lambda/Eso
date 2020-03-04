@@ -1,6 +1,6 @@
 package common_test
 
-import common.{Config, Interpreter, Translator}
+import common.{Config, Interpreter, Translator, Transpiler}
 import org.scalatest.flatspec.AnyFlatSpec
 import ui.{EsoFileReader, EsoRunState}
 
@@ -21,6 +21,16 @@ abstract class EsoSpec extends AnyFlatSpec{
     builder ++= vec
     builder.result}
   
+  def testTranspilerAgainstProgramResult(interp: Interpreter, trans: Transpiler, prog: String, expected: String, inp: Seq[Char] = Seq(), config: Config = defaultConfig): Unit = {
+    trans(config)(prog) match{
+      case Success(res) => assertOutput(interp, res, expected, inp, config)
+      case Failure(e) => fail(s"Transpilation Failed ($e)")}}
+  def testAllTranspiledAgainstProgramResult(interp: Interpreter, trans: Transpiler, config: Config = defaultConfig)(itms: (String, String, String)*): Unit = {
+    itms match{
+      case (nam1, inp1, ref1) +: rem =>
+        trans.toString should s"preserve the behavior of $nam1" in testTranspilerAgainstProgramResult(interp, trans, grabFile(nam1), ref1, inp1.toSeq, config)
+        for((nam, inp, ref) <- rem) it should s"preserve the behavior of $nam" in testTranspilerAgainstProgramResult(interp, trans, grabFile(nam), ref, inp.toSeq, config)}}
+  
   def testTranslatorAgainstOutput(trans: Translator, rev: Boolean, prog: String, expected: String, config: Config = defaultConfig): Unit = {
     val restry = {
       if(rev) trans.unapply(config)(prog)
@@ -31,17 +41,17 @@ abstract class EsoSpec extends AnyFlatSpec{
   def testAllTranslatedAgainstOutput(trans: Translator, config: Config = defaultConfig)(itms: (String, String, Boolean)*): Unit = {
     itms match{
       case (nam1, ref1, rev1) +: rem =>
-        trans.toString should s"Preserve the behavior of $nam1 when translating from ${if(rev1) s"${trans.name} to ${trans.baseLang}" else s"${trans.baseLang} to ${trans.name}"}" in{
+        trans.toString should s"preserve the behavior of $nam1 when translating from ${if(rev1) s"${trans.name} to ${trans.baseLang}" else s"${trans.baseLang} to ${trans.name}"}" in{
           testTranslatorAgainstOutput(trans, rev1, grabFile(nam1), ref1, config)}
         for((nam, ref, rev) <- rem){
-          it should s"Preserve the behavior of $nam when translating from ${if(rev) s"${trans.name} to ${trans.baseLang}" else s"${trans.baseLang} to ${trans.name}"}" in{
+          it should s"preserve the behavior of $nam when translating from ${if(rev) s"${trans.name} to ${trans.baseLang}" else s"${trans.baseLang} to ${trans.name}"}" in{
             testTranslatorAgainstOutput(trans, rev, grabFile(nam), ref, config)}}}}
   def testTranslatorAgainstProgramResult(intp: Interpreter, trans: Translator, rev: Boolean, prog: String, expected: String, inp: Seq[Char] = Seq(), canBeSame: Boolean = false, config: Config = defaultConfig): Unit = {
     val restry = {
       if(rev) trans.unapply(config)(prog)
       else trans(config)(prog)}
     restry match{
-      case Success(res) if canBeSame || res != prog => assertOutput(intp, res, expected, config=config)
+      case Success(res) if canBeSame || res != prog => assertOutput(intp, res, expected, inp, config)
       case Success(_) => fail("Output Identical")
       case Failure(e) => fail(s"Translation Failed ($e)")}}
   def testAllTranslatedAgainstProgramResult(intp: Interpreter, trans: Translator, canBeSame: Boolean = false, config: Config = defaultConfig)(itms: (String, String, String, Boolean)*): Unit = {

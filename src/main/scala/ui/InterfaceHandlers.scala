@@ -358,7 +358,7 @@ case class ListLangsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends I
           |${state.trans.values.map(t => s"- $t").toVector.sorted.mkString("\n")}
           |
           |Transpilers...
-          |${state.gens.keys.map{case (snam, dnam) => s"- $snam => $dnam"}.toVector.sorted.mkString("\n")}
+          |${state.gens.values.map(t => s"- $t").toVector.sorted.mkString("\n")}
           |""".stripMargin
     eio.println(str)
     

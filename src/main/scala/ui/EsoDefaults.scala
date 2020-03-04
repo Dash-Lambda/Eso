@@ -21,7 +21,7 @@ import scala_run.ScalaRun
 import slashes.Slashes
 import snusp.{BFToSNUSP, SNUSP}
 import thue.Thue
-import unlambda.Unlambda
+import unlambda.{LambdaToUnlambda, Unlambda}
 import volatile.Volatile
 import whitespace.{WSAssembly, WhiteSpace, WhiteSpaceToScala}
 import wierd.Wierd
@@ -101,7 +101,7 @@ object EsoDefaults extends EsoObj{
     ALPL,
     LazyBird)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly, GlyphoShorthand, LazyKAnyToUnl, LazyKAnyToIota, LazyKAnyToCC, LazyKAnyToJot)
-  val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude, BFToLazyK)
+  val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude, BFToLazyK, LambdaToLazyKUnl, LambdaToUnlambda)
   
   val defBoolVec: Vector[(String, Boolean, String)] = Vector[(String, Boolean, String)](
     ("log", false, "toggle detailed console logging"),

@@ -20,4 +20,6 @@ abstract class Transpiler extends EsoObj{
       case _ => ac.mkString("\n")}
     val lines = prog.linesIterator.to(LazyList).map(_.dropWhile("\t ".contains(_)))
     ido(0, Vector(), lines)}
+  
+  override def toString: String = s"$src => $dst"
 }
