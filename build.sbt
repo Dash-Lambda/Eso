@@ -1,5 +1,5 @@
 ThisBuild / scalaVersion     := "2.13.0"
-ThisBuild / version          := "2.4.0"
+ThisBuild / version          := "2.4.1"
 ThisBuild / organization     := "com.github.dashlambda"
 ThisBuild / organizationName := "dashlambda"
 

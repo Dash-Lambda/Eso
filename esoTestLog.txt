@@ -234,7 +234,7 @@ MetatapeSpec:
 Metatape
 - should run hworld.mt correctly
 - should run bitWidth.mt correctly
-Run completed in 1 minute, 36 seconds.
+Run completed in 1 minute, 39 seconds.
 Total number of tests run: 135
 Suites: completed 48, aborted 0
 Tests: succeeded 135, failed 0, canceled 0, ignored 0, pending 0
