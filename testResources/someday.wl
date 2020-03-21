@@ -1,0 +1,1 @@
+Someday you will cry for me Like I cried for you. Someday you'll miss me Like I missed you.

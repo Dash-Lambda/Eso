@@ -1,0 +1,1 @@
+With death being the only certainty of life, life is just a bit too short for regrets. Let's live, while we're alive. Let's love, while we're alive. Let's live, and not just survive.
