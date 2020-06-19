@@ -16,15 +16,15 @@ object BFOpt extends Interpreter{
     @tailrec def scan(dat: MemTape[Int], stp: Int, ind: Int): Int = if(dat(ind) != 0) scan(dat, stp, ind + stp) else ind
         
         @tailrec
-        def nxt(pc: Int, tp: Int, tape: MemTape[Int], inp: Seq[Char]): Option[(Char, (Int, Int, MemTape[Int], Seq[Char]))] = prog(pc) match{
+        def nxt(pc: Int, tp: Int, tape: MemTape[Int], inp: Seq[Char]): Option[(String, (Int, Int, MemTape[Int], Seq[Char]))] = prog(pc) match{
           case BFMove(n) => nxt(pc + 1, tp + n, tape, inp)
           case BFScan(n) => nxt(pc + 1, scan(tape, n, tp), tape, inp)
           case BFIn => nxt(pc + 1, tp, tape.set(tp, inp.head.toInt), inp.tail)
-          case BFOut => Some((tape(tp).toChar, (pc + 1, tp, tape, inp)))
+          case BFOut(n) => Some((tape(tp).toChar.toString * n, (pc + 1, tp, tape, inp)))
           case BFOpenLoop(i) => nxt(if(tape(tp) == 0) i else pc + 1, tp, tape, inp)
           case BFCloseLoop(i) => nxt(if(tape(tp) != 0) i else pc + 1, tp, tape, inp)
           case BFEnd => None
           case bop: BlkOp => nxt(pc + 1, tp + bop.shift, bop(tp, tape), inp)}
     
-    inputs => LazyList.unfold((0: Int, 0: Int, MemTape(Vector.fill(init)(0), dyn, 0), inputs)){case (pc, dc, tape, inp) => nxt(pc, dc, tape, inp)}}
+    inputs => LazyList.unfold((0: Int, 0: Int, MemTape(Vector.fill(init)(0), dyn, 0), inputs)){case (pc, dc, tape, inp) => nxt(pc, dc, tape, inp)}.flatten}
 }

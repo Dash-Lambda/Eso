@@ -23,7 +23,7 @@ object BFToScala extends BFTranspiler{
               else if(dyn) s"while(p < len && tape(p) != 0){p ${incStr(n)}}"
               else s"while(tape(p) != 0){p ${incStr(n)}}"
             case BFIn => "tape(p) = inp.head.toInt\ninp = inp.tail"
-            case BFOut => "print(tape(p).toChar)"}
+            case BFOut(n) => s"print(tape(p).toChar.toString*$n)"}
           val block2 = if(dyn && "m/".contains(op)) s"$block\nchkInd()" else block
           tdo(ac, stk, tmp :+ block2, fnum, i + 1)}
       case _ => ac.mkString("\n\n")}

@@ -16,7 +16,7 @@ case class BFMove(n: Int) extends BFOp
 case class BFScan(n: Int) extends BFOp
 case class BFOpenLoop(i: Int) extends BFOp
 case class BFCloseLoop(i: Int) extends BFOp
-object BFOut extends BFOp
+case class BFOut(n: Int) extends BFOp
 object BFIn extends BFOp
 object BFEnd extends BFOp
 
@@ -43,19 +43,19 @@ case class SingOp(ops: Vector[(Int, Option[Int])], shift: Int) extends BlkOp{
 
 object BFOptimize extends EsoObj{
   val blks: Vector[Char] = Vector('<', '>', '+', '-', '_')
-  val opts: Vector[Char] = Vector('<', '>', '+', '-')
+  val opts: Vector[Char] = Vector('<', '>', '+', '-', '.')
   
-  def apply(progRaw: String): Try[Vector[BFOp]] = Try{optFull(progRaw)}
+  def apply(progRaw: String, comp: Boolean = false): Try[Vector[BFOp]] = Try{optFull(progRaw, comp)}
   
-  def optFull(progRaw: String): Vector[BFOp] = {
+  def optFull(progRaw: String, comp: Boolean = false): Vector[BFOp] = {
     def contract(src: String): Vector[(Char, Int)] = {
       @tailrec
       def cdo(i: Int, ac: Vector[(Char, Int)]): Vector[(Char, Int)] = src.lift(i) match{
-        case Some(c) => c match{
-          case '>' | '<' | '+' | '-' =>
+        case Some(c) =>
+          if(opts.contains(c)){
             val i1 = src.indexWhere(_ != c, i)
-            cdo(i1, ac :+ (c, i1 - i))
-          case _ => cdo(i + 1, ac :+ (c, 0))}
+            cdo(i1, ac :+ (c, i1 - i))}
+          else cdo(i + 1, ac :+ (c, 0))
         case None => ac}
       cdo(0, Vector())}
     
@@ -73,17 +73,17 @@ object BFOptimize extends EsoObj{
       
       @tailrec
       def cdo(i: Int, ac: Vector[BFOp]): Vector[BFOp] = src.lift(i) match{
-        case Some((c, _)) => c match{
+        case Some((c, n)) => c match{
           case '+' | '-' | '<' | '>' | '_' => bdo(i, Vector(), 0) match{
             case (vec, s, i1) =>
               if(vec.nonEmpty) cdo(i1, ac :+ SingOp(vec, s))
               else cdo(i1, ac :+ BFMove(s))}
+          case '.' => cdo(i + 1, ac :+ BFOut(n))
           case _ =>
             val bfop = c match{
               case '[' => BFOpenLoop(-1)
               case ']' => BFCloseLoop(-1)
               case ',' => BFIn
-              case '.' => BFOut
               case 'e' => BFEnd}
             cdo(i + 1, ac :+ bfop)}
         case _ => ac}
@@ -99,6 +99,19 @@ object BFOptimize extends EsoObj{
         case op +: ops => ldo(ac :+ op, ops)
         case _ => ac}
       ldo(Vector(), srcRaw)}
+
+    def setSkipsComp(src: Vector[BFOp]): Vector[BFOp] = {
+      @tailrec
+      def sdo(ac: Vector[BFOp], stk: Vector[Int], i: Int): Vector[BFOp] = src.lift(i) match{
+        case None => ac
+        case Some(op) => op match{
+          case BFOpenLoop(_) => sdo(ac, stk :+ i, i + 1)
+          case BFCloseLoop(_) => stk match{
+            case ls :+ l => sdo(ac.updated(l, BFOpenLoop(0)).updated(i, BFCloseLoop(0)), ls, i + 1)
+            case _ => sdo(ac.updated(i, BFCloseLoop(1)), stk, i + 1)}
+          case BFOut(_) => sdo(stk.foldLeft(ac){case (p, l) => p.updated(l, BFOpenLoop(1))}, Vector(), i + 1)
+          case _ => sdo(ac, stk, i + 1)}}
+      sdo(src, Vector(), 0)}
     
     def setSkips(src: Vector[BFOp]): Vector[BFOp] = {
       @tailrec
@@ -110,9 +123,9 @@ object BFOptimize extends EsoObj{
         case _ => ac}
       sdo(0, Vector(), src)}
     
-    val prog1 = filterChars(progRaw, "[]<>+-,.").replaceAll("""\[[+\-]\]""", "_") :+ 'e'
+    val prog1 = filterChars(progRaw, "[]<>+-,.").replaceAll("""\[[+\-]]""", "_") :+ 'e'
     val prog2 = contract(prog1)
     val prog3 = collectBulk(prog2)
     val prog4 = setLoops(prog3)
-    setSkips(prog4)}
+    if(comp) setSkipsComp(prog4) else setSkips(prog4)}
 }

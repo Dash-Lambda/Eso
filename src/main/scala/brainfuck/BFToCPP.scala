@@ -30,7 +30,7 @@ object BFToCPP extends BFTranspiler{
       case BFScan(n) => s"while(tape[p] != 0){p ${incStr(n)};}"
       case BFOpenLoop(_) => "while(tape[p] != 0){"
       case BFCloseLoop(_) => "}"
-      case BFOut => "putchar(tape[p]);"
+      case BFOut(n) => s"for(int cnt = 0; cnt < $n; cnt++){putchar(tape[p]);}"
       case BFIn => "tape[p] = getchar();"
       case BFEnd => ""
       case bop: SingOp => copStr(bop)

@@ -13,7 +13,7 @@ trait BFTranspiler extends Transpiler{
   
   def apply(config: Config)(progRaw: String): Try[String] = Try{(config.num("init"), config.num("olen"), config.num("methSize"), config.bool("dyn"), config.bool("indent"))} flatMap{
     case (init, olen, methSize, dyn, ind) =>
-      BFOptimize(progRaw) map{prog =>
+      BFOptimize(progRaw, comp=true) map{prog =>
         val gen = genProg(init, olen, dyn, methSize, prog)
         if(ind) indent(gen)
         else gen}}
