@@ -189,11 +189,13 @@ bfOpt
 - should run hworld.b correctly
 - should run hworldBugTest.b correctly
 - should run bitWidth.b correctly
+- should run lostKingdom.b correctly
 - should respect dynamic tape size setting
 BFComp
 - should run hworld.b correctly
 - should run hworldBugTest.b correctly
 - should run bitWidth.b correctly
+- should run mandelbrot.b correctly
 - should respect dynamic tape size setting
 GrassSpec:
 Grass
@@ -235,7 +237,7 @@ Metatape
 - should run hworld.mt correctly
 - should run bitWidth.mt correctly
 Run completed in 1 minute, 31 seconds.
-Total number of tests run: 135
+Total number of tests run: 137
 Suites: completed 48, aborted 0
-Tests: succeeded 135, failed 0, canceled 0, ignored 0, pending 0
+Tests: succeeded 137, failed 0, canceled 0, ignored 0, pending 0
 All tests passed.

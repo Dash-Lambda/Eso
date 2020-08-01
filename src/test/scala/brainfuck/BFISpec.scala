@@ -26,7 +26,8 @@ class BFISpec extends EsoSpec{
   testAllAgainstOutput(BFOpt)(
     ("hworld.b", "", "Hello World!\n"),
     ("hworldBugTest.b", "", "Hello World!\n"),
-    ("bitWidth.b", "", "Hello, world!\n"))
+    ("bitWidth.b", "", "Hello, world!\n"),
+    ("lostKingdom.b", "y\nn\nw\nc5\nn\n", grabFile("lostKingdomLog.txt")))
   it should "respect dynamic tape size setting" in {
     lazy val res1 = getOutput(BFOpt, eprog, config=noDynConfig) flatMap (l => Try{l.take(20).mkString})
     lazy val res2 = getOutput(BFOpt, eprog, config=dynConfig) flatMap (l => Try{l.take(20).mkString})
@@ -38,7 +39,8 @@ class BFISpec extends EsoSpec{
   testAllAgainstOutput(BFComp)(
     ("hworld.b", "", "Hello World!\n"),
     ("hworldBugTest.b", "", "Hello World!\n"),
-    ("bitWidth.b", "", "Hello, world!\n"))
+    ("bitWidth.b", "", "Hello, world!\n"),
+    ("mandelbrot.b", "", grabFile("mandelbrotOutput.txt")))
   it should "respect dynamic tape size setting" in {
     lazy val res1 = getOutput(BFComp, eprog, config=noDynConfig) flatMap (l => Try{l.take(20).mkString})
     lazy val res2 = getOutput(BFComp, eprog, config=dynConfig) flatMap (l => Try{l.take(20).mkString})

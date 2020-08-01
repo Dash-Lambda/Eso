@@ -1,0 +1,54 @@
+Lost Kingdom
+(C) Jon Ripley 2004, 2005
+Brainfuck Edition v0.11
+
+To read the back-story enter '!'.
+For a list of commands enter '?'.
+
+Enable long room descriptions (Y/N) ? 
+Ramshackle Hut
+
+You are standing inside your ramshackle wooden hut. The squalor here has
+replaced the comfort and grandeur of your former royal palace. In one corner
+near the north door leading to your garden lies the pile of straw you use as
+a bed. Fixed in place by an unknown magic, next to a small table, is a wooden
+mockery of your former throne. The main door to the east leads outside to a
+road.
+
+You can see:
+  a small wooden box of matches sitting on the table (2)
+
+>
+Dirt Patch
+
+This patch of dirt and weeds bears no comparison to the lush gardens and
+lawns of your former palace; you know that the dry cracked earth here will
+bear no more fruit. A breeze from the west brings the stagnant odour of a
+once lively pond.
+
+You can see:
+  a rusty old lamp lying discarded on the ground (1)
+
+>
+Stagnant Pond
+
+The yard continues to a small area containing only a stagnant pool of water.
+This pond, once teeming with life, is now a mess of brown sludge and green
+algae. In the distance across the farm of your neighbour you can see a small
+village.
+
+You can see:
+  the body of a dead fish, in the reeds around the pond (5)
+
+>Yeugh, rotten fish does not taste good...
+
+Frankly, it's poisonous.
+
+*** You have died ***
+
+You scored 0 points out of a possible 100.
+You have earned the rank of Amateur.
+
+Another game (Y/N) ? 
+Thanks for playing.
+

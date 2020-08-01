@@ -33,6 +33,7 @@ object BFToScalaIntern extends BFTranspiler{
               case Some(BFCloseLoop(1)) =>
                 val blk = s"done(Some(Step(tape(p).toChar.toString${if(n == 1) "" else s"*$n"}, tailcall(f${loops.head}()))))"
                 tdo(ac :++ segment(tmp :+ blk, fnum), stk, Vector(s"def f${loops.head}a(): TailRec[Option[Step]] = {"), loops.tail, fnum, i + 2)
+              case Some(BFEnd) => (ac :++ segment(tmp :+ s"done(Some(Step(tape(p).toChar.toString${if(n == 1) "" else s"*$n"}, done(None))))", fnum)).mkString("\n")
               case _ =>
                 val blk = s"done(Some(Step(tape(p).toChar.toString${if(n == 1) "" else s"*$n"}, tailcall(f$fnum()))))"
                 tdo(ac :++ segment(tmp :+ blk, fnum), stk, Vector(s"def f$fnum(): TailRec[Option[Step]] = {"), loops, fnum + 1, i + 1)}
