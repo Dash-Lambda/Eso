@@ -113,7 +113,6 @@ Current native language support (mostly in chronological order):
 ### WIP:
 * REPL mode
 * Multiline bindings
-* Automated testing
 * Compiler memory (to avoid unnecessary recompiling)
 * Additional components for supported languages
 * Maybe language component-side error handling
