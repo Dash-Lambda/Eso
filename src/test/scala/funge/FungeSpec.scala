@@ -21,7 +21,8 @@ class FungeSpec extends EsoSpec{
       case Success(str) =>
         val bads = getBadLines(str)
         assert(bads.isEmpty)
-      case _ => fail}}
+      case _ => fail()}}
+  testRTWithFile(Befunge93)("mycology.b98")
   
   //Befunge-98
   "Befunge-98" should "pass mycology" in {
@@ -34,4 +35,5 @@ class FungeSpec extends EsoSpec{
         if(bads.isEmpty) succeed
         else fail("Mycology Report Contains BAD Lines")
       case _ => fail("Interpreter Failed")}}
+  testRTWithFile(Befunge98)("hworld.b98")
 }

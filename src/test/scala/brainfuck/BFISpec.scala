@@ -21,6 +21,10 @@ class BFISpec extends EsoSpec{
     if(!res1.isFailure) fail("Tape is not static when dyn is false")
     else if(res2.isFailure) fail("Tape is not dynamic when dyn is true")
     else succeed}
+  testRTWithAllFiles(BFBase)(
+    ("hworld.b", ""),
+    ("hworldBugTest.b", ""),
+    ("bitWidth.b", ""))
   
   //Optimizing interpreter
   testAllAgainstOutput(BFOpt)(
@@ -34,6 +38,10 @@ class BFISpec extends EsoSpec{
     if(!res1.isFailure) fail("Tape is not static when dyn is false")
     else if(res2.isFailure) fail("Tape is not dynamic when dyn is true")
     else succeed}
+  testRTWithAllFiles(BFOpt)(
+    ("hworld.b", ""),
+    ("hworldBugTest.b", ""),
+    ("bitWidth.b", ""))
   
   //Compiling interpreter
   testAllAgainstOutput(BFComp)(
@@ -47,4 +55,8 @@ class BFISpec extends EsoSpec{
     if(!res1.isFailure) fail("Tape is not static when dyn is false")
     else if(res2.isFailure) fail("Tape is not dynamic when dyn is true")
     else succeed}
+  testRTWithAllFiles(BFComp)(
+    ("hworld.b", ""),
+    ("hworldBugTest.b", ""),
+    ("bitWidth.b", ""))
 }

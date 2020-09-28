@@ -43,11 +43,11 @@ class RunProgHandlerSpec extends InterfaceHandlerSpec{
       s"""|Searching for translator path... Done.
           |Retrieving program from file... Done.
           |Translating program... Done.
-          |Initializing interpreter... Done in NUMms.
+          |Initializing interpreter... Done.
           |Hello World!
           |
-          |""".stripMargin.replaceAllLiterally("\r", "")
-    val res = runWithArgs()("log" -> "true")("s" -> "testResources/hworld.b")._2.replaceAll("""\d+ms""", "NUMms")
+          |""".stripMargin.replace("\r", "")
+    val res = runWithArgs()("log" -> "true")("s" -> "testResources/hworld.b")._2
     assertResult(chkStr)(res)}
   
   it should "print the program duration if time is on" in {
@@ -55,8 +55,21 @@ class RunProgHandlerSpec extends InterfaceHandlerSpec{
       s"""|Hello World!
           |
           |Program completed in NUMms
-          |""".stripMargin.replaceAllLiterally("\r", "")
+          |""".stripMargin.replace("\r", "")
     val res = runWithArgs()("time" -> "true")("s" -> "testResources/hworld.b")._2.replaceAll("""\d+ms""", "NUMms")
+    assertResult(chkStr)(res)}
+  
+  it should "print initialization time if log and time flags are on" in {
+    val chkStr =
+      s"""|Searching for translator path... Done.
+          |Retrieving program from file... Done.
+          |Translating program... Done.
+          |Initializing interpreter... Done in NUMms.
+          |Hello World!
+          |
+          |Program completed in NUMms
+          |""".stripMargin.replace("\r", "")
+    val res = runWithArgs()("log" -> "true", "time" -> "true")("s" -> "testResources/hworld.b")._2.replaceAll("""\d+ms""", "NUMms")
     assertResult(chkStr)(res)}
   
   it should "fail to read input if an inaccessible file is given" in {
@@ -87,6 +100,38 @@ class RunProgHandlerSpec extends InterfaceHandlerSpec{
   it should "build a translator path if needed" in {
     val res = runWithArgs()()("s" -> "testResources/hworld.fl")._2
     assertResult("Hello World!\n\n")(res)}
+  
+  it should "cache built programs if the cache flag is on" in {
+    val eio = defaultIO()
+    val handler = currentHandler(eio)
+    val initState = EsoRunState.withOps("-log true")
+    val cacheState = handler(initState)(mkMap("s" -> "hworld.b"))
+    cacheState match{
+      case rs: EsoRunState =>
+        eio.clear()
+        handler(rs)(mkMap("s" -> "hworld.b"))
+        val res = eio.collectOutput()
+        assertResult("Using cached run (disable with 'set -cache off')\nHello World!\n\n")(res)}}
+  
+  it should "not cache built programs if the cache flag is off" in {
+    val eio = defaultIO()
+    val handler = currentHandler(eio)
+    val initState = EsoRunState.withOps("-log true -cache false")
+    val cacheState = handler(initState)(mkMap("s" -> "hworld.b"))
+    cacheState match{
+      case rs: EsoRunState =>
+        eio.clear()
+        handler(rs)(mkMap("s" -> "hworld.b"))
+        val res = eio.collectOutput()
+        val chkStr =
+          s"""|Searching for translator path... Done.
+              |Retrieving program from file... Done.
+              |Translating program... Done.
+              |Initializing interpreter... Done.
+              |Hello World!
+              |
+              |""".stripMargin.replace("\r", "")
+        assertResult(chkStr)(res)}}
 }
 
 class TranslateHandlerSpec extends InterfaceHandlerSpec{
@@ -142,7 +187,7 @@ class DefineBFLangHandlerSpec extends InterfaceHandlerSpec{
   "DefineBFLangHandler" should "correctly define a BF lang" in {
     val finState = runWithArgs(defaultIO("test", "1", "2", "3", "4", "5", "6", "7", "8"))()()._1
     finState match{
-      case EsoRunState(_, _, ts, _, _, _) => assert(ts.isDefinedAt(("test", "BrainFuck")))
+      case EsoRunState(_, _, ts, _, _, _, _) => assert(ts.isDefinedAt(("test", "BrainFuck")))
       case _ => fail("Returned Improper State")}}
 }
 
@@ -166,7 +211,7 @@ class LoadBFLangsHandlerSpec extends InterfaceHandlerSpec{
     val (ns, str) = runWithArgs()()("f" -> "testResources/testLangs.json")
     assertResult("Loaded BF Langs:\n- test\n")(str)
     ns match{
-      case EsoRunState(_, _, ts, _, _, _) => ts.get(("test", "BrainFuck")) match{
+      case EsoRunState(_, _, ts, _, _, _, _) => ts.get(("test", "BrainFuck")) match{
         case Some(t: BFTranslator) =>
           val res = t.kvPairs.sortBy(_._2)
           assertResult(pairs)(res)
@@ -189,7 +234,7 @@ class ShowSyntaxHandlerSpec extends InterfaceHandlerSpec{
          |.: !
          |,: ?
          |
-         |""".stripMargin.replaceAllLiterally("\r", "")
+         |""".stripMargin.replace("\r", "")
     val res = runWithArgs()()("l" -> "FlufflePuff")._2
     assertResult(ref)(res)}
 }
@@ -211,8 +256,8 @@ class SetVarHandlerSpec extends InterfaceHandlerSpec{
   def applyCases(str: String)(vec: Vector[Boolean]): String = (str.toVector zip vec).map{case (c, b) => if(b) c.toUpper else c.toLower}.mkString
   def permuteCases(str: String): LazyList[String] = permuteBin(str.length).map(applyCases(str))
   
-  val trues: LazyList[String] = LazyList.range(1, 10).map(_.toString) #::: LazyList("t", "true", "y", "yes").flatMap(permuteCases)
-  val falses: LazyList[String] = "0" #:: LazyList("f", "false", "n", "no").flatMap(permuteCases)
+  val trues: LazyList[String] = LazyList.range(1, 10).map(_.toString) #::: LazyList("t", "true", "y", "yes", "on", "i").flatMap(permuteCases)
+  val falses: LazyList[String] = LazyList("0", "f", "false", "n", "no", "off", "o").flatMap(permuteCases)
   
   val boolNames: Vector[String] = EsoDefaults.defBoolVec.map(_._1)
   val numNames: Vector[String] = EsoDefaults.defNumVec.map(_._1)
@@ -227,34 +272,34 @@ class SetVarHandlerSpec extends InterfaceHandlerSpec{
     for(s <- trues){
       val testState = SetVarHandler()(falseState)(immutable.HashMap("log" -> s))
       testState match{
-        case EsoRunState(_, _, _, bools, _, _) => assert(bools("log"), s"'$s' gave false")
+        case EsoRunState(_, _, _, bools, _, _, _) => assert(bools("log"), s"'$s' gave false")
         case _ => fail("Did Not Return RunState")}}}
   
   it should "recognize all false keywords" in {
     for(s <- falses){
       val testState = SetVarHandler()(trueState)(immutable.HashMap("log" -> s))
       testState match{
-        case EsoRunState(_, _, _, bools, _, _) => assert(!bools("log"), s"'$s' gave true")
+        case EsoRunState(_, _, _, bools, _, _, _) => assert(!bools("log"), s"'$s' gave true")
         case _ => fail("Did Not Return RunState")}}}
   
   it should "recognize positive and negative numbers" in {
     for(n <- Seq(-100, -10, 0, 10, 100)){
       val testState = SetVarHandler()(numInitState)(immutable.HashMap("olen" -> n.toString))
       testState match{
-        case EsoRunState(_, _, _, _, nums, _) => assertResult(nums("olen"))(n)
+        case EsoRunState(_, _, _, _, nums, _, _) => assertResult(nums("olen"))(n)
         case _ => fail("Did Not Return RunState")}}}
   
   it should "recognize character input" in {
     for(c <- 'a' to 'z'){
       val testState = SetVarHandler()(numInitState)(immutable.HashMap("olen" -> s"'$c'"))
       testState match{
-        case EsoRunState(_, _, _, _, nums, _) => assertResult(nums("olen").toChar)(c)
+        case EsoRunState(_, _, _, _, nums, _, _) => assertResult(nums("olen").toChar)(c)
         case _ => fail("Did Not Return RunState")}}}
   
   it should "recognize multiple assignments" in {
     val testState = SetVarHandler()(multiInitState)(multiMapping)
     testState match{
-      case EsoRunState(_, _, _, bools, nums, _) =>
+      case EsoRunState(_, _, _, bools, nums, _, _) =>
         for(nam <- boolNames){
           withClue(s"Failure on variable '$nam'"){
             assertResult(true)(bools(nam))}}

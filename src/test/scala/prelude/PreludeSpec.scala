@@ -14,4 +14,7 @@ class PreludeSpec extends EsoSpec{
   it should "run hworld.pld correctly in sequence" in {
     val res = getOutputString(Prelude, hworld, Seq(), defaultConfig.set("preludePar", b=false))
     assertResult(Success("Hello world!"))(res)}
+  
+  it should "return a referentially transparent function in parallel" in testRTWithSource(Prelude, config=defaultConfig.set("preludePar", b=true))(hworld)
+  it should "return a referentially transparent function in sequence" in testRTWithSource(Prelude, config=defaultConfig.set("preludePar", b=false))(hworld)
 }

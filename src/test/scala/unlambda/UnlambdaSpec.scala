@@ -9,4 +9,9 @@ class UnlambdaSpec extends EsoSpec{
     ("alphatest.unl", "", "abcdefghijklmnopqrstuvwxyz0123456789\n", false),
     ("adventure.unl", grabFile("winAdventure.txt"), grabFile("adventureRef.txt"), true),
     ("primes.unl", "", PrimeNumTools.primesLazy.take(100).mkString("\n"), true))
+  testRTWithAllFilesLimited(Unlambda)(
+    ("hworld.unl", "", -1),
+    ("alphatest.unl", "", -1),
+    ("adventure.unl", grabFile("winAdventure.txt"), -1),
+    ("primes.unl", "", 100))
 }

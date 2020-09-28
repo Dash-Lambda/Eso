@@ -12,4 +12,13 @@ class WordLangSpec extends EsoSpec{
     ("someday.wl", "", "Ö3"),
     ("listChars.wl", "", (100 to 0 by -1).map(_.toChar).mkString),
     ("cat.wl", "a", "I=\nI=a"))
+  testRTWithAllFiles(WordLang)(
+    ("helloo.wl", ""),
+    ("camo.wl", ""),
+    ("listing.wl", ""),
+    ("flag.wl", ""),
+    ("letsLive.wl", ""),
+    ("someday.wl", ""),
+    ("listChars.wl", ""),
+    ("cat.wl", "a"))
 }

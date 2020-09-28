@@ -28,4 +28,10 @@ class LazyBirdSpec extends EsoSpec{
       "v" -> "``s`k``s``s`k``s`ksks`kk``s`k`sik",
       "@" -> "``s``si`ks`kk")
     for((a, b) <- pairs) parsedEquals(a, b)}
+  testRTWithAllFilesLimited(LazyBird)(
+    ("hworld.lzb", "", -1),
+    ("fib.lzb", "", fibStr(20).length),
+    ("fibComb.lzb", "", fibStr(20).length),
+    ("asciiCat.lzb", ('a' to 'z').mkString, 26),
+    ("equals.lzb", "", 2))
 }
