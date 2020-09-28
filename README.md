@@ -93,6 +93,7 @@ Current native language support (mostly in chronological order):
 * Run programs from text files
 * Feed input from text files
 * Log output to text files
+* Built program caching
 * Automatic file associations for known extensions
 * Naive, optimizing, and compiling BrainFuck interpreters
 * Translate to and from compatible languages
@@ -114,7 +115,6 @@ Current native language support (mostly in chronological order):
 ### WIP:
 * REPL mode
 * Multiline bindings
-* Compiler memory (to avoid unnecessary recompiling)
 * Additional components for supported languages
 * Maybe language component-side error handling
 * Debug features
