@@ -38,6 +38,7 @@ class EsoTestInterface(var inp: Seq[String], strbldr: StringBuilder) extends Eso
     strbldr ++= x.toString + '\n'}
   
   def collectOutput(): String = strbldr.mkString
+  def clear(): Unit = strbldr.clear()
 }
 object EsoTestInterface{
   def apply(inp: Seq[String]): EsoTestInterface = new EsoTestInterface(inp, new StringBuilder)

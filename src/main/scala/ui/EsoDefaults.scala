@@ -119,7 +119,8 @@ object EsoDefaults extends EsoObj{
     ("echoFileInp", false, "print file input to the console as it is used, makes it look as if the input was entered into the console directly"),
     ("preludePar", false, "run Prelude voices in parallel, can speed up execution of some programs"),
     ("normLineBreaks", true, "normalize all line breaks to '\\n' when reading source files (for instance, '\\r\\n' => '\\n')"),
-    ("debug", false, "toggle debug information for languages that support it"))
+    ("debug", false, "toggle debug information for the interface and languages that support it"),
+    ("cache", true, "cache initialized state of programs for faster repeated loading"))
   val defNumVec: Vector[(String, Int, String)] = Vector[(String, Int, String)](
     ("bfOpt", 2, "BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled"),
     ("init", 40000, "initial tape size for interpreters with a data tape"),
@@ -151,6 +152,7 @@ object EsoDefaults extends EsoObj{
     SaveBFLangsHandler(),
     ShowSyntaxHandler(),
     ClearBindingsHandler,
+    ClearCacheHandler,
     LoadBindingsHandler(),
     SaveBindingsHandler,
     ListBindingsHandler(),

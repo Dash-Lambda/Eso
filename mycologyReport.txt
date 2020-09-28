@@ -79,7 +79,7 @@ y claims all of the following:
 	That the offset of the IP was ( 0 0 )
 	That the least point containing a non-space cell is ( -3 -2 )
 	That the greatest point, relative to that point, is ( 183 911 )
-	That the day of the month is 21 
+	That the day of the month is 28 
 	That the month is 9 
 	That the year is 2020 
 	That the time is 00 : 28 : 53 

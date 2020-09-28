@@ -20,6 +20,7 @@
         - [How Translators are Used](#how-translators-are-used)
     - [Environment Variables](#environment-variables)
     - [Config Environment](#config-environment)
+    - [Caching](#caching)
 * [Notes](#notes)
     - [BrainFuck Optimization Strategy](#brainFuck-optimization-strategy)
     - [User-Defined BrainFuck Translators](#user-defined-brainFuck-translators)
@@ -258,6 +259,7 @@ The environment maintained by Eso has collected quite a few parameters, detailed
     * appendInp: Toggle whether or not to append console input to file input. Primarily for self-interpreters who expect both the program and user input from the same sourc.
     * bfDiv: A flag dictating what to do when Funge-98 encounters division by zero. The spec allows it to either error out or return 0, most interpreters prompt the user at runtime but in Eso it's just an environment flag. True returns 0.
     * bfRetCode: True prints the Funge-98 return code at the end of execution, right above the "program complete" message if you have that on.
+    * cache: True enabled built program caching, false disables it.
     * dfChar: DeadFish, which I believe is the first non-Turing-complete language in Eso, only prints numbers -it cannot print characters. Setting this flag to true interprets DeadFish output as characters anyway.
     * dyn: This flag controls dynamic tape size where applicable. True simulates an infinite memory tape, false, is fixed size. Currently used by BrainFuck, PATH, and SNUSP.
     * echoFileInp: Toggle whether or not to echo file input to the console. This will print file input as if it were user input.
@@ -289,6 +291,16 @@ The Config object currently holds:
 * All of the main environment variables above
 * A pseudorandom number generator
 * A LazyList of times, handled the same way as user input.
+
+### Caching
+
+If you have caching enabled, Eso will keep a list of built programs to save time on reading and initialization when you run a program multiple times.
+
+The caching scheme is pretty simple thanks to Eso's functional design. Since the interpreter actually returns a function mapping the user input to the program output, the run handler can simply store the function it gets back in a HashMap and grab it from there instead of the interpreter for later runs. The built programs are keyed by the file name and language used, and are bundled with the last modified time of the source file at the time it was built so the run handler knows to build a new one if the code has been changed.
+
+One of the most critical things that Eso must do for this scheme to work is to enforce referential transparency, meaning that the cached program will do exactly the same thing every time it's run. Thankfully, this is a natural consequence of functional programming.
+
+The one bit where this can cause trouble is with the Scala interpreter, since it can run arbitrary Scala code. I recommend turning caching off if you plan to do much with Scala.
 
 ## Notes
 

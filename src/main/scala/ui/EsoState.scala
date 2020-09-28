@@ -14,26 +14,39 @@ case class EsoRunState(interps: immutable.HashMap[String, Interpreter],
                        trans: immutable.HashMap[(String, String), Translator],
                        bools: immutable.HashMap[String, Boolean],
                        nums: immutable.HashMap[String, Int],
-                       binds: immutable.HashMap[String, String]) extends EsoState{
+                       binds: immutable.HashMap[String, String],
+                       runCache: immutable.HashMap[(String, String), (Seq[Char] => LazyList[Char], Long)]) extends EsoState{
   import EsoRunState.{trueReg, falseReg, charReg, intReg}
   
-  def addInterp(intp: Interpreter): EsoRunState = EsoRunState(interps + ((intp.name, intp)), gens, trans, bools, nums, binds)
-  def addGen(gen: Transpiler): EsoRunState = EsoRunState(interps, gens + ((gen.id, gen)), trans, bools, nums, binds)
-  def addTrans(tran: Translator): EsoRunState = EsoRunState(interps, gens, trans + ((tran.id, tran)), bools, nums, binds)
-  def addBool(nam: String, bool: Boolean): EsoRunState = EsoRunState(interps, gens, trans, bools + ((nam, bool)), nums, binds)
-  def addNum(nam: String, num: Int): EsoRunState = EsoRunState(interps, gens, trans, bools, nums + ((nam, num)), binds)
-  def addBind(nam: String, bind: String): EsoRunState = EsoRunState(interps, gens, trans, bools, nums, binds + ((nam, bind)))
+  def addInterp(intp: Interpreter): EsoRunState = nextState(newInterps = interps + ((intp.name, intp)))
+  def addGen(gen: Transpiler): EsoRunState = nextState(newGens = gens + ((gen.id, gen)))
+  def addTrans(tran: Translator): EsoRunState = nextState(newTrans = trans + ((tran.id, tran)))
+  def addBool(nam: String, bool: Boolean): EsoRunState = nextState(newBools = bools + ((nam, bool)))
+  def addNum(nam: String, num: Int): EsoRunState = nextState(newNums = nums + ((nam, num)))
+  def addBind(nam: String, bind: String): EsoRunState = nextState(newBinds = binds + ((nam, bind)))
+  def cacheFunc(nam: String, lang: String, lm: Long, func: Seq[Char] => LazyList[Char]): EsoRunState = nextState(newRunCache = runCache + (((nam, lang), (func, lm))))
   
-  def addAllTrans(tranVec: Vector[Translator]): EsoRunState = EsoRunState(interps, gens, trans ++ tranVec.map(t => (t.id, t)), bools, nums, binds)
+  def addAllTrans(tranVec: Vector[Translator]): EsoRunState = nextState(newTrans = trans ++ tranVec.map(t => (t.id, t)))
   
-  def dropInterp(nam: String): EsoRunState = EsoRunState(interps - nam, gens, trans, bools, nums, binds)
-  def dropGen(nam: (String, String)): EsoRunState = EsoRunState(interps, gens - nam, trans, bools, nums, binds)
-  def dropTran(nam: (String, String)): EsoRunState = EsoRunState(interps, gens, trans - nam, bools, nums, binds)
-  def dropBool(nam: String): EsoRunState = EsoRunState(interps, gens, trans, bools - nam, nums, binds)
-  def dropNum(nam: String): EsoRunState = EsoRunState(interps, gens, trans, bools, nums - nam, binds)
-  def dropBind(nam: String): EsoRunState = EsoRunState(interps, gens, trans, bools, nums, binds - nam)
+  def dropInterp(nam: String): EsoRunState = nextState(newInterps = interps - nam)
+  def dropGen(nam: (String, String)): EsoRunState = nextState(newGens = gens - nam)
+  def dropTran(nam: (String, String)): EsoRunState = nextState(newTrans = trans - nam)
+  def dropBool(nam: String): EsoRunState = nextState(newBools = bools - nam)
+  def dropNum(nam: String): EsoRunState = nextState(newNums = nums - nam)
+  def dropBind(nam: String): EsoRunState = nextState(newBinds = binds - nam)
   
-  def clearBinds: EsoRunState = EsoRunState(interps, gens, trans, bools, nums, immutable.HashMap[String, String]())
+  def clearBinds: EsoRunState = nextState(newBinds = immutable.HashMap())
+  def clearCache: EsoRunState = nextState(newRunCache = immutable.HashMap())
+  
+  def nextState(newInterps: immutable.HashMap[String, Interpreter] = interps,
+                newGens: immutable.HashMap[(String, String), Transpiler] = gens,
+                newTrans: immutable.HashMap[(String, String), Translator] = trans,
+                newBools: immutable.HashMap[String, Boolean] = bools,
+                newNums: immutable.HashMap[String, Int] = nums,
+                newBinds: immutable.HashMap[String, String] = binds,
+                newRunCache: immutable.HashMap[(String, String), (Seq[Char] => LazyList[Char], Long)] = runCache): EsoRunState = {
+    EsoRunState(newInterps, newGens, newTrans, newBools, newNums, newBinds, newRunCache)
+  }
   
   def getTrans(sl: String, tl: String): Option[Config => String => Try[String]] = trans.get((sl, tl)) match{
     case Some(t) => Some(t.apply)
@@ -68,8 +81,8 @@ object EsoRunState extends EsoObj{
   val boolReg: Regex = raw"""[^-]*-(\w+) ((?:true|false))(.*)\z""".r
   val flagReg: Regex = raw"""[^-]*-(\w+)(.*)\z""".r
   val biteReg: Regex = raw"""[^-]*-(.*)\z""".r
-  val trueReg: Regex = raw"""(?i)(?:true|yes|t|y|[1-9])""".r
-  val falseReg: Regex = raw"""(?i)(?:false|no|f|n|0)""".r
+  val trueReg: Regex = raw"""(?i)(?:true|yes|t|y|[1-9]|on|i)""".r
+  val falseReg: Regex = raw"""(?i)(?:false|no|f|n|0|off|o)""".r
   val charReg: Regex = raw"""'(.)'""".r
   val intReg: Regex = raw"""-?\d+""".r
   
@@ -79,7 +92,8 @@ object EsoRunState extends EsoObj{
     mkMap(EsoDefaults.defTransVec.map(t => (t.id, t))),
     mkMap(EsoDefaults.defBoolVec.map(t => (t._1, t._2))),
     mkMap(EsoDefaults.defNumVec.map(t => (t._1, t._2))),
-    mkMap(Vector()))
+    immutable.HashMap(),
+    immutable.HashMap())
   
   def withOps(opstr: String, initState: EsoRunState = default): EsoRunState = {
     @tailrec

@@ -71,6 +71,7 @@ case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface) extends Int
     val appFlg = state.bools("appendInp")
     val echoFInp = state.bools("echoFileInp")
     val normLineFlag = state.bools("normLineBreaks")
+    val cache = state.bools("cache")
     
     def olim(res: LazyList[Char]): LazyList[Char] = state.nums("olen") match{
       case -1 => res
@@ -97,29 +98,37 @@ case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface) extends Int
     Trampoline.doOrElse(state){
       DoOrOp(args.get("s"), "Missing Source File", eio){src =>
         DoOrOp(getLang(args, "l", "s"), "Unrecognized Language or File Extension", eio){lang =>
-          if(logFlg) eio.print("Searching for translator path... ")
-          DoOrOp(findTranslator(state, lang, state.interpNames), "Language Not Recognized", eio){
-            case (inam, t) =>
-              if(logFlg) eio.print("Done.\nRetrieving program from file... ")
-              DoOrErr(EsoFileReader.readFile(src, normLineFlag), eio){progRaw =>
-                if(logFlg) eio.print(s"Done.\nTranslating program... ")
-                DoOrErr(t(progRaw), eio){prog =>
-                  if(logFlg) eio.print("Done.\nInitializing interpreter... ")
-                  TimeIt(state.interps(inam)(state.config)(prog)) match{
-                    case (i, dur) =>
-                      if(logFlg) eio.println(s"Done in ${dur}ms.")
-                      DoOrErr(i, eio){r =>
-                        DoOrErr(inputs, eio){inp =>
-                          TimeIt{tryAll{printer(olim(r(inp)))}} match{
-                            case (flg, rdr) => flg match{
-                              case Failure(e) =>
-                                if(timeFlg) eio.println(s"\nError: $e\nProgram failed in ${rdr}ms")
-                                else eio.println(s"\nError: $e")
-                              case Success(_) =>
-                                if(timeFlg) eio.println(s"\nProgram completed in ${rdr}ms")
-                                else eio.println()}}
-                          Done{state}}}}}}}}}}}
-}
+          val runner: Try[Seq[Char] => LazyList[Char]] = state.runCache.get((src, lang)) match{
+            case Some((prg, lm)) if cache && lm == EsoFileReader.getLastModified(src) =>
+              if(logFlg) eio.println("Using cached run (disable with 'set -cache off')")
+              Success(prg)
+            case _ =>
+              Trampoline{
+                if(logFlg) eio.print("Searching for translator path... ")
+                DoOrOp(findTranslator(state, lang, state.interpNames), "Language Not Recognized", eio){
+                  case (inam, t) =>
+                    if(logFlg) eio.print("Done.\nRetrieving program from file... ")
+                    DoOrErr(EsoFileReader.readFile(src, normLineFlag), eio){progRaw =>
+                      if(logFlg) eio.print(s"Done.\nTranslating program... ")
+                      DoOrErr(t(progRaw), eio){prog =>
+                        if(logFlg) eio.print("Done.\nInitializing interpreter... ")
+                        TimeIt(state.interps(inam)(state.config)(prog)) match{
+                          case (i, dur) =>
+                            if(logFlg) {
+                              if(timeFlg) eio.println(s"Done in ${dur}ms.")
+                              else eio.println(s"Done.")}
+                            Done(i)}}}}}}
+          DoOrErr(runner, eio){r =>
+            DoOrErr(inputs, eio){inp =>
+              TimeIt{tryAll{printer(olim(r(inp)))}} match{
+                case (flg, rdr) => flg match{
+                  case Failure(e) =>
+                    if(timeFlg) eio.println(s"\nError: $e\nProgram failed in ${rdr}ms")
+                    else eio.println(s"\nError: $e")
+                  case Success(_) =>
+                    if(timeFlg) eio.println(s"\nProgram completed in ${rdr}ms")
+                    else eio.println()}}
+              Done(if(cache) state.cacheFunc(src, lang, EsoFileReader.getLastModified(src), r) else state)}}}}}}}
 
 case class TranslateHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
   val nam: String = "translate"
@@ -267,6 +276,13 @@ object ClearBindingsHandler extends InterfaceHandler{
   val helpStr: String = ""
   
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = state.clearBinds
+}
+
+object ClearCacheHandler extends InterfaceHandler{
+  val nam: String = "clrCache"
+  val helpStr: String = ""
+  
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = state.clearCache
 }
 
 case class LoadBindingsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{

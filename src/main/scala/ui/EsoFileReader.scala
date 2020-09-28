@@ -1,5 +1,7 @@
 package ui
 
+import java.io.File
+
 import common.{EsoExcep, EsoObj}
 
 import scala.io.Source
@@ -19,7 +21,11 @@ object EsoFileReader extends EsoObj{
       .getOrElse(Failure(EsoExcep("Incompatible File Encoding")))}
   def readFileWithEncoding(fnam: String, enc: String, normLines: Boolean = true): Try[String] = Try{
     val src = Source.fromFile(fnam, enc)
-    val res = if(normLines) src.mkString.replaceAllLiterally("\r\n", "\n") else src.mkString
+    val res = if(normLines) src.mkString.replace("\r\n", "\n") else src.mkString
     src.close()
     res}
+  
+  def getLastModified(fnam: String): Long = {
+    val f = new File(fnam)
+    f.lastModified()}
 }
