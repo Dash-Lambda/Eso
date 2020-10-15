@@ -17,6 +17,7 @@
         - [States and Configurations](#states-and-configurations)
         - [Command Handlers](#command-handlers)
         - [Interpreter I/O](#interpreter-io)
+        - [File and Console I/O](#file-and-console-io)
         - [How Translators are Used](#how-translators-are-used)
     - [Environment Variables](#environment-variables)
     - [Config Environment](#config-environment)
@@ -242,7 +243,14 @@ The interface actually runs the program by traversing the output list and printi
 
 This preserves pure functionality because LazyLists are immutable; each element is only evaluated once, after that it doesn't change. The input list always represents a single constant input, it just figures out what that input is while it's being used. The interpreter always maps each unique input to a single output.
 
-#### How Translators are Used
+#### File and Console I/O
+LazyLists are all well and good for interpreters, but command handlers need a bit more freedom. They originally just directly used built-in functions like println() and Java's File API. Once I started writing automated tests, this grew cumbersome.
+
+In the current design command handlers can be given two types of interface objects, one for console I/O and one for file I/O. These objects have methods for reading, printing, and whatever else makes sense, and are used in place of the standard functions. In general, these object can either be a passthrough that goes directly to the real console/file system, or they can have a self-contained environment that is very convenient for testing.
+
+A pleasant side-effect (badum-tss) of this design is that it pushes the effectful I/O still further up the chain, making interface handlers _almost_ pure functions. 
+
+#### How Translators are Used 
 Aside from directly translating a program using the command, Eso uses translators under the hood to make the interface more flexible.
 
 For the translate command, Eso doesn't just look for a translator between the two specified languages; it instead looks for the shortest chain of translators that can get it from the source language to the target language, then composes the chain into a single function. So, if you translate a program from Ook to FlufflePuff, Eso is actually translating Ook>BrainFuck>FlufflePuff.
@@ -251,7 +259,7 @@ When you use the run command, Eso searches for a chain from the source language 
 
 The transpile handler searches for the shortest chain from the source language to a known transpiler to the target language; bear in mind that it will only use a single transpiler.
 
-Eso can do this with translators because they are guaranteed to be invertible and to preserve the structure of a program. In essence, no matter how many times you translate it, the program is guaranteed to be the same program. Transpilers can freely change how a program works (they just need to preserve the behavior), which means they're more flexible in terms of functionality but less flexible in terms of how they can be manipulated.
+Eso can do this with translators because they are guaranteed to be invertible and to preserve the structure of a program. In essence, no matter how many times you translate it, the program is guaranteed to be the same program. Transpilers can freely change how a program works (they just need to preserve the behavior), which means they're more flexible in terms of functionality but less flexible in terms of how they can be manipulated. 
 
 ### Environment Variables
 The environment maintained by Eso has collected quite a few parameters, detailed here:
