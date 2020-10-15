@@ -105,7 +105,8 @@ object EsoRunState extends EsoObj{
       case _ => state}
     wdo(opstr, initState)}
   
-  def withOps(ops: Seq[(String, String)]): EsoRunState = {
+  def withOps(ops: (String, String)*): EsoRunState = withOpSeq(ops.toVector)
+  def withOpSeq(ops: Seq[(String, String)]): EsoRunState = {
     ops.foldLeft(default){
       case (s, (k, v)) => s.setVarSilent(k, v)}}
 }

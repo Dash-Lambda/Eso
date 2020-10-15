@@ -1,6 +1,6 @@
 package ui
 
-import brainfuck.{BFOpt, BFTranslator, Ook}
+import brainfuck.{BFOpt, BFTranslator, GenBFT, Ook}
 import common_test.EsoSpec
 import metatape.Metatape
 
@@ -11,16 +11,20 @@ abstract class InterfaceHandlerSpec extends EsoSpec{
   val defaultState: EsoRunState = EsoRunState.default
   def defaultIO(strs: String*): EsoTestInterface = EsoTestInterface(strs)
   
-  def currentHandler: EsoTestInterface => InterfaceHandler
-  def runWithArgs(eio: EsoTestInterface = defaultIO())(ops: (String, String)*)(args: (String, String)*): (EsoState, String) = {
-    val handler = currentHandler(eio)
-    val state = EsoRunState.withOps(ops)
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler
+  def runWithArgs(eio: EsoTestInterface = defaultIO(), efi: EsoFileInterface = SystemFileInterface)(ops: (String, String)*)(args: (String, String)*): (EsoState, String) = {
+    val state = EsoRunState.withOpSeq(ops)
+    runner(eio, efi, state, args)}
+  def runStateWithArgs(eio: EsoTestInterface = defaultIO(), efi: EsoFileInterface = SystemFileInterface)(state: EsoRunState = EsoRunState.default)(args: (String, String)*): (EsoState, String) = {
+    runner(eio, efi, state, args)}
+  def runner(eio: EsoTestInterface, efi: EsoFileInterface, state: EsoRunState, args: Seq[(String, String)]): (EsoState, String) = {
+    val handler = currentHandler(eio, efi)
     val ns = handler(state)(mkMap(args.toVector))
     (ns, eio.collectOutput())}
 }
 
 class RunProgHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler: EsoTestInterface => InterfaceHandler = RunProgHandler
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = RunProgHandler(eio, efi)
   
   "RunProgHandler" should "fail on an unknown file extension" in {
     val res = runWithArgs()()("s" -> "testResources/hworldb.txt")._2
@@ -102,26 +106,20 @@ class RunProgHandlerSpec extends InterfaceHandlerSpec{
     assertResult("Hello World!\n\n")(res)}
   
   it should "cache built programs if the cache flag is on" in {
-    val eio = defaultIO()
-    val handler = currentHandler(eio)
-    val initState = EsoRunState.withOps("-log true")
-    val cacheState = handler(initState)(mkMap("s" -> "hworld.b"))
+    val cacheState = runWithArgs()("log" -> "true")("s" -> "hworld.b")
     cacheState match{
-      case rs: EsoRunState =>
-        eio.clear()
-        handler(rs)(mkMap("s" -> "hworld.b"))
+      case (rs: EsoRunState, _) =>
+        val eio = defaultIO()
+        runStateWithArgs(eio)(rs)("s" -> "hworld.b")
         val res = eio.collectOutput()
         assertResult("Using cached run (disable with 'set -cache off')\nHello World!\n\n")(res)}}
   
   it should "not cache built programs if the cache flag is off" in {
-    val eio = defaultIO()
-    val handler = currentHandler(eio)
-    val initState = EsoRunState.withOps("-log true -cache false")
-    val cacheState = handler(initState)(mkMap("s" -> "hworld.b"))
+    val cacheState = runWithArgs()("log" -> "true", "cache" -> "false")("s" -> "hworld.b")
     cacheState match{
-      case rs: EsoRunState =>
-        eio.clear()
-        handler(rs)(mkMap("s" -> "hworld.b"))
+      case (rs: EsoRunState, _) =>
+        val eio = defaultIO()
+        runStateWithArgs(eio)(rs)("s" -> "hworld.b")
         val res = eio.collectOutput()
         val chkStr =
           s"""|Searching for translator path... Done.
@@ -132,10 +130,21 @@ class RunProgHandlerSpec extends InterfaceHandlerSpec{
               |
               |""".stripMargin.replace("\r", "")
         assertResult(chkStr)(res)}}
+  
+  it should "write program output to a file with the -o option" in {
+    val efi = MutableContainedFileInterface.withElms("hworld.b" -> (grabFile("hworld.b"), 0))
+    runWithArgs(efi=efi)()("s" -> "hworld.b", "o" -> "testOutput.txt")
+    val fo = efi.readFile("testOutput.txt")
+    assertResult(Success("Hello World!\n"))(fo)}
+  
+  it should "not write program output to a file without the -o option" in {
+    val efi = MutableContainedFileInterface.withElms("hworld.b" -> (grabFile("hworld.b"), 0))
+    runWithArgs(efi=efi)()("s" -> "hworld.b")
+    assert(!efi.fileExists("testOutput.txt"))}
 }
 
 class TranslateHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler: EsoTestInterface => InterfaceHandler = TranslateHandler
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = TranslateHandler(eio, efi)
   
   "TranslateHandler" should "fail on unknown file extensions" in {
     val prog = runWithArgs()()("s" -> "testResources/hworldfl.txt", "tl" -> "BrainFuck")._2
@@ -156,10 +165,20 @@ class TranslateHandlerSpec extends InterfaceHandlerSpec{
     val prog2 = Ook(defaultConfig)(prog1)
     val res = prog2 flatMap (p => getOutputString(BFOpt, p))
     assertResult(Success("Hello World!\n"))(res)}
+  
+  it should "write translation to a file with the -o option" in {
+    val efi = MutableContainedFileInterface.withElms("hworldfl.txt" -> (grabFile("hworldfl.txt"), 0))
+    runWithArgs(efi=efi)()("s" -> "hworldfl.txt", "sl" -> "FlufflePuff", "tl" -> "BrainFuck", "o" -> "testOutput.txt")._2
+    assert(efi.fileExists("testOutput.txt"))}
+  
+  it should "not write translation to a file without the -o option" in {
+    val efi = MutableContainedFileInterface.withElms("hworldfl.txt" -> (grabFile("hworldfl.txt"), 0))
+    runWithArgs(efi=efi)()("s" -> "hworldfl.txt", "sl" -> "FlufflePuff", "tl" -> "BrainFuck")
+    assert(!efi.fileExists("testOutput.txt"))}
 }
 
 class TranspileHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler: EsoTestInterface => InterfaceHandler = TranspileHandler
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = TranspileHandler(eio, efi)
   
   "TranspileHandler" should "fail on unknown file extensions" in {
     val prog = runWithArgs()()("s" -> "testResources/hworldb.txt", "tl" -> "Metatape")._2
@@ -179,10 +198,20 @@ class TranspileHandlerSpec extends InterfaceHandlerSpec{
     val prog = runWithArgs()()("s" -> "testResources/hworld.fl", "tl" -> "Metatape")._2
     val res = getOutputString(Metatape, prog)
     assertResult(Success("Hello World!\n"))(res)}
+  
+  it should "write transpilation to a file with the -o option" in {
+    val efi = MutableContainedFileInterface.withElms("hworldb.txt" -> (grabFile("hworldb.txt"), 0))
+    runWithArgs(efi=efi)()("s" -> "hworldb.txt", "tl" -> "Metatape", "sl" -> "BrainFuck", "o" -> "testOutput.txt")._2
+    assert(efi.fileExists("testOutput.txt"))}
+  
+  it should "not write transpilation to a file without the -o option" in {
+    val efi = MutableContainedFileInterface.withElms("hworldb.txt" -> (grabFile("hworldb.txt"), 0))
+    runWithArgs(efi=efi)()("s" -> "hworldb.txt", "tl" -> "Metatape", "sl" -> "BrainFuck")
+    assert(!efi.fileExists("testOutput.txt"))}
 }
 
 class DefineBFLangHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler: EsoTestInterface => InterfaceHandler = DefineBFLangHandler
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = DefineBFLangHandler(eio)
   
   "DefineBFLangHandler" should "correctly define a BF lang" in {
     val finState = runWithArgs(defaultIO("test", "1", "2", "3", "4", "5", "6", "7", "8"))()()._1
@@ -192,7 +221,7 @@ class DefineBFLangHandlerSpec extends InterfaceHandlerSpec{
 }
 
 class LoadBFLangsHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler: EsoTestInterface => InterfaceHandler = LoadBFLangsHandler
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = LoadBFLangsHandler(eio, efi)
   
   "LoadBFLangsHandlerSpec" should "fail on an inaccessible file" in {
     val (_, str) = runWithArgs()()("f" -> "fail")
@@ -219,8 +248,42 @@ class LoadBFLangsHandlerSpec extends InterfaceHandlerSpec{
       case _ => fail("Returned Improper State")}}
 }
 
+class SaveBFLangsHandlerSpec extends InterfaceHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = SaveBFLangsHandler(eio, efi)
+  
+  "SaveBFLangsHandler" should "save to the default file if none is provided" in {
+    val bft = GenBFT("test", Vector(
+      "[" -> "0",
+      "]" -> "1",
+      "<" -> "2",
+      ">" -> "3",
+      "+" -> "4",
+      "-" -> "5",
+      "," -> "6",
+      "." -> "7"))
+    val state = EsoRunState.default.addTrans(bft)
+    val efi = MutableContainedFileInterface.withElms()
+    runStateWithArgs(efi=efi)(state)()
+    assert(efi.fileExists(EsoDefaults.defBFLFile))}
+  
+  it should "save to the provided file with -f option" in {
+    val bft = GenBFT("test", Vector(
+      "[" -> "0",
+      "]" -> "1",
+      "<" -> "2",
+      ">" -> "3",
+      "+" -> "4",
+      "-" -> "5",
+      "," -> "6",
+      "." -> "7"))
+    val state = EsoRunState.default.addTrans(bft)
+    val efi = MutableContainedFileInterface.withElms()
+    runStateWithArgs(efi=efi)(state)("f" -> "testOutput.txt")
+    assert(efi.fileExists("testOutput.txt"))}
+}
+
 class ShowSyntaxHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler: EsoTestInterface => InterfaceHandler = ShowSyntaxHandler
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ShowSyntaxHandler(eio)
   
   "ShowSyntaxHandler" should "correctly display syntax for FlufflePuff" in {
     val ref =
@@ -239,8 +302,78 @@ class ShowSyntaxHandlerSpec extends InterfaceHandlerSpec{
     assertResult(ref)(res)}
 }
 
+class ClearBindingsHandlerSpec extends InterfaceHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ClearBindingsHandler
+  
+  "ClearBindingsHandler" should "clear all bindings" in {
+    val state = EsoRunState.default.addBind("test", "ping")
+    val (res, _) = runStateWithArgs()(state)()
+    res match{
+      case rs: EsoRunState =>
+        val chk = rs.binds.get("test")
+        assertResult(None)(chk)
+      case _ => fail("Returned Invalid State")}}
+}
+
+class ClearCacheHandlerSpec extends InterfaceHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ClearCacheHandler
+  
+  "ClearCacheHandler" should "clear the built program cache" in {
+    val state = EsoRunState.default.cacheFunc("test", "l", 0, _ => LazyList())
+    val (res, _) = runStateWithArgs()(state)()
+    res match{
+      case rs: EsoRunState =>
+        val chk = rs.runCache.get("test" -> "l")
+        assertResult(None)(chk)
+      case _ => fail("Returned Invalid State")}}
+}
+
+class LoadBindingsHandlerSpec extends InterfaceHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = LoadBindingsHandler(eio, efi)
+  
+  "LoadBindingsHandler" should "correctly load bindings from provided file using -f option" in {
+    val (state, _) = runWithArgs()()("f" -> "testBindings.json")
+    state match{
+      case rs: EsoRunState =>
+        val chk = rs.binds.get("test")
+        assertResult(Some("testCommand"))(chk)}}
+}
+
+class SaveBindingsHandlerSpec extends InterfaceHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = SaveBindingsHandler(efi)
+  
+  "SaveBindingsHandler" should "correctly save bindings to default file with no arguments" in {
+    val efi = MutableContainedFileInterface.withElms()
+    val state = EsoRunState.default.addBind("test", "testCommand")
+    runStateWithArgs(efi=efi)(state)()
+    val chk = efi.getFile("userBindings.json")
+    assertResult(Some("""{"names":["test"],"test":"testCommand"}"""))(chk)}
+  
+  it should "correctly save bindings to provided file using -f option" in {
+    val efi = MutableContainedFileInterface.withElms()
+    val state = EsoRunState.default.addBind("test", "testCommand")
+    runStateWithArgs(efi=efi)(state)("f" -> "testBindings.json")
+    val chk = efi.getFile("testBindings.json")
+    assertResult(Some("""{"names":["test"],"test":"testCommand"}"""))(chk)}
+}
+
+class ListBindingsHandlerSpec extends InterfaceHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ListBindingsHandler(eio)
+  
+  "ListBindingsHandler" should "correctly list the current bindings" in {
+    val binds = (('a' to 'z') zip (1 to 26)).toVector
+    val state = binds.foldLeft(EsoRunState.default){case (s, (k, v)) => s.addBind(k.toString, v.toString)}
+    val (_, res) = runStateWithArgs()(state)()
+    val ref =
+      s"""|Bindings...
+          |${binds.map{case (k, v) => s"- $k => $v"}.sorted.mkString("\n")}
+          |
+          |""".stripMargin
+    assertResult(normLines(ref))(normLines(res))}
+}
+
 class SetVarHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler: EsoTestInterface => InterfaceHandler = SetVarHandler
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = SetVarHandler(eio)
   def permuteBin(len: Int): LazyList[Vector[Boolean]] = {
     LazyList
       .from(0)
@@ -318,4 +451,160 @@ class SetVarHandlerSpec extends InterfaceHandlerSpec{
     
     val res2 = runWithArgs()()("log" -> "100")._2
     assertResult(s"""Error: Invalid Parameter Name or Value for "log"${'\n'}""")(res2)}
+}
+
+class SetDefaultsHandlerSpec extends InterfaceHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = SetDefaultsHandler
+  
+  "SetDefaultHandler" should "reset the state to defaults" in {
+    val state = EsoRunState(immutable.HashMap(), immutable.HashMap(), immutable.HashMap(), immutable.HashMap(), immutable.HashMap(), immutable.HashMap(), immutable.HashMap())
+    val (res, _) = runStateWithArgs()(state)()
+    assertResult(EsoRunState.default)(res)}
+}
+
+class ListLangsHandlerSpec extends InterfaceHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ListLangsHandler(eio)
+  
+  "ListLangsHandler" should "correctly list the available language components" in {
+    val ref =
+      """Languages...
+        |- ///
+        |- ALPL
+        |- Befunge-93
+        |- Befunge-98
+        |- BrainFuck
+        |- Deadfish
+        |- Emmental
+        |- FracTran
+        |- FracTran++
+        |- Glypho
+        |- Grass
+        |- LazyBird
+        |- LazyK
+        |- Metatape
+        |- NULL
+        |- P''
+        |- PATH
+        |- Platts
+        |- Prelude
+        |- SNUSP
+        |- Scala
+        |- Thue
+        |- Unlambda
+        |- Volatile
+        |- WhiteSpace
+        |- Wierd
+        |- WordLang
+        |
+        |Translators...
+        |- FlufflePuff <=> BrainFuck
+        |- GlyphoShorthand <=> Glypho
+        |- LazyK_CC <=> LazyK
+        |- LazyK_Iota <=> LazyK
+        |- LazyK_Jot <=> LazyK
+        |- LazyK_Unlambda <=> LazyK
+        |- Ook <=> BrainFuck
+        |- WSAssembly <=> WhiteSpace
+        |
+        |Transpilers...
+        |- BrainFuck => C++
+        |- BrainFuck => LazyK
+        |- BrainFuck => Metatape
+        |- BrainFuck => Prelude
+        |- BrainFuck => SNUSP
+        |- BrainFuck => Scala
+        |- Lambda_Calculus => LazyK_Unlambda
+        |- Lambda_Calculus => Unlambda
+        |- WhiteSpace => Scala
+        |
+        |""".stripMargin
+    val (_, res) = runWithArgs()()()
+    assertResult(normLines(ref))(normLines(res))}
+}
+
+class listVarsHandlerSpec extends InterfaceHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ListVarsHandler(eio)
+  
+  "listVarsHandler" should "correctly list the available runtime parameters" in {
+    val ref =
+      """Runtime Parameters...
+        |- appendInp     	= false	(append console input to the end of file input (useful for some self-interpreters))
+        |- bfDiv         	= true 	(toggle whether or not divison by 0 evaluates to 0 in Befunge-98)
+        |- bfRetCode     	= false	(toggle whether or not the Befunge-98 return code is displayed)
+        |- cache         	= true 	(cache initialized state of programs for faster repeated loading)
+        |- debug         	= false	(toggle debug information for the interface and languages that support it)
+        |- dfChar        	= true 	(toggle whether or not to print Deadfish output as char values)
+        |- dyn           	= false	(resize tape as needed for BF interpreter to eliminate memory limitations)
+        |- echoFileInp   	= false	(print file input to the console as it is used, makes it look as if the input was entered into the console directly)
+        |- fPtr          	= true 	(toggle whether output for P'' programs starts at the read head going right or at the end of the tape going left)
+        |- indent        	= false	(toggle whether or not to neatly indent generated Scala code)
+        |- log           	= false	(toggle detailed console logging)
+        |- normLineBreaks	= true 	(normalize all line breaks to '\n' when reading source files (for instance, '\r\n' => '\n'))
+        |- pNull         	= false	(toggle whether to print the null/empty character in the output of P'' programs)
+        |- preludePar    	= false	(run Prelude voices in parallel, can speed up execution of some programs)
+        |- printNum      	= false	(print output as numerical values rather than characters)
+        |- sHead         	= true 	(toggle whether the read head starts at the beginning of the initial tape or the right end of the tape for P'')
+        |- time          	= false	(print program duration on completion)
+        |- bfOpt         	= 2    	(BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled)
+        |- charWidth     	= 8    	(bit width of input characters for languages that do bitwise I/O)
+        |- fileEOF       	= 0    	(character value to end file input strings with)
+        |- init          	= 40000	(initial tape size for interpreters with a data tape)
+        |- methSize      	= 1000 	(maximum number of blocks in a generated method (for compiling interpreters)
+        |- olen          	= -1   	(maximum output length, useful for non-terminating programs, -1=infinite)
+        |
+        |""".stripMargin
+    val (_, res) = runWithArgs()()()
+    assertResult(normLines(ref))(normLines(res))}
+}
+
+class listFileAssociationsHandlerSpec extends InterfaceHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ListFileAssociationsHandler(eio)
+  
+  "ListFileAssociationsHandler" should "correctly list the current file associations" in {
+    val ref =
+      """File Associations...
+        |- .slash => ///
+        |- .b93 => Befunge-93
+        |- .b98 => Befunge-98
+        |- .b => BrainFuck
+        |- .df => Deadfish
+        |- .emm => Emmental
+        |- .ft => FracTran
+        |- .ftp => FracTran++
+        |- .grs => Grass
+        |- .pdp => P''
+        |- .path => PATH
+        |- .snusp => SNUSP
+        |- .scala => Scala
+        |- .th => Thue
+        |- .unl => Unlambda
+        |- .ws => WhiteSpace
+        |- .wd => Wierd
+        |- .fl => FlufflePuff
+        |- .ook => Ook
+        |- .wsa => WSAssembly
+        |- .mt => Metatape
+        |- .cpp => C++
+        |- .pld => Prelude
+        |- .nul => NULL
+        |- .vol => Volatile
+        |- .glo => Glypho
+        |- .glos => GlyphoShorthand
+        |- .plts => Platts
+        |- .wl => WordLang
+        |- .lazy => LazyK
+        |- .alpl => ALPL
+        |- .lzb => LazyBird
+        |
+        |""".stripMargin
+    val (_, res) = runWithArgs()()()
+    assertResult(normLines(ref))(normLines(res))}
+}
+
+class ExitHandlerSpec extends InterfaceHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ExitHandler
+  
+  "ExitHandler" should "return the halt state" in {
+    val (res, _) = runWithArgs()()()
+    assertResult(EsoHalt)(res)}
 }

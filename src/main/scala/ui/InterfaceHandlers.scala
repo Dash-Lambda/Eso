@@ -1,7 +1,5 @@
 package ui
 
-import java.io.{File, PrintWriter}
-
 import brainfuck.{BFTranslator, GenBFT}
 import common.{DoOrErr, DoOrNull, DoOrOp, Done, EsoExcep, EsoObj, TimeIt, Trampoline}
 import org.typelevel.jawn.Parser
@@ -53,14 +51,9 @@ abstract class InterfaceHandler extends EsoObj{
       case Some(fextReg(fext)) => EsoDefaults.fileExtensionMap.get(fext)
       case _ => None}
     case lop => lop}
-  
-  def writeFile(fnam: String, str: String): Unit = {
-    val oFile = new PrintWriter(new File(fnam))
-    oFile.print(str)
-    oFile.close()}
 }
 
-case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
+case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface, efi: EsoFileInterface = SystemFileInterface) extends InterfaceHandler{
   val nam: String = "run"
   val helpStr: String = "<-s :sourceFileName:> {-l :language:, -i :inputFileName:, -o :outputFileName:}"
   
@@ -79,27 +72,24 @@ case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface) extends Int
     
     def inputs: Try[LazyList[Char]] = args.get("i") match{
       case Some(fnam) =>
-        val fStr = EsoFileReader.readFile(fnam, normLineFlag) map (s => (s + state.nums("fileEOF").toChar).to(LazyList).map{c => if(echoFInp) eio.print(c); c})
+        val fStr = efi.readFile(fnam, normLineFlag) map (s => (s + state.nums("fileEOF").toChar).to(LazyList).map{ c => if(echoFInp) eio.print(c); c})
         if(appFlg) fStr map (s => s :++ eio.charsIterator)
         else fStr
       case None => Success(eio.charsIterator.to(LazyList))}
     
     def printer(out: Seq[Char]): Unit = args.get("o") match{
       case Some(onam) =>
-        val of = new PrintWriter(new File(onam))
         out foreach{c =>
           val str = if(printNum) c.toInt.toString + ' ' else c.toString
           eio.print(str)
-          of.print(str)
-          of.flush()}
-        of.close()
+          efi.appendFile(onam, str)}
       case None => out foreach(c => eio.print(if(printNum) c.toInt.toString + ' ' else c.toString))}
     
     Trampoline.doOrElse(state){
       DoOrOp(args.get("s"), "Missing Source File", eio){src =>
         DoOrOp(getLang(args, "l", "s"), "Unrecognized Language or File Extension", eio){lang =>
           val runner: Try[Seq[Char] => LazyList[Char]] = state.runCache.get((src, lang)) match{
-            case Some((prg, lm)) if cache && lm == EsoFileReader.getLastModified(src) =>
+            case Some((prg, lm)) if cache && lm == efi.getLastModified(src).get =>
               if(logFlg) eio.println("Using cached run (disable with 'set -cache off')")
               Success(prg)
             case _ =>
@@ -108,7 +98,7 @@ case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface) extends Int
                 DoOrOp(findTranslator(state, lang, state.interpNames), "Language Not Recognized", eio){
                   case (inam, t) =>
                     if(logFlg) eio.print("Done.\nRetrieving program from file... ")
-                    DoOrErr(EsoFileReader.readFile(src, normLineFlag), eio){progRaw =>
+                    DoOrErr(efi.readFile(src, normLineFlag), eio){ progRaw =>
                       if(logFlg) eio.print(s"Done.\nTranslating program... ")
                       DoOrErr(t(progRaw), eio){prog =>
                         if(logFlg) eio.print("Done.\nInitializing interpreter... ")
@@ -128,9 +118,9 @@ case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface) extends Int
                   case Success(_) =>
                     if(timeFlg) eio.println(s"\nProgram completed in ${rdr}ms")
                     else eio.println()}}
-              Done(if(cache) state.cacheFunc(src, lang, EsoFileReader.getLastModified(src), r) else state)}}}}}}}
+              Done(if(cache) state.cacheFunc(src, lang, efi.getLastModified(src).get, r) else state)}}}}}}}
 
-case class TranslateHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
+case class TranslateHandler(eio: EsoIOInterface = EsoConsoleInterface, efi: EsoFileInterface = SystemFileInterface) extends InterfaceHandler{
   val nam: String = "translate"
   val helpStr: String = "<-s :sourceFileName:> (-tl :targetLanguage, -o :targetFileName:) {-sl :sourceLanguage}"
   
@@ -139,7 +129,7 @@ case class TranslateHandler(eio: EsoIOInterface = EsoConsoleInterface) extends I
     
     def printer(str: String): Unit = args.get("o") match{
       case Some(onam) =>
-        writeFile(onam, str)
+        efi.writeFile(onam, str)
         if(logFlg) eio.println(s"Translation saved to $onam.")
       case None => eio.println(str)}
     
@@ -150,7 +140,7 @@ case class TranslateHandler(eio: EsoIOInterface = EsoConsoleInterface) extends I
             if(logFlg) eio.print("Searching for translation path... ")
             DoOrOp(buildTrans(state)(sl, tl), "No Applicable Translation Path", eio){t =>
               if(logFlg) eio.print("Done.\nRetrieving program from file... ")
-              DoOrErr(EsoFileReader.readFile(i), eio){progRaw =>
+              DoOrErr(efi.readFile(i), eio){ progRaw =>
                 if(logFlg) eio.print("Done.\nTranslating... ")
                 DoOrErr(t(progRaw), eio){prog =>
                   if(logFlg) eio.println("Done.")
@@ -158,7 +148,7 @@ case class TranslateHandler(eio: EsoIOInterface = EsoConsoleInterface) extends I
                   Done{state}}}}}}}}}
 }
 
-case class TranspileHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
+case class TranspileHandler(eio: EsoIOInterface = EsoConsoleInterface, efi: EsoFileInterface = SystemFileInterface) extends InterfaceHandler{
   val nam: String = "transpile"
   val helpStr: String = "<-s :sourceFileName:> (-tl :targetLanguage, -o :targetFileName:) {-sl :sourceLanguage}"
   
@@ -167,7 +157,7 @@ case class TranspileHandler(eio: EsoIOInterface = EsoConsoleInterface) extends I
     
     def printer(str: String): Unit = args.get("o") match{
       case Some(onam) =>
-        writeFile(onam, str)
+        efi.writeFile(onam, str)
         if(logFlg) eio.println(s"Transpiled program saved to $onam.")
       case None => eio.println(str)}
     
@@ -182,7 +172,7 @@ case class TranspileHandler(eio: EsoIOInterface = EsoConsoleInterface) extends I
                 DoOrOp(findTranslator(state, state.genLinks(lin), tl), "No Applicable Translation Path", eio){
                   case (lout, tout) =>
                     if(logFlg) eio.print("Done.\nRetrieving program from file... ")
-                    DoOrErr(EsoFileReader.readFile(s), eio){progRaw =>
+                    DoOrErr(efi.readFile(s), eio){ progRaw =>
                       if(logFlg) eio.print("Done.\nTranslating from source... ")
                       DoOrErr(tin(progRaw), eio){prog1 =>
                         if(logFlg) eio.print("Done.\nTranspiling... ")
@@ -211,7 +201,7 @@ case class DefineBFLangHandler(eio: EsoIOInterface = EsoConsoleInterface) extend
       state.addTrans(GenBFT(nam, syn))}
 }
 
-case class LoadBFLangsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
+case class LoadBFLangsHandler(eio: EsoIOInterface = EsoConsoleInterface, efi: EsoFileInterface = SystemFileInterface) extends InterfaceHandler{
   val nam: String = "loadBFLangs"
   val helpStr: String = "{-f :fileName:}"
   
@@ -220,7 +210,7 @@ case class LoadBFLangsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends
     
     if(logFlg) eio.print("Retrieving lang file... ")
     Trampoline.doOrElse(state){
-      DoOrErr(EsoFileReader.readFile(args.getOrElse("f", EsoDefaults.defBFLFile)), eio){langFile =>
+      DoOrErr(efi.readFile(args.getOrElse("f", EsoDefaults.defBFLFile)), eio){ langFile =>
         if(logFlg) eio.print("Done.\nParsing file... ")
         DoOrErr(Parser.parseFromString[JValue](langFile), eio){jsv =>
           DoOrNull(jsv, "Parsed To Null", eio){jso =>
@@ -238,7 +228,7 @@ case class LoadBFLangsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends
                 state.addAllTrans(tv)}}}}}}}
 }
 
-case class SaveBFLangsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
+case class SaveBFLangsHandler(eio: EsoIOInterface = EsoConsoleInterface, efi: EsoFileInterface = SystemFileInterface) extends InterfaceHandler{
   val nam: String = "saveBFLangs"
   val helpStr: String = "{-f :fileName:}"
   
@@ -249,7 +239,7 @@ case class SaveBFLangsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends
       case (id, bft: BFTranslator) if !ignore.contains(id) => (bft.name, bft.toJObject)}
     val namVec = jsoVec.map{case (k, _) => JString(k)}
     val jsObj = JObject.fromSeq(jsoVec :+ ("names", JArray.fromSeq(namVec)))
-    writeFile(fnam, jsObj.render)
+    efi.writeFile(fnam, jsObj.render())
     if(state.bools("log")) eio.println(s"Translators saved to $fnam.")
     
     state}
@@ -285,14 +275,14 @@ object ClearCacheHandler extends InterfaceHandler{
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = state.clearCache
 }
 
-case class LoadBindingsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends InterfaceHandler{
+case class LoadBindingsHandler(eio: EsoIOInterface = EsoConsoleInterface, efi: EsoFileInterface = SystemFileInterface) extends InterfaceHandler{
   val nam: String = "loadBindings"
   val helpStr: String = "{-f :fileName:}"
   
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val fnam = args.getOrElse("f", EsoDefaults.defBindFile)
     Trampoline.doOrElse(state){
-      DoOrErr(EsoFileReader.readFile(fnam), eio){str =>
+      DoOrErr(efi.readFile(fnam), eio){ str =>
         DoOrErr(Parser.parseFromString[JValue](str), eio){jVal =>
           DoOrNull(jVal.get("names"), "Missing Name List", eio){jNams =>
             Done{
@@ -305,17 +295,17 @@ case class LoadBindingsHandler(eio: EsoIOInterface = EsoConsoleInterface) extend
                   case (s, (t, b)) => s.addBind(t, b)}}}}}}}
 }
 
-object SaveBindingsHandler extends InterfaceHandler{
+case class SaveBindingsHandler(efi: EsoFileInterface = SystemFileInterface) extends InterfaceHandler{
   val nam: String = "saveBindings"
   val helpStr: String = "{-f :fileName:}"
   
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
-    val fnam = args.getOrElse("f", "userBindings.json")
+    val fnam = args.getOrElse("f", EsoDefaults.defBindFile)
     val bindVec = state.binds.toVector
     val nams = bindVec.map{case (k, _) => JString(k)}
     val jsoPairs = bindVec.map{case (k, v) => (k, JString(v))} :+ ("names", JArray.fromSeq(nams))
-    val bindStr = JObject.fromSeq(jsoPairs).render
-    writeFile(fnam, bindStr)
+    val bindStr = JObject.fromSeq(jsoPairs).render()
+    efi.writeFile(fnam, bindStr)
     
     state}
 }
@@ -375,8 +365,9 @@ case class ListLangsHandler(eio: EsoIOInterface = EsoConsoleInterface) extends I
           |
           |Transpilers...
           |${state.gens.values.map(t => s"- $t").toVector.sorted.mkString("\n")}
+          |
           |""".stripMargin
-    eio.println(str)
+    eio.print(str)
     
     state}
 }

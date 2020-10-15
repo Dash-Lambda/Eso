@@ -2,7 +2,7 @@ package common_test
 
 import common.{Config, Interpreter, Translator, Transpiler}
 import org.scalatest.flatspec.AnyFlatSpec
-import ui.{EsoFileReader, EsoRunState}
+import ui.{EsoRunState, SystemFileInterface}
 
 import scala.collection.immutable
 import scala.util.{Failure, Success, Try}
@@ -11,7 +11,7 @@ abstract class EsoSpec extends AnyFlatSpec{
   val defaultConfig: Config = EsoRunState.default.config
   
   def grabFile(str: String, normLineBreaks: Boolean = true): String = {
-    val tried = EsoFileReader.readFile(s"testResources/$str")
+    val tried = SystemFileInterface.readFile(s"testResources/$str", normLineBreaks)
     assume(tried.isSuccess)
     tried.get}
   
@@ -78,7 +78,7 @@ abstract class EsoSpec extends AnyFlatSpec{
       case Success(str) => assertResult(expected)(str)
       case Failure(e) => fail(e)}}
   def assertOutputAutoLimit(intp: Interpreter, prog: String, expected: String, inp: Seq[Char] = Seq(), config: Config = defaultConfig): Unit = {
-    val res = getOutput(intp, prog) map (_.take(expected.length).mkString)
+    val res = getOutput(intp, prog, inp, config) map (_.take(expected.length).mkString)
     res match{
       case Success(str) => assertResult(expected)(str)
       case Failure(e) => fail(e)}}
@@ -137,4 +137,6 @@ abstract class EsoSpec extends AnyFlatSpec{
         for(a +: b +: _ <- results.sliding(2)){
           assertResult(a)(b)}
       case Failure(e) => fail(e)}}
+  
+  def normLines(str: String): String = str.replace("\r\n", "\n")
 }

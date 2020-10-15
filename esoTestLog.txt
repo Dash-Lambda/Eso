@@ -54,6 +54,12 @@ LazyK_Unlambda <=> LazyK
 - should preserve the behavior of hworldIota.lazy when translating from LazyK to LazyK_Unlambda
 - should preserve the behavior of hworldJot.lazy when translating from LazyK to LazyK_Unlambda
 - should preserve the behavior of hworld.lazy when translating from LazyK_Unlambda to LazyK
+ClearBindingsHandlerSpec:
+ClearBindingsHandler
+- should clear all bindings
+LoadBindingsHandlerSpec:
+LoadBindingsHandler
+- should correctly load bindings from provided file using -f option
 RunProgHandlerSpec:
 RunProgHandler
 - should fail on an unknown file extension
@@ -71,6 +77,8 @@ RunProgHandler
 - should build a translator path if needed
 - should cache built programs if the cache flag is on
 - should not cache built programs if the cache flag is off
+- should write program output to a file with the -o option
+- should not write program output to a file without the -o option
 DeadfishSpec:
 Deadfish
 - should run hworld.df correctly
@@ -92,14 +100,23 @@ TranslateHandler
 - should translate hworldfl.txt to BrainFuck correctly with language override
 - should recognize known file extensions
 - should chain translators if needed
+- should write translation to a file with the -o option
+- should not write translation to a file without the -o option
 WhiteSpaceSpec:
 WhiteSpace
 - should run hworld.ws correctly
 - should return a referentially transparent function for hworld.ws
+SaveBFLangsHandlerSpec:
+SaveBFLangsHandler
+- should save to the default file if none is provided
+- should save to the provided file with -f option
 OokSpec:
 Ook <=> BrainFuck
 - should preserve the behavior of hworld.ook when translating from BrainFuck to Ook
 - should preserve the behavior of hworld.b when translating from Ook to BrainFuck
+listVarsHandlerSpec:
+listVarsHandler
+- should correctly list the available runtime parameters
 PreludeSpec:
 Prelude
 - should run hworld.pld correctly in parallel
@@ -111,9 +128,16 @@ MemTape
 - should respect static size
 - should respect out-of-bounds gets when dynamic
 - should respect out-of-bounds sets when dynamic
+SetDefaultsHandlerSpec:
+SetDefaultHandler
+- should reset the state to defaults
 ShowSyntaxHandlerSpec:
 ShowSyntaxHandler
 - should correctly display syntax for FlufflePuff
+SaveBindingsHandlerSpec:
+SaveBindingsHandler
+- should correctly save bindings to default file with no arguments
+- should correctly save bindings to provided file using -f option
 DefineBFLangHandlerSpec:
 DefineBFLangHandler
 - should correctly define a BF lang
@@ -144,6 +168,8 @@ TranspileHandler
 - should transpile hworldb.txt to Metatape correctly with language override
 - should recognize known file extensions
 - should build a translator path if needed
+- should write transpilation to a file with the -o option
+- should not write transpilation to a file without the -o option
 GlyphoShorthandSpec:
 GlyphoShorthand <=> Glypho
 - should preserve the behavior of hworld.glos when translating from Glypho to GlyphoShorthand
@@ -172,6 +198,12 @@ LoadBFLangsHandlerSpec:
 LoadBFLangsHandlerSpec
 - should fail on an inaccessible file
 - should correctly load languages from a file
+listFileAssociationsHandlerSpec:
+ListFileAssociationsHandler
+- should correctly list the current file associations
+ListBindingsHandlerSpec:
+ListBindingsHandler
+- should correctly list the current bindings
 ALPLSpec:
 ALPL
 - should run hworld.alpl correctly
@@ -219,6 +251,9 @@ PDPSpec:
 P''
 - should run hworld.pdp correctly
 - should return a referentially transparent function for hworld.pdp
+ListLangsHandlerSpec:
+ListLangsHandler
+- should correctly list the available language components
 BFISpec:
 BFBase
 - should run hworld.b correctly
@@ -246,6 +281,9 @@ BFComp
 - should return a referentially transparent function for hworld.b
 - should return a referentially transparent function for hworldBugTest.b
 - should return a referentially transparent function for bitWidth.b
+ClearCacheHandlerSpec:
+ClearCacheHandler
+- should clear the built program cache
 GrassSpec:
 Grass
 - should run hworld.grs correctly
@@ -291,14 +329,17 @@ SetVarHandler
 - should recognize multiple assignments
 - should report invalid variable names
 - should report invalid value types
+ExitHandlerSpec:
+ExitHandler
+- should return the halt state
 MetatapeSpec:
 Metatape
 - should run hworld.mt correctly
 - should run bitWidth.mt correctly
 - should return a referentially transparent function for hworld.mt
 - should return a referentially transparent function for bitWidth.mt
-Run completed in 1 minute, 29 seconds.
-Total number of tests run: 198
-Suites: completed 48, aborted 0
-Tests: succeeded 198, failed 0, canceled 0, ignored 0, pending 0
+Run completed in 1 minute, 34 seconds.
+Total number of tests run: 217
+Suites: completed 59, aborted 0
+Tests: succeeded 217, failed 0, canceled 0, ignored 0, pending 0
 All tests passed.
