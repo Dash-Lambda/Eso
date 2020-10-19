@@ -37,6 +37,7 @@ object EsoDefaults extends EsoObj{
   
   val defBFLFile: String = "BFLangs.json"
   val defBindFile: String = "userBindings.json"
+  val defAssocFile: String = "fileAssoc.json"
   val fileExtensionsVec: Vector[(String, String)] = Vector(
     ("slash", "///"),
     ("b93", "Befunge-93"),
@@ -161,6 +162,11 @@ object EsoDefaults extends EsoObj{
     ListLangsHandler(),
     ListVarsHandler(),
     ListFileAssociationsHandler(),
+    SaveFileAssociationsHandler(),
+    LoadFileAssociationsHandler(),
+    AddFileAssociationHandler,
+    DropFileAssociationHandler,
+    ClearFileAssociationsHandler,
     ExitHandler)
   
   def allHandlers(eio: EsoIOInterface = EsoConsoleInterface): Vector[InterfaceHandler] = Vector(

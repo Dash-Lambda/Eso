@@ -15,7 +15,8 @@ case class EsoRunState(interps: immutable.HashMap[String, Interpreter],
                        bools: immutable.HashMap[String, Boolean],
                        nums: immutable.HashMap[String, Int],
                        binds: immutable.HashMap[String, String],
-                       runCache: immutable.HashMap[(String, String), (Seq[Char] => LazyList[Char], Long)]) extends EsoState{
+                       runCache: immutable.HashMap[(String, String), (Seq[Char] => LazyList[Char], Long)],
+                       fileAssoc: immutable.HashMap[String, String]) extends EsoState{
   import EsoRunState.{trueReg, falseReg, charReg, intReg}
   
   def addInterp(intp: Interpreter): EsoRunState = nextState(newInterps = interps + ((intp.name, intp)))
@@ -25,6 +26,7 @@ case class EsoRunState(interps: immutable.HashMap[String, Interpreter],
   def addNum(nam: String, num: Int): EsoRunState = nextState(newNums = nums + ((nam, num)))
   def addBind(nam: String, bind: String): EsoRunState = nextState(newBinds = binds + ((nam, bind)))
   def cacheFunc(nam: String, lang: String, lm: Long, func: Seq[Char] => LazyList[Char]): EsoRunState = nextState(newRunCache = runCache + (((nam, lang), (func, lm))))
+  def addAssoc(ext: String, lang: String): EsoRunState = nextState(newFileAssoc = fileAssoc + ((ext, lang)))
   
   def addAllTrans(tranVec: Vector[Translator]): EsoRunState = nextState(newTrans = trans ++ tranVec.map(t => (t.id, t)))
   
@@ -34,9 +36,11 @@ case class EsoRunState(interps: immutable.HashMap[String, Interpreter],
   def dropBool(nam: String): EsoRunState = nextState(newBools = bools - nam)
   def dropNum(nam: String): EsoRunState = nextState(newNums = nums - nam)
   def dropBind(nam: String): EsoRunState = nextState(newBinds = binds - nam)
+  def dropAssoc(ext: String): EsoRunState = nextState(newFileAssoc = fileAssoc - ext)
   
   def clearBinds: EsoRunState = nextState(newBinds = immutable.HashMap())
   def clearCache: EsoRunState = nextState(newRunCache = immutable.HashMap())
+  def clearAssoc: EsoRunState = nextState(newFileAssoc = immutable.HashMap())
   
   def nextState(newInterps: immutable.HashMap[String, Interpreter] = interps,
                 newGens: immutable.HashMap[(String, String), Transpiler] = gens,
@@ -44,8 +48,9 @@ case class EsoRunState(interps: immutable.HashMap[String, Interpreter],
                 newBools: immutable.HashMap[String, Boolean] = bools,
                 newNums: immutable.HashMap[String, Int] = nums,
                 newBinds: immutable.HashMap[String, String] = binds,
-                newRunCache: immutable.HashMap[(String, String), (Seq[Char] => LazyList[Char], Long)] = runCache): EsoRunState = {
-    EsoRunState(newInterps, newGens, newTrans, newBools, newNums, newBinds, newRunCache)
+                newRunCache: immutable.HashMap[(String, String), (Seq[Char] => LazyList[Char], Long)] = runCache,
+                newFileAssoc: immutable.HashMap[String, String] = fileAssoc): EsoRunState = {
+    EsoRunState(newInterps, newGens, newTrans, newBools, newNums, newBinds, newRunCache, newFileAssoc)
   }
   
   def getTrans(sl: String, tl: String): Option[Config => String => Try[String]] = trans.get((sl, tl)) match{
@@ -93,7 +98,8 @@ object EsoRunState extends EsoObj{
     mkMap(EsoDefaults.defBoolVec.map(t => (t._1, t._2))),
     mkMap(EsoDefaults.defNumVec.map(t => (t._1, t._2))),
     immutable.HashMap(),
-    immutable.HashMap())
+    immutable.HashMap(),
+    mkMap(EsoDefaults.fileExtensionsVec))
   
   def withOps(opstr: String, initState: EsoRunState = default): EsoRunState = {
     @tailrec
@@ -109,4 +115,14 @@ object EsoRunState extends EsoObj{
   def withOpSeq(ops: Seq[(String, String)]): EsoRunState = {
     ops.foldLeft(default){
       case (s, (k, v)) => s.setVarSilent(k, v)}}
+  
+  def withItems(interps: immutable.HashMap[String, Interpreter] = immutable.HashMap(),
+                gens: immutable.HashMap[(String, String), Transpiler] = immutable.HashMap(),
+                trans: immutable.HashMap[(String, String), Translator] = immutable.HashMap(),
+                bools: immutable.HashMap[String, Boolean] = immutable.HashMap(),
+                nums: immutable.HashMap[String, Int] = immutable.HashMap(),
+                binds: immutable.HashMap[String, String] = immutable.HashMap(),
+                runCache: immutable.HashMap[(String, String), (Seq[Char] => LazyList[Char], Long)] = immutable.HashMap(),
+                fileAssoc: immutable.HashMap[String, String] = immutable.HashMap()): EsoRunState = {
+    EsoRunState(interps, gens, trans, bools, nums, binds, runCache, fileAssoc)}
 }

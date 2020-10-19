@@ -35,6 +35,9 @@ LazyBird
 - should return a referentially transparent function for fibComb.lzb
 - should return a referentially transparent function for asciiCat.lzb
 - should return a referentially transparent function for equals.lzb
+ClearFileAssociationsHandlerSpec:
+ClearFileAssociationsHandler
+- should clear all file associations
 BFToLazyKSpec:
 BFToLazyK
 - should preserve the behavior of bitWidth.b
@@ -86,6 +89,10 @@ Deadfish
 LambdaToLazyKUnlSpec:
 Lambda_Calculus => LazyK_Unlambda
 - should preserve the behavior of absSpaceLazyK.txt
+AddFileAssociationHandlerSpec:
+AddFileAssociationHandler
+- should add individual file associations
+- should add multiple file associations
 NULLSpec:
 NULL
 - should run hworld.nul correctly
@@ -116,7 +123,7 @@ Ook <=> BrainFuck
 - should preserve the behavior of hworld.b when translating from Ook to BrainFuck
 listVarsHandlerSpec:
 listVarsHandler
-- should correctly list the available runtime parameters
+- should correctly list the default runtime parameters
 PreludeSpec:
 Prelude
 - should run hworld.pld correctly in parallel
@@ -134,6 +141,9 @@ SetDefaultHandler
 ShowSyntaxHandlerSpec:
 ShowSyntaxHandler
 - should correctly display syntax for FlufflePuff
+DropFileAssociationHandlerSpec:
+DropFileAssociationHandler
+- should drop individual file associations
 SaveBindingsHandlerSpec:
 SaveBindingsHandler
 - should correctly save bindings to default file with no arguments
@@ -200,6 +210,7 @@ LoadBFLangsHandlerSpec
 - should correctly load languages from a file
 listFileAssociationsHandlerSpec:
 ListFileAssociationsHandler
+- should correctly list the default file associations
 - should correctly list the current file associations
 ListBindingsHandlerSpec:
 ListBindingsHandler
@@ -253,7 +264,7 @@ P''
 - should return a referentially transparent function for hworld.pdp
 ListLangsHandlerSpec:
 ListLangsHandler
-- should correctly list the available language components
+- should correctly list the default language components
 BFISpec:
 BFBase
 - should run hworld.b correctly
@@ -281,6 +292,10 @@ BFComp
 - should return a referentially transparent function for hworld.b
 - should return a referentially transparent function for hworldBugTest.b
 - should return a referentially transparent function for bitWidth.b
+LoadFileAssociationsHandlerSpec:
+LoadFileAssociationsHandler
+- should correctly load file associations from the default file with no arguments
+- should correctly load file associations from the provided file with -f
 ClearCacheHandlerSpec:
 ClearCacheHandler
 - should clear the built program cache
@@ -320,6 +335,10 @@ WordLang
 - should return a referentially transparent function for someday.wl
 - should return a referentially transparent function for listChars.wl
 - should return a referentially transparent function for cat.wl
+SaveFileAssociationsHandlerSpec:
+SaveFileAssociationsHandler
+- should correctly save file associations to the default file with no arguments
+- should correctly save file associations to the provided file with -f option
 SetVarHandlerSpec:
 SetVarHandler
 - should recognize all true keywords
@@ -339,7 +358,7 @@ Metatape
 - should return a referentially transparent function for hworld.mt
 - should return a referentially transparent function for bitWidth.mt
 Run completed in 1 minute, 34 seconds.
-Total number of tests run: 217
-Suites: completed 59, aborted 0
-Tests: succeeded 217, failed 0, canceled 0, ignored 0, pending 0
+Total number of tests run: 226
+Suites: completed 64, aborted 0
+Tests: succeeded 226, failed 0, canceled 0, ignored 0, pending 0
 All tests passed.

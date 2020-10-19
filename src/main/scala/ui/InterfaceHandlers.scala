@@ -46,9 +46,9 @@ abstract class InterfaceHandler extends EsoObj{
       .flatten
       .collectFirst{case vec if vec.last == tl => compChain(vec)}}
   
-  def getLang(args: immutable.HashMap[String, String], a: String, f: String): Option[String] = args.get(a) match{
+  def getLang(state: EsoRunState)(args: immutable.HashMap[String, String], a: String, f: String): Option[String] = args.get(a) match{
     case None => args.get(f) match{
-      case Some(fextReg(fext)) => EsoDefaults.fileExtensionMap.get(fext)
+      case Some(fextReg(fext)) => state.fileAssoc.get(fext)
       case _ => None}
     case lop => lop}
 }
@@ -87,7 +87,7 @@ case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface, efi: EsoFil
     
     Trampoline.doOrElse(state){
       DoOrOp(args.get("s"), "Missing Source File", eio){src =>
-        DoOrOp(getLang(args, "l", "s"), "Unrecognized Language or File Extension", eio){lang =>
+        DoOrOp(getLang(state)(args, "l", "s"), "Unrecognized Language or File Extension", eio){lang =>
           val runner: Try[Seq[Char] => LazyList[Char]] = state.runCache.get((src, lang)) match{
             case Some((prg, lm)) if cache && lm == efi.getLastModified(src).get =>
               if(logFlg) eio.println("Using cached run (disable with 'set -cache off')")
@@ -135,8 +135,8 @@ case class TranslateHandler(eio: EsoIOInterface = EsoConsoleInterface, efi: EsoF
     
     Trampoline.doOrElse(state){
       DoOrOp(args.get("s"), "Not Enough Arguments", eio){i =>
-        DoOrOp(getLang(args, "sl", "s"), "Unrecognized Source Language or File Extension", eio){sl =>
-          DoOrOp(getLang(args, "tl", "o"), "Unrecognized Target Language or File Extension", eio){tl =>
+        DoOrOp(getLang(state)(args, "sl", "s"), "Unrecognized Source Language or File Extension", eio){sl =>
+          DoOrOp(getLang(state)(args, "tl", "o"), "Unrecognized Target Language or File Extension", eio){tl =>
             if(logFlg) eio.print("Searching for translation path... ")
             DoOrOp(buildTrans(state)(sl, tl), "No Applicable Translation Path", eio){t =>
               if(logFlg) eio.print("Done.\nRetrieving program from file... ")
@@ -163,8 +163,8 @@ case class TranspileHandler(eio: EsoIOInterface = EsoConsoleInterface, efi: EsoF
     
     Trampoline.doOrElse(state){
       DoOrOp(args.get("s"), "Not Enough Arguments", eio){s =>
-        DoOrOp(getLang(args, "sl", "s"), "Unrecognized Source Language or File Extension", eio){sl =>
-          DoOrOp(getLang(args, "tl", "o"), "Unrecognized Target Language or File Extension", eio){tl =>
+        DoOrOp(getLang(state)(args, "sl", "s"), "Unrecognized Source Language or File Extension", eio){sl =>
+          DoOrOp(getLang(state)(args, "tl", "o"), "Unrecognized Target Language or File Extension", eio){tl =>
             if(logFlg) eio.print("Searching for source translator path... ")
             DoOrOp(findTranslator(state, sl, state.genNames.map(_._1)), "No Applicable Translation Path", eio){
               case (lin, tin) =>
@@ -282,7 +282,7 @@ case class LoadBindingsHandler(eio: EsoIOInterface = EsoConsoleInterface, efi: E
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val fnam = args.getOrElse("f", EsoDefaults.defBindFile)
     Trampoline.doOrElse(state){
-      DoOrErr(efi.readFile(fnam), eio){ str =>
+      DoOrErr(efi.readFile(fnam), eio){str =>
         DoOrErr(Parser.parseFromString[JValue](str), eio){jVal =>
           DoOrNull(jVal.get("names"), "Missing Name List", eio){jNams =>
             Done{
@@ -399,10 +399,68 @@ case class ListFileAssociationsHandler(eio: EsoIOInterface = EsoConsoleInterface
   def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
     val str =
       s"""|File Associations...
-          |${EsoDefaults.fileExtensionsVec.map{case (f, l) => s"- .$f => $l"}.mkString("\n")}
+          |${state.fileAssoc.toVector.map{case (f, l) => s"- .$f => $l"}.sorted.mkString("\n")}
           |""".stripMargin
     eio.println(str)
     state}
+}
+
+case class SaveFileAssociationsHandler(efi: EsoFileInterface = SystemFileInterface) extends InterfaceHandler{
+  val nam: String = "saveFileAssociations"
+  val helpStr: String = "{-f :fileName:}"
+  
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+    val fnam = args.getOrElse("f", EsoDefaults.defAssocFile)
+    val assVec = state.fileAssoc.toVector
+    val exts = assVec.map{case (k, _) => JString(k)}
+    val jsoPairs = assVec.map{case (k, v) => (k, JString(v))} :+ ("names", JArray.fromSeq(exts))
+    val assocStr = JObject.fromSeq(jsoPairs).render()
+    efi.writeFile(fnam, assocStr)
+    state}
+}
+
+case class LoadFileAssociationsHandler(eio: EsoIOInterface = EsoConsoleInterface, efi: EsoFileInterface = SystemFileInterface) extends InterfaceHandler{
+  val nam: String = "loadFileAssociations"
+  val helpStr: String = "{-f :fileName:}"
+  
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+    val fnam = args.getOrElse("f", EsoDefaults.defAssocFile)
+    Trampoline.doOrElse(state){
+      DoOrErr(efi.readFile(fnam), eio){str =>
+        DoOrErr(Parser.parseFromString[JValue](str), eio){jVal =>
+          DoOrNull(jVal.get("names"), "Missing Name List", eio){jNams =>
+            Done{
+              LazyList.from(0)
+                .map(jNams.get)
+                .takeWhile(_ != JNull)
+                .map(_.asString)
+                .map(k => (k, jVal.get(k).asString))
+                .foldLeft(state){
+                  case (s, (e, l)) => s.addAssoc(e, l)}}}}}}}
+}
+
+object AddFileAssociationHandler extends InterfaceHandler{
+  val nam: String = "addFileAssociation"
+  val helpStr: String = "{-:ext: :lang:}*"
+  
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+    args.toVector.foldLeft(state){
+      case (s, (e, l)) => s.addAssoc(e, l)}}
+}
+
+object DropFileAssociationHandler extends InterfaceHandler{
+  val nam: String = "dropFileAssociation"
+  val helpStr: String = "-e :ext:"
+  
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = {
+    args.get("e").map(state.dropAssoc).getOrElse(state)}
+}
+
+object ClearFileAssociationsHandler extends InterfaceHandler{
+  val nam: String = "clearFileAssociations"
+  val helpStr: String = ""
+  
+  def apply(state: EsoRunState)(args: HashMap[String, String]): EsoState = state.clearAssoc
 }
 
 object ExitHandler extends InterfaceHandler{
