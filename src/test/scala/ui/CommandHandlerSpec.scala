@@ -7,11 +7,11 @@ import metatape.Metatape
 import scala.collection.immutable
 import scala.util.{Failure, Success}
 
-abstract class InterfaceHandlerSpec extends EsoSpec{
+abstract class CommandHandlerSpec extends EsoSpec{
   val defaultState: EsoRunState = EsoRunState.default
   def defaultIO(strs: String*): EsoTestInterface = EsoTestInterface(strs)
   
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler
   def runWithArgs(eio: EsoTestInterface = defaultIO(), efi: EsoFileInterface = SystemFileInterface)(ops: (String, String)*)(args: (String, String)*): (EsoState, String) = {
     val state = EsoRunState.withOpSeq(ops)
     runner(eio, efi, state, args)}
@@ -23,8 +23,8 @@ abstract class InterfaceHandlerSpec extends EsoSpec{
     (ns, eio.collectOutput())}
 }
 
-class RunProgHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = RunProgHandler(eio, efi)
+class RunProgHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = RunProgHandler(eio, efi)
   
   "RunProgHandler" should "fail on an unknown file extension" in {
     val res = runWithArgs()()("s" -> "testResources/hworldb.txt")._2
@@ -145,8 +145,8 @@ class RunProgHandlerSpec extends InterfaceHandlerSpec{
     assert(!efi.fileExists("testOutput.txt"))}
 }
 
-class TranslateHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = TranslateHandler(eio, efi)
+class TranslateHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = TranslateHandler(eio, efi)
   
   "TranslateHandler" should "fail on unknown file extensions" in {
     val prog = runWithArgs()()("s" -> "testResources/hworldfl.txt", "tl" -> "BrainFuck")._2
@@ -179,8 +179,8 @@ class TranslateHandlerSpec extends InterfaceHandlerSpec{
     assert(!efi.fileExists("testOutput.txt"))}
 }
 
-class TranspileHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = TranspileHandler(eio, efi)
+class TranspileHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = TranspileHandler(eio, efi)
   
   "TranspileHandler" should "fail on unknown file extensions" in {
     val prog = runWithArgs()()("s" -> "testResources/hworldb.txt", "tl" -> "Metatape")._2
@@ -212,8 +212,8 @@ class TranspileHandlerSpec extends InterfaceHandlerSpec{
     assert(!efi.fileExists("testOutput.txt"))}
 }
 
-class DefineBFLangHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = DefineBFLangHandler(eio)
+class DefineBFLangHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = DefineBFLangHandler(eio)
   
   "DefineBFLangHandler" should "correctly define a BF lang" in {
     val finState = runWithArgs(defaultIO("test", "1", "2", "3", "4", "5", "6", "7", "8"))()()._1
@@ -222,9 +222,10 @@ class DefineBFLangHandlerSpec extends InterfaceHandlerSpec{
       case _ => fail("Returned Improper State")}}
 }
 
-class LoadBFLangsHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = LoadBFLangsHandler(eio, efi)
+class LoadBFLangsHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = LoadBFLangsHandler(eio, efi)
   
+  val langFile: String = grabFile("testLangs.json")
   val pairs: Vector[(String, String)] = Vector(
     "[" -> "a",
     "]" -> "b",
@@ -236,12 +237,26 @@ class LoadBFLangsHandlerSpec extends InterfaceHandlerSpec{
     "." -> "h")
   
   "LoadBFLangsHandlerSpec" should "fail on an inaccessible file" in {
-    val (_, str) = runWithArgs()()("f" -> "fail")
-    assert(str.startsWith("Error: java.io.FileNotFoundException"))}
+    val efi = MutableContainedFileInterface.withElms()
+    val (_, str) = runWithArgs(efi=efi)()("f" -> "fail")
+    withClue(s"Error: $str"){
+      assert(str.startsWith("Error: common.EsoExcep (File Not Found)"))}}
   
   it should "correctly load languages from a file" in {
-    val (ns, str) = runWithArgs()()("f" -> "testResources/testLangs.json")
+    val efi = MutableContainedFileInterface.withElms("testLangFile.json" -> (langFile, 0L))
+    val (ns, str) = runWithArgs(efi=efi)()("f" -> "testLangFile.json")
     assertResult("Loaded BF Langs:\n- test\n")(str)
+    ns match{
+      case EsoRunState(_, _, ts, _, _, _, _, _) => ts.get(("test", "BrainFuck")) match{
+        case Some(t: BFTranslator) =>
+          val res = t.kvPairs.sortBy(_._2)
+          assertResult(pairs)(res)
+        case _ => fail("Didn't Load Translator with Correct ID")}
+      case _ => fail("Returned Improper State")}}
+  
+  it should "correctly load languages through loadOnly" in {
+    val efi = MutableContainedFileInterface.withElms("BFLangs.json" -> (langFile, 0L))
+    val ns = LoadBFLangsHandler(EsoDummyInterface, efi).loadOnly(EsoRunState.default)
     ns match{
       case EsoRunState(_, _, ts, _, _, _, _, _) => ts.get(("test", "BrainFuck")) match{
         case Some(t: BFTranslator) =>
@@ -251,8 +266,8 @@ class LoadBFLangsHandlerSpec extends InterfaceHandlerSpec{
       case _ => fail("Returned Improper State")}}
 }
 
-class SaveBFLangsHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = SaveBFLangsHandler(eio, efi)
+class SaveBFLangsHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = SaveBFLangsHandler(eio, efi)
   
   val bft: GenBFT = GenBFT("test", Vector(
     "[" -> "0",
@@ -277,8 +292,8 @@ class SaveBFLangsHandlerSpec extends InterfaceHandlerSpec{
     assert(efi.fileExists("testOutput.txt"))}
 }
 
-class ShowSyntaxHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ShowSyntaxHandler(eio)
+class ShowSyntaxHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = ShowSyntaxHandler(eio)
   
   val ref: String =
     s"""Syntax for FlufflePuff...
@@ -298,8 +313,8 @@ class ShowSyntaxHandlerSpec extends InterfaceHandlerSpec{
     assertResult(ref)(res)}
 }
 
-class ClearBindingsHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ClearBindingsHandler
+class ClearBindingsHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = ClearBindingsHandler
   
   "ClearBindingsHandler" should "clear all bindings" in {
     val state = EsoRunState.default.addBind("test", "ping")
@@ -311,8 +326,8 @@ class ClearBindingsHandlerSpec extends InterfaceHandlerSpec{
       case _ => fail("Returned Invalid State")}}
 }
 
-class ClearCacheHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ClearCacheHandler
+class ClearCacheHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = ClearCacheHandler
   
   "ClearCacheHandler" should "clear the built program cache" in {
     val state = EsoRunState.default.cacheFunc("test", "l", 0, _ => LazyList())
@@ -324,19 +339,38 @@ class ClearCacheHandlerSpec extends InterfaceHandlerSpec{
       case _ => fail("Returned Invalid State")}}
 }
 
-class LoadBindingsHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = LoadBindingsHandler(eio, efi)
+class LoadBindingsHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = LoadBindingsHandler(eio, efi)
+  
+  val bindFile: String = grabFile("testBindings.json")
   
   "LoadBindingsHandler" should "correctly load bindings from provided file using -f option" in {
-    val (state, _) = runWithArgs()()("f" -> "testBindings.json")
+    val efi = MutableContainedFileInterface.withElms("testBindings.json" -> (bindFile, 0))
+    val (state, _) = runWithArgs(efi=efi)()("f" -> "testBindings.json")
+    state match{
+      case rs: EsoRunState =>
+        val chk = rs.binds.get("test")
+        assertResult(Some("testCommand"))(chk)}}
+  
+  it should "correctly load bindings from default file with no arguments" in {
+    val efi = MutableContainedFileInterface.withElms("userBindings.json" -> (bindFile, 0))
+    val (state, _) = runWithArgs(efi=efi)()()
+    state match{
+      case rs: EsoRunState =>
+        val chk = rs.binds.get("test")
+        assertResult(Some("testCommand"))(chk)}}
+  
+  it should "correctly load bindings from default file with loadOnly" in {
+    val efi = MutableContainedFileInterface.withElms("userBindings.json" -> (bindFile, 0))
+    val state = LoadBindingsHandler(EsoDummyInterface, efi).loadOnly(EsoRunState.default)
     state match{
       case rs: EsoRunState =>
         val chk = rs.binds.get("test")
         assertResult(Some("testCommand"))(chk)}}
 }
 
-class SaveBindingsHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = SaveBindingsHandler(efi)
+class SaveBindingsHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = SaveBindingsHandler(efi)
   
   "SaveBindingsHandler" should "correctly save bindings to default file with no arguments" in {
     val efi = MutableContainedFileInterface.withElms()
@@ -353,8 +387,8 @@ class SaveBindingsHandlerSpec extends InterfaceHandlerSpec{
     assertResult(Some("""{"names":["test"],"test":"testCommand"}"""))(chk)}
 }
 
-class ListBindingsHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ListBindingsHandler(eio)
+class ListBindingsHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = ListBindingsHandler(eio)
   
   "ListBindingsHandler" should "correctly list the current bindings" in {
     val binds = (('a' to 'z') zip (1 to 26)).toVector
@@ -368,8 +402,8 @@ class ListBindingsHandlerSpec extends InterfaceHandlerSpec{
     assertResult(normLines(ref))(normLines(res))}
 }
 
-class SetVarHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = SetVarHandler(eio)
+class SetVarHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = SetVarHandler(eio)
   def permuteBin(len: Int): LazyList[Vector[Boolean]] = {
     LazyList
       .from(0)
@@ -449,8 +483,8 @@ class SetVarHandlerSpec extends InterfaceHandlerSpec{
     assertResult(s"""Error: Invalid Parameter Name or Value for "log"${'\n'}""")(res2)}
 }
 
-class SetDefaultsHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = SetDefaultsHandler
+class SetDefaultsHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = SetDefaultsHandler
   
   "SetDefaultHandler" should "reset the state to defaults" in {
     val state = EsoRunState(immutable.HashMap(), immutable.HashMap(), immutable.HashMap(), immutable.HashMap(), immutable.HashMap(), immutable.HashMap(), immutable.HashMap(), immutable.HashMap())
@@ -458,8 +492,8 @@ class SetDefaultsHandlerSpec extends InterfaceHandlerSpec{
     assertResult(EsoRunState.default)(res)}
 }
 
-class ListLangsHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ListLangsHandler(eio)
+class ListLangsHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = ListLangsHandler(eio)
   
   val ref: String =
     """Languages...
@@ -519,8 +553,8 @@ class ListLangsHandlerSpec extends InterfaceHandlerSpec{
     assertResult(normLines(ref))(normLines(res))}
 }
 
-class listVarsHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ListVarsHandler(eio)
+class listVarsHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = ListVarsHandler(eio)
   
   val ref: String =
     """Runtime Parameters...
@@ -555,8 +589,8 @@ class listVarsHandlerSpec extends InterfaceHandlerSpec{
     assertResult(normLines(ref))(normLines(res))}
 }
 
-class listFileAssociationsHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ListFileAssociationsHandler(eio)
+class listFileAssociationsHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = ListFileAssociationsHandler(eio)
   
   val ref: String =
     """|File Associations...
@@ -612,8 +646,8 @@ class listFileAssociationsHandlerSpec extends InterfaceHandlerSpec{
     assertResult(normLines(ref2))(normLines(res))}
 }
 
-class SaveFileAssociationsHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = SaveFileAssociationsHandler(efi)
+class SaveFileAssociationsHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = SaveFileAssociationsHandler(efi)
   
   val refStr: String = """{"alpl":"ALPL","b":"BrainFuck","b93":"Befunge-93","b98":"Befunge-98","cpp":"C++","df":"Deadfish","emm":"Emmental","fl":"FlufflePuff","ft":"FracTran","ftp":"FracTran++","glo":"Glypho","glos":"GlyphoShorthand","grs":"Grass","lazy":"LazyK","lzb":"LazyBird","mt":"Metatape","names":["ftp","lazy","slash","th","df","b98","wl","b93","ws","pld","plts","grs","path","mt","pdp","cpp","lzb","glo","nul","glos","b","emm","fl","vol","alpl","unl","scala","ft","ook","wd","wsa","snusp"],"nul":"NULL","ook":"Ook","path":"PATH","pdp":"P''","pld":"Prelude","plts":"Platts","scala":"Scala","slash":"///","snusp":"SNUSP","th":"Thue","unl":"Unlambda","vol":"Volatile","wd":"Wierd","wl":"WordLang","ws":"WhiteSpace","wsa":"WSAssembly"}"""
   
@@ -632,8 +666,8 @@ class SaveFileAssociationsHandlerSpec extends InterfaceHandlerSpec{
       case Failure(e) => fail(s"File Read Error $e")}}
 }
 
-class LoadFileAssociationsHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = LoadFileAssociationsHandler(eio, efi)
+class LoadFileAssociationsHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = LoadFileAssociationsHandler(eio, efi)
   
   "LoadFileAssociationsHandler" should "correctly load file associations from the default file with no arguments" in {
     val efi = MutableContainedFileInterface.withElms(
@@ -654,10 +688,20 @@ class LoadFileAssociationsHandlerSpec extends InterfaceHandlerSpec{
         assertResult(Some("l1"))(rs.fileAssoc.get("e1"))
         assertResult(Some("l2"))(rs.fileAssoc.get("e2"))
       case _ => fail("Unexpected Halt State")}}
+  
+  it should "correctly load file associations from the default file with loadOnly" in {
+    val efi = MutableContainedFileInterface.withElms(
+      "fileAssoc.json" -> ("""{"e1":"l1","e2":"l2","names":["e1","e2"]}""", 0))
+    val state = EsoRunState.withItems()
+    LoadFileAssociationsHandler(EsoDummyInterface, efi).loadOnly(state) match{
+      case rs: EsoRunState =>
+        assertResult(Some("l1"))(rs.fileAssoc.get("e1"))
+        assertResult(Some("l2"))(rs.fileAssoc.get("e2"))
+      case _ => fail("Unexpected Halt State")}}
 }
 
-class AddFileAssociationHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = AddFileAssociationHandler
+class AddFileAssociationHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = AddFileAssociationHandler
   
   "AddFileAssociationHandler" should "add individual file associations" in {
     val assoc = immutable.HashMap("e1" -> "l1")
@@ -679,8 +723,8 @@ class AddFileAssociationHandlerSpec extends InterfaceHandlerSpec{
       case _ => fail("Unexpected Halt State")}}
 }
 
-class DropFileAssociationHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = DropFileAssociationHandler
+class DropFileAssociationHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = DropFileAssociationHandler
   
   "DropFileAssociationHandler" should "drop individual file associations" in {
     val assoc = immutable.HashMap("e1" -> "l1", "e2" -> "l2")
@@ -692,8 +736,8 @@ class DropFileAssociationHandlerSpec extends InterfaceHandlerSpec{
       case _ => fail("Unexpected Halt State")}}
 }
 
-class ClearFileAssociationsHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ClearFileAssociationsHandler
+class ClearFileAssociationsHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = ClearFileAssociationsHandler
   
   "ClearFileAssociationsHandler" should "clear all file associations" in {
     val assoc = immutable.HashMap("e1" -> "l1", "e2" -> "l2")
@@ -703,8 +747,8 @@ class ClearFileAssociationsHandlerSpec extends InterfaceHandlerSpec{
       case _ => fail("Unexpected Halt State")}}
 }
 
-class ExitHandlerSpec extends InterfaceHandlerSpec{
-  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): InterfaceHandler = ExitHandler
+class ExitHandlerSpec extends CommandHandlerSpec{
+  def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = ExitHandler
   
   "ExitHandler" should "return the halt state" in {
     val (res, _) = runWithArgs()()()

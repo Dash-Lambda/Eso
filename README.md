@@ -16,6 +16,7 @@
         - [The Command Parser](#the-command-parser)
         - [States and Configurations](#states-and-configurations)
         - [Command Handlers](#command-handlers)
+        - [Load Handlers](#load-handlers)
         - [Interpreter I/O](#interpreter-io)
         - [File and Console I/O](#file-and-console-io)
         - [How Translators are Used](#how-translators-are-used)
@@ -95,7 +96,7 @@ Current native language support (mostly in chronological order):
 * Feed input from text files
 * Log output to text files
 * Built program caching
-* Automatic file associations for known extensions
+* Automatic, configurable file associations for known extensions
 * Naive, optimizing, and compiling BrainFuck interpreters
 * Translate to and from compatible languages
 * Write WhiteSpace programs with a readable assembly language
@@ -219,12 +220,15 @@ Eso originally used a single monolithic interface, but that grew cumbersome. The
 
 A Handler represents a single command, and it holds three things:
 * Its name, used by the main interface to connect it to the parsed command.
-* A description of its parameters, used by the "help" command.
+* A description of its purpose and the arguments it accepts, used by the "help" command.
 * A method that executes the command.
 
 A Handler is essentially a function with the signature (State => (Arguments => State)) (it isn't necessarily a pure function, but it's a simple way to look at it). The main interface parses its input, passes its state and any additional arguments to the corresponding Handler, then the Handler executes the command and returns the new state.
 
 This approach makes it very easy to extend Eso with new features. Any new environment variables or components can be added to the State and Config structures without changing any other code, and new commands only require writing the new Handler and adding it to the interface's list of Handlers.
+
+#### Load Handlers
+Eso has several configuration components that can be saved and loaded later. Rather than requiring the user to manually load every part of their preferred configuration on each startup, Eso keeps a list of "Load Handlers" that it runs at startup to automatically load everything from the default locations. This means that if you save your bindings, custom translators, file associations, or anything else you can save, it'll be available to both the persistent and non-persistent interfaces without any action from the user.
 
 #### Interpreter I/O
 As the interpreters are pure functions, internal interaction with the console is out. Instead, Eso leans heavily on something called lazy evaluation.

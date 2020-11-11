@@ -5,9 +5,9 @@ import common.EsoObj
 import scala.collection.immutable
 import scala.util.matching.Regex
 
-case class EsoExecutor(cmds: Vector[InterfaceHandler]) extends EsoObj{
+case class EsoExecutor(cmds: Vector[CommandHandler]) extends EsoObj{
   val boundReg: Regex = raw"""(\w+)((?: .*)?)\z""".r
-  val handlers: immutable.HashMap[String, InterfaceHandler] = mkMap(cmds map (h => (h.nam, h)))
+  val handlers: immutable.HashMap[String, CommandHandler] = mkMap(cmds map (h => (h.nam, h)))
   
   def apply(state: EsoRunState)(inp: String): EsoState = parse(state.binds)(inp) match{
     case Some(res) => res match{
@@ -28,17 +28,18 @@ case class EsoExecutor(cmds: Vector[InterfaceHandler]) extends EsoObj{
     case _ => EsoCommandParser(inp)}
   
   def showHelp(): Unit = {
-    val cStr = cmds.map(h => s"- ${h.nam} ${h.helpStr}").sorted.mkString("\n")
+    val len = cmds.map(_.nam.length).max
+    val cStr = cmds.sortBy(_.nam).map(h => s"  %${len}s: ${h.helpStr}".format(h.nam)).mkString("\n")
     val hStr =
       s"""|Version: ${getClass.getPackage.getImplementationVersion}
           |Commands:
           |$cStr
           |
           |Syntax:
-          |<expr>: Required
-          |(expr): At Least One
-          |{expr}: Optional
-          |expr*: Repeated any number of times
+          |  <expr>: Required
+          |  [expr]: At least one of
+          |  {expr}: Optional
+          |   expr*: Repeated any number of times
           |""".stripMargin
     println(hStr)}
 }

@@ -32,8 +32,8 @@ import scala.collection.immutable
 object EsoDefaults extends EsoObj{
   val defPointer: String = "Eso> "
   val defWelcome: String =
-    """|Welcome to Eso, the functional esoteric language interpreter!
-       |Type "help" for a list of commands.""".stripMargin
+    s"""|Welcome to Eso (v${getClass.getPackage.getImplementationVersion}), the functional esoteric language interpreter!
+        |Type "help" for a list of commands.""".stripMargin
   
   val defBFLFile: String = "BFLangs.json"
   val defBindFile: String = "userBindings.json"
@@ -135,7 +135,11 @@ object EsoDefaults extends EsoObj{
   val defTransMap: immutable.HashMap[(String, String), Translator] = mkMap(defTransVec map (t => (t.id, t)))
   val defGenMap: immutable.HashMap[(String, String), Transpiler] = mkMap(defGenVec map (g => (g.id, g)))
   
-  val nonPersistentHandlers: Vector[InterfaceHandler] = Vector(
+  val nonPersistentStartupLoaders: Vector[LoadHandler] = Vector(
+    LoadBFLangsHandler(eio = EsoDummyInterface),
+    LoadBindingsHandler(eio = EsoDummyInterface),
+    LoadFileAssociationsHandler(eio = EsoDummyInterface))
+  val nonPersistentHandlers: Vector[CommandHandler] = Vector(
     RunProgHandler(),
     TranslateHandler(),
     TranspileHandler(),
@@ -144,7 +148,11 @@ object EsoDefaults extends EsoObj{
     ListVarsHandler(),
     ListFileAssociationsHandler())
   
-  val persistentHandlers: Vector[InterfaceHandler] = Vector(
+  val persistentStartupLoaders: Vector[LoadHandler] = Vector(
+    LoadBFLangsHandler(eio = EsoDummyInterface),
+    LoadBindingsHandler(eio = EsoDummyInterface),
+    LoadFileAssociationsHandler(eio = EsoDummyInterface))
+  val persistentHandlers: Vector[CommandHandler] = Vector(
     RunProgHandler(),
     TranslateHandler(),
     TranspileHandler(),
@@ -169,7 +177,7 @@ object EsoDefaults extends EsoObj{
     ClearFileAssociationsHandler,
     ExitHandler)
   
-  def allHandlers(eio: EsoIOInterface = EsoConsoleInterface): Vector[InterfaceHandler] = Vector(
+  def allHandlers(eio: EsoIOInterface = EsoConsoleInterface): Vector[CommandHandler] = Vector(
     RunProgHandler(eio),
     TranslateHandler(eio),
     TranspileHandler(eio),

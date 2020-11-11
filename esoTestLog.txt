@@ -63,6 +63,8 @@ ClearBindingsHandler
 LoadBindingsHandlerSpec:
 LoadBindingsHandler
 - should correctly load bindings from provided file using -f option
+- should correctly load bindings from default file with no arguments
+- should correctly load bindings from default file with loadOnly
 RunProgHandlerSpec:
 RunProgHandler
 - should fail on an unknown file extension
@@ -208,6 +210,7 @@ LoadBFLangsHandlerSpec:
 LoadBFLangsHandlerSpec
 - should fail on an inaccessible file
 - should correctly load languages from a file
+- should correctly load languages through loadOnly
 listFileAssociationsHandlerSpec:
 ListFileAssociationsHandler
 - should correctly list the default file associations
@@ -296,6 +299,7 @@ LoadFileAssociationsHandlerSpec:
 LoadFileAssociationsHandler
 - should correctly load file associations from the default file with no arguments
 - should correctly load file associations from the provided file with -f
+- should correctly load file associations from the default file with loadOnly
 ClearCacheHandlerSpec:
 ClearCacheHandler
 - should clear the built program cache
@@ -357,8 +361,8 @@ Metatape
 - should run bitWidth.mt correctly
 - should return a referentially transparent function for hworld.mt
 - should return a referentially transparent function for bitWidth.mt
-Run completed in 1 minute, 34 seconds.
-Total number of tests run: 226
+Run completed in 1 minute, 29 seconds.
+Total number of tests run: 230
 Suites: completed 64, aborted 0
-Tests: succeeded 226, failed 0, canceled 0, ignored 0, pending 0
+Tests: succeeded 230, failed 0, canceled 0, ignored 0, pending 0
 All tests passed.

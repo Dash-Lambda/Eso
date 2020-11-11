@@ -43,3 +43,13 @@ class EsoTestInterface(var inp: Seq[String], strbldr: StringBuilder) extends Eso
 object EsoTestInterface{
   def apply(inp: Seq[String]): EsoTestInterface = new EsoTestInterface(inp, new StringBuilder)
 }
+
+object EsoDummyInterface extends EsoIOInterface{
+  def readLine: String = ""
+  
+  def readLine(str: String): String = ""
+  
+  def print(x: Any): Unit = ()
+  
+  def println(x: Any): Unit = ()
+}
