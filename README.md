@@ -191,14 +191,16 @@ def thueParse: EsoParser[(Vector[(String, String)], String)] = ruleParse.* <&> i
 Going piece by piece...
 
 ```scala
-"""(?m)^(.*\S.*)::=""".r // match a substring at the beginning of a line of the form "[expression]::=", and uses a capturing group to only return "[expression]"
-"""^(.*)\v""".r // Matches any substring from the beginning of input to a new line (vertical whitespace character), uses a capturing group to return everything but the new line character
-def ruleParse = """(?m)^(.*\S.*)::=""".r <&> """^(.*)\v""".r // Combines the first two parts to parse a line of the form "a::=b" into (a, b)
-"""(?m)^\s*::=.*\v""".r // Matches the first line with only "::=" and whitespace
-"""(?s).*""".r // Matches the whole input
-def initParse = """(?m)^\s*::=.*\v""".r &> """(?s).*""".r // Matches all of the input after a line consisting of only "::=" and whitespace
-ruleParse.* // Parses all matches from ruleParse at the same time and returns them as a vector
-def thueParse = ruleParse.* <&> initParse // Parses all Thue replacement rules into a list of pairs followed by the initial string after the terminating empty rule
+def substring = """(?m)^(.*\S.*)::=""".r // match a substring at the beginning of a line of the form "[expression]::=", and uses a capturing group to only return "[expression]"
+def replacement = """^(.*)\v""".r // Matches any substring from the beginning of input to a new line (vertical whitespace character), uses a capturing group to return everything but the new line character
+def ruleParse = substring <&> replacement // Combines the first two parts to parse a line of the form "a::=b" into (a, b)
+def ruleList = ruleParse.* // Parses all matches from ruleParse at the same time and returns them as a vector
+
+def ruleTerminator = """(?m)^\s*::=.*\v""".r // Matches the first line with only "::=" and whitespace
+def initialString = """(?s).*""".r // Matches the whole input
+def initParse = ruleTerminator &> initialString // Matches all of the input after a line consisting of only "::=" and whitespace
+
+def thueParse = ruleList <&> initParse // Parses all Thue replacement rules into a list of pairs followed by the initial string after the terminating empty rule
 ```
 
 Isn't that fun? I think that's fun.
@@ -214,7 +216,7 @@ def expression = ("i" ^^^ i) | ("`" &> (expression <&> expression) map (Applicat
 
 You see how the parser appears in its definition? Yeah, that'll blow up your stack real fast.
 
-The solution is, of course, trampolining. There's a more thorough explanation of trampolining elsewhere in this writeup (In the interface section? It's late, and I'm too lazy to check.), but basically the function calls are turned into a series of tasks that can be done within a single stack frame. All the combinators have special classes that trampoline with each other, so no matter how recursive your parser, it will never blow up the stack! Might kill your heap though... but not your stack!
+The solution is, of course, trampolining. There's a more thorough explanation of trampolining near the end of this writeup, but basically the function calls are turned into a series of tasks that can be done within a single stack frame. All the combinators have special classes that trampoline with each other, so no matter how recursive your parser, it will never blow up the stack! Might kill your heap though... but not your stack!
 
 ### How the Interface Works
 It's always a challenge to handle UI functionally. Everything behind the scenes is fair game, but actually receiving input from and sending output to the user is by definition a side-effect.
@@ -467,13 +469,13 @@ Trampoline.doOrElse(state){
 ```
 These actually represent most of the core logic. Eso uses `Try` monads for most of its error handling, as well as `Option`s for a lot of faillable tasks, so if the code were to use a normal imperative or structural style there would be a lot of redundant code for checking whether or not something failed and breaking the flow.
 
-These structures just nest each step into the previous one it's dependent on. You can see that the first layer tries to get the source file, then the second layer tries to find the language to use, and so-on. Each layer tries to do something, and either passes the result to the next layer or short-circuits with a failure. This works out to be quite an elegant way to represent multi-step IO interactions.
+These structures just nest each step into the previous one it's dependent on. You can see that the first layer tries to get the source file, then the second layer tries to figure out which language to use, and so-on. Each layer tries to do something, and either passes the result to the next layer or short-circuits with a failure. This works out to be quite an elegant way to represent multi-step IO interactions.
 
 You'll also notice that the whole thing is wrapped in a `Trampoline` method. If you were to just arbitrarily nest things like this, you would be pointlessly eating up the call stack -so instead, each layer is actually a wrapper that returns the next layer. So, during execution it's actually going into a layer then coming out of that layer with the next one, only ever going down into one layer at a time. This is called trampolining, and it's a common way to optimize recursive structures that could otherwise blow up the call stack.
 
 Of course, Eso wouldn't need special handling of trampolines if it had full TCE, but that's a matter for future JVM versions to address.
 
-###Abstraction Eliminators
+### Abstraction Eliminators
 For some combinator-calculus languages without support for lambda expressions, Eso provides abstraction eliminators. These are special transpilers that turn all lambda expressions into combinator expressions. For example, if you wanted to run abstraction elimination on an Unlambda program, you would type:
 ```
 Eso> transpile -s example.txt -o example.unl -sl Lambda_Calculus
