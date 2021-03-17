@@ -1,7 +1,7 @@
 package platts
 
 import common.{Config, Interpreter}
-import parsers.{EsoParseFail, EsoParsed, RegexParser}
+import parsers.{EsoParseFail, EsoParsed, EsoParser}
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -12,7 +12,8 @@ object Platts extends Interpreter{
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{parse(progRaw)} map{
     case (symLen, ruleMap, initData) =>
-      val stepper = RegexParser(raw"""(.{$symLen}).{$symLen}"""){ m => ruleMap.getOrElse(m.group(1), REP("", toggle=false))}
+      import parsers.Implicits._
+      def stepper: EsoParser[POP] = (s"^.{$symLen}".r <& s"^.{$symLen}".r) map (s => ruleMap.getOrElse(s, REP("", toggle=false)))
       
       @tailrec
       def repInp(ac: String, inp: Seq[Char]): (String, Seq[Char]) = {
@@ -35,7 +36,7 @@ object Platts extends Interpreter{
       inputs => LazyList.unfold((initData, false, inputs)){case (ac, out, inp) => rdo(ac, out, inp)}.flatten}
   
   def parse(progRaw: String): (Int, immutable.HashMap[String, POP], String) = {
-    val lines = progRaw.replaceAllLiterally("{input}", (-1).toChar.toString).linesIterator.to(LazyList)
+    val lines = progRaw.replace("{input}", (-1).toChar.toString).linesIterator.to(LazyList)
     val num = lines.head.toInt
     val rules = lines.tail.take(num)
     val initial = lines.drop(num + 1)

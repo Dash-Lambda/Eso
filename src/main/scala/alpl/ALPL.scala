@@ -1,7 +1,8 @@
 package alpl
 
 import common.{Config, Interpreter}
-import parsers.{DepthRecurParser, EsoParser, RegexParser}
+import parsers.EsoParser
+import parsers.Implicits._
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -11,17 +12,16 @@ import scala.util.control.TailCalls._
 object ALPL extends Interpreter{
   val name: String = "ALPL"
   
-  val allParser: EsoParser[String, Vector[Expr]] = {
-    val asnParser = RegexParser[Expr](raw"""=(.)"""){m => FuncExpr(assign(m.group(1).head))}
-    val prmParser = RegexParser[Expr](raw"""([^\[\]\.\`\=])"""){m =>
-      m.group(1) match{
-        case "?" => FuncExpr(inpFunc)
-        case "0" => FuncExpr(printFunc(false))
-        case "1" => FuncExpr(printFunc(true))
-        case str => RefExpr(str.head)}}
-    val lamParser = RegexParser[Expr](raw"""\[([^\.]*)\.([^\]]*)\]"""){m =>
-      val binds = m.group(1).toVector
-      val ops = m.group(2).toVector.map{
+  def asnParse: EsoParser[Expr] = "=" &> """^.""".r map (s => FuncExpr(assign(s.head)))
+  def prmParse: EsoParser[Expr] = """^[^\[\].`=]""".r map {
+    case "?" => FuncExpr(inpFunc)
+    case "0" => FuncExpr(printFunc(false))
+    case "1" => FuncExpr(printFunc(true))
+    case str => RefExpr(str.head)}
+  def lamParse: EsoParser[Expr] = ("[" &> ("""^[^.]*""".r <&> ("." &> """^[^]]*""".r)) <& "]") map {
+    case (p, f) =>
+      val binds = p.toVector
+      val ops = f.toVector.map{
         case '`' => None
         case c =>
           val expr = c match{
@@ -33,20 +33,19 @@ object ALPL extends Interpreter{
               case i => BoundExpr(i)}}
           Some(expr)}
       FuncExpr(Lambda(ops, Vector(), binds.size))}
-    
-    def recur(str: String): Option[(String, Int, Int)] = if(str.startsWith("`")) Some((str.tail, 0, 1)) else None
-    def collect(xs: Seq[Expr]): Expr = xs.reduceLeft(AppExpr)
-    DepthRecurParser(asnParser.withErrors <+> prmParser.withErrors <+> lamParser.withErrors)(2)(recur)(collect)
-      .withConditioning(_.replaceAll("""\s+""", ""))
-      .withErrors.*}
+  def junkParse: EsoParser[String] = """^\s*""".r
+  def alplParse: EsoParser[Expr] = junkParse &> (asnParse | prmParse | lamParse | ("`" &> (alplParse <&> alplParse) map {case (x, y) => AppExpr(x, y)}))
+  def allParse: EsoParser[Vector[Expr]] = alplParse.*
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = allParser(progRaw).toTry() map{
-    case prog +: es =>
-      inputs => {
-        val width = config.num("charWidth")
-        val initEnv = Env(immutable.HashMap(), binInp(inputs, width), 0, width - 1)
-        val initRet: TailRec[Ret] = tailcall(prog(passCont(es), initEnv))
-        LazyList.unfold(initRet)(nxt => nxt.result.resolve)}}
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
+    allParse(progRaw).toTry() map{
+      case prog +: es =>
+        inputs => {
+          val width = config.num("charWidth")
+          val initEnv = Env(immutable.HashMap(), binInp(inputs, width), 0, width - 1)
+          val initRet: TailRec[Ret] = tailcall(prog(passCont(es), initEnv))
+          LazyList.unfold(initRet)(nxt => nxt.result.resolve)}}
+  }
   
   def binInp(inp: Seq[Char], wid: Int = 8): Seq[Boolean] = {
     @tailrec

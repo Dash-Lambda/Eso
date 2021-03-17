@@ -1,24 +1,20 @@
 package unlambda
 
 import common.AbstractionEliminator
-import parsers.{EsoParser, PartialArbitraryScanParser}
-
-import scala.annotation.tailrec
+import parsers.EsoParser
+import parsers.Implicits._
 
 object LambdaToUnlambda extends AbstractionEliminator{
   val dst: String = "Unlambda"
-  val parser: EsoParser[Seq[Char], Expr] = {
-    @tailrec
-    def cdo(src: Seq[Char], ac: Vector[Char] = Vector()): Vector[Char] = src match{
-      case a +: b +: cs if a == '.' || a == '?' => cdo(cs, ac :+ a :+ (-b).toChar)
-      case c +: cs => if(" \t\r\n".contains(c)) cdo(cs, ac) else cdo(cs, ac :+ c)
-      case _ => ac}
-    PartialArbitraryScanParser[Char, Expr](_.headOption){
-      case (cs :+ a :+ b, ac) if a == '.' || a == '?' => (cs, IOExpr(a, (-b).toChar) +: ac)
-      case (cs :+ '^' :+ c, a +: ac) => (cs, a.elim(c) +: ac)
-      case (cs :+ '`', x +: y +: ac) => (cs, AppExpr(x, y) +: ac)
-      case (cs :+ c, ac) => (cs, CharExpr(c) +: ac)}
-      .withConditioning(inp => cdo(inp))}
+  
+  val parser: EsoParser[Expr] = {
+    def junkParse: EsoParser[String] = "^[ \t\r\n]*".r
+    def consoleIO: EsoParser[Expr] = ("""^[.?]""".r <&> "^.".r) map {case (a, b) => IOExpr(a.head, b.head)}
+    def abstraction: EsoParser[Expr] = "^" &> ("^.".r <&> expression) map {case (c, a) => a.elim(c.head)}
+    def application: EsoParser[Expr] = "`" &> (expression <&> expression) map {case (x, y) => AppExpr(x, y)}
+    def character: EsoParser[Expr] = "^.".r map (s => CharExpr(s.head))
+    def expression: EsoParser[Expr] = junkParse &> (application | abstraction | consoleIO | character)
+    expression}
   
   case class AppExpr(x: Expr, y: Expr) extends Expr {
     def elim(c: Char): Expr =

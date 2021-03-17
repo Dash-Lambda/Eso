@@ -1,7 +1,8 @@
 package thue
 
 import common.{Config, Interpreter}
-import parsers.{EsoParser, RegexParser}
+import parsers.EsoParser
+import parsers.Implicits._
 
 import scala.annotation.tailrec
 import scala.util.Try
@@ -9,13 +10,11 @@ import scala.util.Try
 object Thue extends Interpreter{
   val name: String = "Thue"
   
-  val thueParser: EsoParser[String, (Vector[(String, String)], String)] = {
-    val spcReg = """\s*""".r
-    val pairParser = RegexParser("""(?m)^(.*)::=(.*)$$""")(m => (m.group(1), m.group(2)))
-    val ruleParser = pairParser.onlyIf(p => !spcReg.matches(p._1 ++ p._2))
-    ruleParser.* <&> pairParser.after}
+  def ruleParse: EsoParser[(String, String)] = """(?m)^(.*\S.*)::=""".r <&> """^(.*)\v""".r
+  def initParse: EsoParser[String] = """(?m)^\s*::=.*\v""".r &> "(?s).*".r
+  def thueParse: EsoParser[(Vector[(String, String)], String)] = ruleParse.* <&> initParse
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = thueParser(progRaw).toTry() map{case (prog, init) => thi(init, prog, config.rands)}
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = thueParse(progRaw).toTry() map{case (prog, init) => thi(init, prog, config.rands)}
   
   def thi(init: String, prog: Vector[(String, String)], initRands: LazyList[Int]): Seq[Char] => LazyList[Char] = {
     def collapse(inp: Seq[Char]): Seq[String] = LazyList.unfold(inp){lst =>
@@ -32,9 +31,9 @@ object Thue extends Interpreter{
         else{
           val (k, v) = hits((r%hits.length + hits.length)%hits.length)
           v match{
-            case ":::" => tdo(ac.replaceAllLiterally(k, inp.head), inp.tail, rs)
+            case ":::" => tdo(ac.replace(k, inp.head), inp.tail, rs)
             case _ =>
-              if(v.startsWith("~")) Some((v.tail, (ac.replaceAllLiterally(k, ""), inp, rs)))
-              else tdo(ac.replaceAllLiterally(k, v), inp, rs)}}}
+              if(v.startsWith("~")) Some((v.tail, (ac.replace(k, ""), inp, rs)))
+              else tdo(ac.replace(k, v), inp, rs)}}}
     inputs => LazyList.unfold((init, collapse(inputs), initRands)){case (ac, inp, rs) => tdo(ac, inp, rs)}.flatten}
 }

@@ -13,7 +13,7 @@ class LazyBirdSpec extends EsoSpec{
     ("equals.lzb", "", "10", false))
   
   it should "interpret named combinators correctly" in {
-    def parsedEquals(a: String, b: String): Unit = assertResult(LazyBird.lzbParser.parseOne(a))(LazyBird.lzbParser.parseOne(b))
+    def parsedEquals(a: String, b: String): Unit = assertResult(LazyBird.lzbParse.parseOne(a))(LazyBird.lzbParse.parseOne(b))
     val pairs = Vector(
       "m" -> "``sii",
       "0" -> "`ki",

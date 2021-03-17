@@ -3,6 +3,7 @@ package lazyk
 import common.EsoObj
 import lazyk.LazyKFuncs._
 import parsers._
+import parsers.Implicits._
 
 import scala.util.Try
 
@@ -11,47 +12,39 @@ object LazyKParsers extends EsoObj{
   val kexpr: Expr = FuncExpr(kcomb)
   val iexpr: Expr = FuncExpr(icomb)
   val iotaexpr: Expr = FuncExpr(iotacomb)
+  def appExpr(p: (Expr, Expr)): Expr = AppExpr(p._1, p._2)
   
-  val unlParser: EsoParser[Seq[Char], Expr] = {
-    PartialRightScanningParser[Char, Expr](_.headOption){
-      case ('s', ac) => sexpr +: ac
-      case ('k', ac) => kexpr +: ac
-      case ('i', ac) => iexpr +: ac
-      case ('`', x +: y +: ac) => AppExpr(x, y) +: ac}}
+  val jotExprParse: EsoParser[Expr] = {
+    (inp: String) =>
+      val res = inp.toVector
+        .filter(c => "01".contains(c))
+        .foldRight(Vector[Expr]()){
+          case ('0', ac) => sexpr +: kexpr +: ac
+          case ('1', x +: y +: ac) => AppExpr(x, y) +: ac
+          case ('1', x +: ac) => AppExpr(x, iexpr) +: ac
+          case ('1', ac) => AppExpr(iexpr, iexpr) +: ac}
+      if(res.nonEmpty) EsoParsed(res.reduceLeft(AppExpr), "", 0, inp.length)
+      else EsoParseFail}
+  def jotBlockParse: EsoParser[String] = """^[01]+""".r
+  def jotParse: EsoParser[Expr] = jotBlockParse >> jotExprParse
   
-  val combParser: EsoParser[Seq[Char], Expr] = {
-    def collect(src: Seq[Expr]): Expr = src.reduceLeft(AppExpr)
-    def recur(src: Seq[Char]): ARPRet[Seq[Char], Expr] = src match{
-      case c +: cs => c match{
-        case '(' => ARPDown(cs, 0, 1)
-        case ')' => ARPUp(cs, 0, 1)
-        case 'S' => ARPNext(sexpr, cs, 0, 1)
-        case 'K' => ARPNext(kexpr, cs, 0, 1)
-        case 'I' => ARPNext(iexpr, cs, 0, 1)
-        case _ => ARPFail}
-      case _ => ARPUp(src, 0, 0)}
-    ArbitraryRecurParser(recur _)(collect)}
+  def unlExpParse: EsoParser[Expr] = ("s" ^^^ sexpr) | ("k" ^^^ kexpr) | ("i" ^^^ iexpr) | unlParse
+  def unlParse: EsoParser[Expr] = ("`" &> (unlExpParse <&> unlExpParse)) map appExpr
   
-  val iotaParser: EsoParser[Seq[Char], Expr] = {
-    PartialRightScanningParser[Char, Expr](_.headOption){
-      case ('i', ac) => iotaexpr +: ac
-      case ('*', x +: y +: ac) => AppExpr(x, y) +: ac}}
+  def combParse: EsoParser[Expr] = ("S" ^^^ sexpr) | ("K" ^^^ kexpr) | ("I" ^^^ iexpr) | ("(" &> ccParse <& ")")
+  def ccParse: EsoParser[Expr] = combParse.+ map (_.foldLeft(iexpr: Expr)(AppExpr))
   
-  val jotParser: EsoParser[Seq[Char], Expr] = {
-    PartialRightScanningParser[Char, Expr](exps => Some(exps.foldLeft(iexpr: Expr)(AppExpr))){
-      case ('0', ac) => sexpr +: kexpr +: ac
-      case ('1', x +: y +: ac) => AppExpr(x, y) +: ac
-      case ('1', x +: ac) => AppExpr(x, iexpr) +: ac
-      case ('1', ac) => AppExpr(iexpr, iexpr) +: ac}}
+  def iotaExpParse: EsoParser[Expr] = ("i" ^^^ iotaexpr) | iotaParse
+  def iotaParse: EsoParser[Expr] = ("*" &> (iotaExpParse <&> iotaExpParse)) map appExpr
   
-  val emptyParser: EsoParser[Seq[Char], Expr] = inp => if(inp.isEmpty) EsoParsed(iexpr, Seq(), 0, 0) else EsoParseFail
+  val emptyParser: EsoParser[Expr] = """^\Z""".r ^^^ iexpr
+  val junkParser: EsoParser[String] = """^[^`*skiSKI01()]*""".r
   
-  val lkParser: EsoParser[Seq[Char], Expr] = {
-    (unlParser <+> combParser <+> iotaParser <+> jotParser <+> emptyParser)
-      .withConditioning(p => filterContains(p.toVector, "*`ski(SKI)01"))
-      .withErrors}
+  val lkParser: EsoParser[Expr] = {
+    junkParser &> (unlParse | ccParse | iotaParse | jotParse | emptyParser)}
   
   def parse(progRaw: String): Try[Expr] = {
     def uncomment(str: String): String = str.replaceAll("""(?m)^#.*$""", "")
-    lkParser(uncomment(progRaw)).toTry("Invalid Expression")}
+    def scrub(str: String): String = filterChars(str, "`*skiSKI01()")
+    lkParser(scrub(uncomment(progRaw))).toTry("Invalid Expression")}
 }

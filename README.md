@@ -149,31 +149,72 @@ I didn't really understand the question at first, because each language's parser
 
 So I started looking into parser libraries, then parser combinator libraries, then just decided I'd write my own damn parsing tools.
 
-So, Eso has two general forms of parsers: Bespoke parsers, which are written by hand boilerplate and all, and abstracted parsers, which use Eso's set of parser tools to more cleanly and elegantly put together a parser. I only use bespoke parsers when there's a significant gain in performance (and I care enough about performance), or in any old parsers I overlooked when overhauling for the new tools.
+So, Eso has two general forms of parsers: Bespoke parsers, which are written by hand boilerplate and all, and abstracted parsers, which use Eso's parser combinators to more cleanly and elegantly put together a parser. I only use bespoke parsers when there's a significant gain in performance (and I care enough about performance), or in any old parsers I left alone when overhauling for the new tools.
 
-The parser tools are a collection of function classes that take an input and return either a parse failure or a structure with the next parsed token, the remaining input, and information on where the token was found.
+Eso's parser combinator toolset is based on two primitive parsers and a collection of functions to compose, group, and modify them (called combinators). The primitive parsers are:
 
-The parent class additionally implements methods to iterate through matches and a set of combinators and modifiers that currently consist of:
-* `map`: Maps the output of the parser
-* `withConditioning`: Modifies the input before it's parsed
-* `>>`: Pipes the result of the left-hand parser into the right-hand one (one left result is a whole right input)
-* `<+>`: Groups parsers such that the result comes from the earliest and longest match
-* `|`: If the left-hand parser fails, the right-hand parser is used
-* `<&>`: Turns the result into the product of the left-hand and right-hand parsers (the right-hand parses the remaining input after the left-hand)
-* `<&`: Gives the left-hand result only if both parsers succeed (basically `<&>` but selecting the left)
-* `&>`: Gives the right-hand result only if both parsers succeed (basically `<&>` but selecting the right)
-* `~>`: Streams the output of the left-hand parser into the right-hand one (Like `>>` except across all matches)
-* `*`: Returns a parser that parses the entire input (basically making parseAllValues the result)
-* `+`: Like `*` except it fails if there are no matches
+* String: Parses literal matches to a particular string. This is currently anchored at the beginning of the string, meaning the matched substring must be at the beginning of input. I've found this to be useful so far, but this behavior may change.
+* Regex: Parses substrings matching a particular pattern. This is free to match anywhere in the input (unless of course the regex is constrained). If the regex contains capturing groups the parsed output is the concatenation of all the capturing groups, if not then the output is the entire matched substring.
 
-There are currently 6 primary parser classes:
-* ChunkParser: Takes a function which returns an `Option`
-* PartialParser: Similar to a ChunkParser except it takes a PartialFunction
-* RecurParser: This one is for parsing to tree structures, currently used in Unlambda. It takes a `recur` function that decides when to go down a level, a `collect` function to turn a set of leaves into a node, and another parser for the non-branching tokens.
-* RegexParser: This takes a regex and a function to turn a match into the output. This one lets me condense a lot of parsers into a single line, which makes me giddy.
-* ArbitraryRecurParser: This one's called "arbitrary" because the depth isn't constant. It's given a function that can either parse the next token or tell it to go up or down a level.
-* ElementwiseParser: This one parses a sequence element by element
-* ScanParsers: These are a few parsers that take a function that transforms two collections at once. They're meant for parsing algorithms that transform the input like a zipper.
+The combinators are as follows, where `p` and `q` are parsers, `a` is a value, and `f` is a function:
+
+* `p | q`: Alternative composition that returns the first successful parse (if p then p else q)
+* `p || q`: Alternative composition that returns the earliest successful parse
+* `p ||| q`: Alternative composition that returns the longest successful parse
+* `p <| q`: Returns the result of p if q passes on the remaining input, but the input used by q is not consumed (if p and q then p)
+* `p <& q`: Sequential composition that returns the result of p if q passes on the remaining input
+* `p &> q`: Sequential composition that returns the result of q on the input after p if p succeeds (if p and q then q)
+* `p <&> q`: Sequential composition that returns the result of both p and q in a tuple
+* `p >> q`: Into composition that gives the result of p to q as input
+* `p.*` and `p.all`: Produces a parser that returns a vector of all parses from p (I wish I could do p*, but Scala is picky about postfix operators)
+* `p.+` and `p.atLeastOne`: Produces a parser that returns a vector of all parses from p, but fails if the result is empty
+* `p ^^ f` and `p map f`: Traditional map that transforms the result with the function f
+* `p flatMap f`: Takes a function that turns the result into another parser and returns the result of that parser on the remaining input
+* `p ^^^ a`: Returns a if p succeeds (identical to `p map (_ => a)`))
+
+The result is a shockingly versatile, expressive, and readable parser framework. A complete parser for the combinator calculus, for instance, can be expressed in two lines:
+
+```scala
+def combinator = ("S" ^^^ S) | ("K" ^^^ K) | ("I" ^^^ I) | ("(" &> expression <& ")")
+def expression = combinator.+ map (_.foldLeft(I)(Application))
+```
+
+Now, you may notice that I didn't actually make any primitive parsers in there. That's because both string and regex parsers have implicit conversions that allow you to use string and regex values directly as parsers. Implicits may be dangerous, _but they sure are fun._
+
+Let's take a look at the Thue parser for some regex goodness:
+```scala
+def ruleParse: EsoParser[(String, String)] = """(?m)^(.*\S.*)::=""".r <&> """^(.*)\v""".r
+def initParse: EsoParser[String] = """(?m)^\s*::=.*\v""".r &> """(?s).*""".r
+def thueParse: EsoParser[(Vector[(String, String)], String)] = ruleParse.* <&> initParse
+```
+
+Going piece by piece...
+
+```scala
+"""(?m)^(.*\S.*)::=""".r // match a substring at the beginning of a line of the form "[expression]::=", and uses a capturing group to only return "[expression]"
+"""^(.*)\v""".r // Matches any substring from the beginning of input to a new line (vertical whitespace character), uses a capturing group to return everything but the new line character
+def ruleParse = """(?m)^(.*\S.*)::=""".r <&> """^(.*)\v""".r // Combines the first two parts to parse a line of the form "a::=b" into (a, b)
+"""(?m)^\s*::=.*\v""".r // Matches the first line with only "::=" and whitespace
+"""(?s).*""".r // Matches the whole input
+def initParse = """(?m)^\s*::=.*\v""".r &> """(?s).*""".r // Matches all of the input after a line consisting of only "::=" and whitespace
+ruleParse.* // Parses all matches from ruleParse at the same time and returns them as a vector
+def thueParse = ruleParse.* <&> initParse // Parses all Thue replacement rules into a list of pairs followed by the initial string after the terminating empty rule
+```
+
+Isn't that fun? I think that's fun.
+
+Eso's first set of parser tools was far more cumbersome and a bit less expressive, relying on overcomplicated primitive parser classes rather than powerful combinators. By relying on combinators to build up complicated parsers out of simple primitives, Eso's newer parser combinator toolset is far more elegant, readable, and concise. I wish I had it from the start.
+
+As one last note on the parser combinators, you may have realized a potential problem hiding in the Combinator Calculus parser: Recursion.
+
+Let's say for example we have this Iota parser:
+```scala
+def expression = ("i" ^^^ i) | ("`" &> (expression <&> expression) map (Application))
+```
+
+You see how the parser appears in its definition? Yeah, that'll blow up your stack real fast.
+
+The solution is, of course, trampolining. There's a more thorough explanation of trampolining elsewhere in this writeup (In the interface section? It's late, and I'm too lazy to check.), but basically the function calls are turned into a series of tasks that can be done within a single stack frame. All the combinators have special classes that trampoline with each other, so no matter how recursive your parser, it will never blow up the stack! Might kill your heap though... but not your stack!
 
 ### How the Interface Works
 It's always a challenge to handle UI functionally. Everything behind the scenes is fair game, but actually receiving input from and sending output to the user is by definition a side-effect.

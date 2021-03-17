@@ -1,45 +1,46 @@
 package unlambda
 
 import common.{Config, Interpreter}
-import parsers.{EsoParser, PartialArbitraryScanParser}
+import parsers.EsoParser
+import parsers.Implicits._
 
-import scala.annotation.tailrec
 import scala.util.Try
 import scala.util.control.TailCalls._
 
 object Unlambda extends Interpreter{
   val name: String = "Unlambda"
   
-  val unlParser: EsoParser[Seq[Char], Expr] = {
-    @tailrec
-    def condition(src: Seq[Char], ac: Vector[Char] = Vector()): Vector[Char] = src match{
-      case '.' +: c +: cs => condition(cs, ac :+ '.' :+ (-c).toChar)
-      case '?' +: c +: cs => condition(cs, ac :+ '?' :+ (-c).toChar)
-      case '#' +: cs => condition(cs.dropWhile(_ != '\n'), ac)
-      case c +: cs if "ivkscdr@|e`.?#".contains(c) => condition(cs, ac :+ c)
-      case _ +: cs => condition(cs, ac)
-      case _ => ac}
-    PartialArbitraryScanParser[Char, Expr](_.headOption){
-      case (cs :+ '.' :+ c, ac) => (cs, funcExpr(outcomb((-c).toChar)) +: ac)
-      case (cs :+ '?' :+ c, ac) => (cs, funcExpr(quescomb((-c).toChar)) +: ac)
-      case (cs :+ '`', x +: y +: ac) => (cs, appExpr(x, y) +: ac)
-      case (cs :+ c, ac) =>
-        val fun = c match{
-          case 'i' => icomb
-          case 'v' => vcomb
-          case 'k' => kcomb
-          case 's' => scomb
-          case 'c' => ccomb
-          case 'd' => dcomb
-          case 'r' => outcomb('\n')
-          case '@' => atcomb
-          case '|' => pipecomb
-          case 'e' => ecomb}
-        (cs, funcExpr(fun) +: ac)}
-      .withConditioning(src => condition(src))}
+  def exprParse: EsoParser[Expr] = junkParse &> (((printParse | quesParse | combParse) map funcExpr) | appParse)
+  def appParse: EsoParser[Expr] = "`" &> (exprParse <&> exprParse) map {case (x, y) => appExpr(x, y)}
+  def printParse: EsoParser[Func] = "." &> """(?s)^.""".r map (c => outcomb(c.head))
+  def quesParse: EsoParser[Func] = "?" &> """(?s)^.""".r map (c => quescomb(c.head))
+  def combParse: EsoParser[Func] = """^[ivkscdr@|e]""".r map {
+    case "i" => icomb
+    case "v" => vcomb
+    case "k" => kcomb
+    case "s" => scomb
+    case "c" => ccomb
+    case "d" => dcomb
+    case "r" => outcomb('\n')
+    case "@" => atcomb
+    case "|" => pipecomb
+    case "e" => ecomb}
+  def junkParse: EsoParser[String] = """^[^ivkscdr@|e`.?#]*(?:#.*\v)?[^ivkscdr@|e`.?#]*""".r
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = unlParser(progRaw.toVector).toTry("Invalid Unlambda Expression") map {prog =>
-    inputs => LazyList.unfold(prog(endCont, Env(None, inputs)))(_.result.resolve)}
+  def appSParse: EsoParser[String] = ("`" &> (exprSParse <&> exprSParse).map{case (x, y) => s"`$x$y"}) map { s => println(s"Parsed App: $s"); s}
+  def printSParse: EsoParser[String] = "." &> """(?s)^.""".r map { s => println(s"Parsed Out: .$s"); s".$s"}
+  def quesSParse: EsoParser[String] = "?" &> """(?s)^.""".r map { s => println(s"Parsed   ?: ?$s"); s"?$s"}
+  def combSParse: EsoParser[String] = """^[ivkscdr@|e]""".r map { s => println(s"Parsed Com: $s"); s}
+  def exprSParse: EsoParser[String] = {
+    (junkParse map {s => if(s.nonEmpty) println(s"""Parsed Jnk: "${s.replace("\n", "\\n")}""""); s}) &> (printSParse | quesSParse | combSParse | appSParse) map { s => println(s"Parsed Exp: ${s.replace(".\n", "r")}"); s}
+  }
+  
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
+    //println
+    //exprSParse(progRaw)
+    exprParse(progRaw).toTry("Invalid Unlambda Expression") map {prog =>
+      inputs => LazyList.unfold(prog(endCont, Env(None, inputs)))(_.result.resolve)}
+  }
   
   case class Env(cur: Option[Char], inp: Seq[Char]){
     def read: Env = inp match{
@@ -71,14 +72,14 @@ object Unlambda extends Interpreter{
   //Expressions
   def funcExpr(f: Func): Expr = (cc, env) => tailcall(cc(f, env))
   def appExpr(x: Expr, y: Expr): Expr = (cc, env) => tailcall(x(exprCont(y, cc), env))
-  def appExpr(x: Func, y: Func): Expr = (cc, env) => tailcall(x(y, cc, env))
+  def funcAppExpr(x: Func, y: Func): Expr = (cc, env) => tailcall(x(y, cc, env))
   
   //Functions
   def scomb: Func = {
     (x, c1, e1) => tailcall(
       c1((y, c2, e2) => tailcall(
         c2((z, c3, e3) => tailcall(
-          x(z, exprCont(appExpr(y, z), c3), e3)), e2)), e1))}
+          x(z, exprCont(funcAppExpr(y, z), c3), e3)), e2)), e1))}
   def kcomb: Func = {
     (x, c1, en1) => tailcall(
       c1((_, c2, en2) => tailcall(

@@ -361,7 +361,7 @@ Metatape
 - should run bitWidth.mt correctly
 - should return a referentially transparent function for hworld.mt
 - should return a referentially transparent function for bitWidth.mt
-Run completed in 1 minute, 29 seconds.
+Run completed in 6 minutes, 23 seconds.
 Total number of tests run: 230
 Suites: completed 64, aborted 0
 Tests: succeeded 230, failed 0, canceled 0, ignored 0, pending 0

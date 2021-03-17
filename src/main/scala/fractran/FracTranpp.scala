@@ -11,7 +11,7 @@ import scala.util.Try
 object FracTranpp extends Interpreter{
   val name: String = "FracTran++"
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{FracTranParser.fppParser.parseOne(progRaw)} flatMap{
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{FracTranParser.fppParse.parseOne(progRaw)} flatMap{
     case (initNum, prog) => Try{fppRun(initNum, prog)}}
   
   def fppRun(initNum: SafeLong, blk: Vector[Vector[FOP]]): Seq[Char] => LazyList[Char] = {

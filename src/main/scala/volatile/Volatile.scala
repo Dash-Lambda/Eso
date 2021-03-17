@@ -1,7 +1,8 @@
 package volatile
 
 import common.{Config, Interpreter}
-import parsers.{EsoParser, PartialElementwiseParser, PartialParser}
+import parsers.EsoParser
+import parsers.Implicits._
 import spire.math.SafeLong
 
 import scala.annotation.tailrec
@@ -9,18 +10,17 @@ import scala.util.{Success, Try}
 
 object Volatile extends Interpreter{
   val name: String = "Volatile"
-  
-  val volParser: EsoParser[Seq[Char], VOP] = {
-    PartialElementwiseParser[Char, VOP]{
-      case '~' => PUSH
-      case '+' => ADD
-      case '-' => SUBT
-      case '*' => MULT
-      case '/' => DIV
-      case ':' => DUP
-      case '.' => OUT
-      case '(' => LSTART(-1)
-      case ')' => LEND(-1)}}
+
+  def volParse: EsoParser[VOP] = """^[~+\-*/:.()]""".r map{
+    case "~" => PUSH
+    case "+" => ADD
+    case "-" => SUBT
+    case "*" => MULT
+    case "/" => DIV
+    case ":" => DUP
+    case "." => OUT
+    case "(" => LSTART(-1)
+    case ")" => LEND(-1)}
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
     val prog = parse(progRaw)
@@ -55,7 +55,7 @@ object Volatile extends Interpreter{
           case n +: ns => sdo(ops, ac.updated(n, LSTART(i + 1)) :+ LEND(n + 1), ns)}
         case _ => sdo(ops, ac :+ op, stk)}
       case _ => ac}
-    sdo(volParser.parseAllValuesLazy(filterChars(progRaw, "~+-*/:.()").toVector).zipWithIndex)}
+    sdo(volParse.parseAllValuesLazy(filterChars(progRaw, "~+-*/:.()")).zipWithIndex)}
   
   trait VOP
   object PUSH extends VOP

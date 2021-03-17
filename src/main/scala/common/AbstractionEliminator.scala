@@ -7,7 +7,7 @@ import scala.util.Try
 abstract class AbstractionEliminator extends Transpiler{
   val src: String = "Lambda_Calculus"
   
-  val parser: EsoParser[Seq[Char], Expr]
+  val parser: EsoParser[Expr]
   
   def apply(config: Config)(progRaw: String): Try[String] = parser(progRaw).toTry() map (_.toString)
   

@@ -1,19 +1,19 @@
 package lazyk
 
 import common.AbstractionEliminator
-import parsers.{EsoParser, PartialArbitraryScanParser}
+import parsers.EsoParser
+import parsers.Implicits._
 
 object LambdaToLazyKUnl extends AbstractionEliminator{
   val dst: String = "LazyK_Unlambda"
   
-  val parser: EsoParser[Seq[Char], Expr] = {
-    PartialArbitraryScanParser[Char, Expr](_.headOption){
-      case (cs :+ '^' :+ c, a +: ac) => (cs, a.elim(c) +: ac)
-      case (cs :+ '`', x +: y +: ac) => (cs, AppExpr(x, y) +: ac)
-      case (cs :+ c, ac) =>
-        if(" \t\r\n".contains(c)) (cs, ac)
-        else (cs, CharExpr(c) +: ac)}
-      .withErrors}
+  val parser: EsoParser[Expr] = {
+    def junkParse: EsoParser[String] = "^[ \t\r\n]*".r
+    def abstraction: EsoParser[Expr] = "^" &> ("^.".r <&> expression) map {case (c, a) => a.elim(c.head)}
+    def application: EsoParser[Expr] = "`" &> (expression <&> expression) map {case (x, y) => AppExpr(x, y)}
+    def character: EsoParser[Expr] = "^.".r map (s => CharExpr(s.head))
+    def expression: EsoParser[Expr] = junkParse &> (application | abstraction | character)
+    expression}
   
   case class AppExpr(x: Expr, y: Expr) extends Expr {
     def elim(c: Char): Expr =

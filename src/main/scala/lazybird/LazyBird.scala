@@ -1,47 +1,45 @@
 package lazybird
 
 import common.{Config, Interpreter}
-import parsers.{EsoParser, PartialArbitraryScanParser}
+import parsers.EsoParser
+import parsers.Implicits._
 
 import scala.util.Try
 import scala.util.control.TailCalls._
 
 object LazyBird extends Interpreter{
   val name: String = "LazyBird"
+  val sexpr: Expr = FE(S)
+  val kexpr: Expr = FE(K)
+  val iexpr: Expr = FE(I)
   
-  val lzbParser: EsoParser[Seq[Char], Expr] = {
-    val s: Expr = FE(S)
-    val k: Expr = FE(K)
-    val i: Expr = FE(I)
-    PartialArbitraryScanParser[Char, Expr](_.headOption){
-      case (cs :+ '.' :+ c, ac) => (cs, FE(PrintComb(c)) +: ac)
-      case (cs :+ '^' :+ c, a +: ac) => (cs, a.elim(c.toLower) +: ac)
-      case (cs :+ '`', x +: y +: ac) => (cs, AppExpr(x, y) +: ac)
-      case (cs :+ c, ac) =>
-        val expr = c.toLower match{
-          case 's' => s
-          case 'k' => k
-          case 'i' => i
-          case 'm' => AE(AE(s, i), i)
-          case '0' => AE(k, i)
-          case 'w' => AE(AE(s, s), AE(k, i))
-          case 'u' => AE(AE(s, AE(k, AE(s, i))), AE(AE(s, i), i))
-          case 'o' => AE(s, i)
-          case 't' => AE(AE(s, AE(k, AE(s, i))), k)
-          case 'l' => AE(AE(s, AE(AE(s, AE(k, s)), k)), AE(k, AE(AE(s, i), i)))
-          case 'b' => AE(AE(s, AE(k, s)), k)
-          case 'c' => AE(AE(s, AE(AE(s, AE(k, AE(AE(s, AE(k, s)), k))), s)), AE(k, k))
-          case 'q' => AE(AE(s, AE(k, AE(s, AE(AE(s, AE(k, s)), k)))), k)
-          case 'v' => AE(AE(s, AE(k, AE(AE(s, AE(AE(s, AE(k, AE(AE(s, AE(k, s)), k))), s)), AE(k, k)))), AE(AE(s, AE(k, AE(s, i))), k))
-          case '@' => AE(AE(s, AE(AE(s, i), AE(k, s))), AE(k, k))
-          case '#' => FE(V)
-          case '_' => FE(Read)
-          case '&' => FE(Eql)
-          case 'r' => FE(PrintComb('\n'))
-          case cl => CharExpr(cl)}
-        (cs, expr +: ac)}.withErrors}
+  def primParse: EsoParser[Expr] = "^.".r map {
+    case "s" => sexpr
+    case "k" => kexpr
+    case "i" => iexpr
+    case "m" => AE(AE(sexpr, iexpr), iexpr)
+    case "0" => AE(kexpr, iexpr)
+    case "w" => AE(AE(sexpr, sexpr), AE(kexpr, iexpr))
+    case "u" => AE(AE(sexpr, AE(kexpr, AE(sexpr, iexpr))), AE(AE(sexpr, iexpr), iexpr))
+    case "o" => AE(sexpr, iexpr)
+    case "t" => AE(AE(sexpr, AE(kexpr, AE(sexpr, iexpr))), kexpr)
+    case "l" => AE(AE(sexpr, AE(AE(sexpr, AE(kexpr, sexpr)), kexpr)), AE(kexpr, AE(AE(sexpr, iexpr), iexpr)))
+    case "b" => AE(AE(sexpr, AE(kexpr, sexpr)), kexpr)
+    case "c" => AE(AE(sexpr, AE(AE(sexpr, AE(kexpr, AE(AE(sexpr, AE(kexpr, sexpr)), kexpr))), sexpr)), AE(kexpr, kexpr))
+    case "q" => AE(AE(sexpr, AE(kexpr, AE(sexpr, AE(AE(sexpr, AE(kexpr, sexpr)), kexpr)))), kexpr)
+    case "v" => AE(AE(sexpr, AE(kexpr, AE(AE(sexpr, AE(AE(sexpr, AE(kexpr, AE(AE(sexpr, AE(kexpr, sexpr)), kexpr))), sexpr)), AE(kexpr, kexpr)))), AE(AE(sexpr, AE(kexpr, AE(sexpr, iexpr))), kexpr))
+    case "@" => AE(AE(sexpr, AE(AE(sexpr, iexpr), AE(kexpr, sexpr))), AE(kexpr, kexpr))
+    case "#" => FE(V)
+    case "_" => FE(Read)
+    case "&" => FE(Eql)
+    case "r" => FE(PrintComb('\n'))
+    case cl => CharExpr(cl.head)}
+  def printParse: EsoParser[Expr] = "." &> "^.".r map (c => FE(PrintComb(c.head)))
+  def absParse: EsoParser[Expr] = "^" &> ("^.".r <&> lzbParse) map {case (c, e) => e.elim(c.head.toLower)}
+  def appParse: EsoParser[Expr] = "`" &> (lzbParse <&> lzbParse) map {case (x, y) => AppExpr(x, y)}
+  def lzbParse: EsoParser[Expr] = appParse | absParse | printParse | primParse
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = lzbParser(progRaw.toVector).toTry() map{ prog =>
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = lzbParse(progRaw).toTry() map{ prog =>
     inputs => LazyList.unfold(tailcall(prog(endCont, Env(inputs))))(nxt => nxt.result.resolve)}
   
   case class Env(inp: Seq[Char]){

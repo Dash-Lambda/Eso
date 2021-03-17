@@ -1,34 +1,34 @@
 package grass
 
 import common.{Config, Interpreter}
-import parsers.{EsoParser, RegexParser}
+import parsers.EsoParser
+import parsers.Implicits._
 
 import scala.annotation.tailrec
 import scala.util.Try
 
 object Grass extends Interpreter{
   val name: String = "Grass"
+  @tailrec
+  def absArity(n: Int, p: Vector[Expr]): Vector[Expr] = {
+    if(n > 0) absArity(n - 1, Vector(AbsExpr(p)))
+    else p}
+  def firstParse: EsoParser[String] = "(?s)[ｗw].*".r map (s =>
+    filterChars(s, "\uff37\uff57\uFF56\uFF36WwVv")
+      .replace("\uff37", "W")
+      .replace("\uff57", "w")
+      .replace("\uFF56", "v")
+      .replace("\uFF36", "v"))
+  def appsParse: EsoParser[Vector[Expr]] = (("^W+".r <&> "^w+".r) map {case (x, y) => AppExpr(x.length, y.length)}).*
+  def abstractParse: EsoParser[Vector[Expr]] = "^w[Ww]*".r >> ("w".all flatMap (v => appsParse.map{ es => absArity(v.length, es)}))
+  def applyParse: EsoParser[Vector[Expr]] = "^W[Ww]*".r >> appsParse
+  def grassParse: EsoParser[Vector[Expr]] = firstParse >> {
+    ("^v?".r &> (abstractParse | applyParse)).all map {res =>
+      res.flatten match{
+        case as :+ (a: AbsExpr) => as :+ a :+ AppExpr(1, 1)
+        case as => as}}}
   
-  val grassParser: EsoParser[String, Vector[Expr]] = {
-    @tailrec
-    def absArity(n: Int, p: Vector[Expr]): Vector[Expr] = {
-      if(n > 0) absArity(n - 1, Vector(AbsExpr(p)))
-      else p}
-    val appParser = RegexParser(raw"""(W+)(w+)""")(m => AppExpr(m.group(1).length, m.group(2).length)).*
-    RegexParser(raw"""(w*)([Ww]*)""")(m => absArity(m.group(1).length, appParser.parseOne(m.group(2)))).*
-      .map{res =>
-        res.flatten match{
-          case as :+ (a: AbsExpr) => as :+ a :+ AppExpr(1, 1)
-          case as => as}}
-      .withConditioning{str =>
-        filterChars(str
-          .replaceAllLiterally("\uff37", "W")
-          .replaceAllLiterally("\uff57", "w")
-          .replaceAllLiterally("\uFF56", "v")
-          .replaceAllLiterally("\uFF36", "v"),
-          "vwW").dropWhile(_ != 'w')}}
-  
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{eval(grassParser.parseOne(progRaw))}
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{eval(grassParse.parseOne(progRaw))}
   
   def eval(prog: Vector[Expr]): Seq[Char] => LazyList[Char] = {
     @tailrec
