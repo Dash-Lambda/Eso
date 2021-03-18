@@ -102,40 +102,41 @@ case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface, efi: EsoFil
           efi.appendFile(onam, str)}
       case None => out foreach(c => eio.print(if(printNum) c.toInt.toString + ' ' else c.toString))}
     
+    def runWithRunner(runner: Try[Seq[Char] => LazyList[Char]], src: String, lang: String): DoOrErr[Seq[Char] => LazyList[Char], EsoRunState] = {
+      DoOrErr(runner, eio){r =>
+        DoOrErr(inputs, eio){inp =>
+          TimeIt{tryAll{printer(olim(r(inp)))}} match{
+            case (flg, rdr) => flg match{
+              case Failure(e) =>
+                if(timeFlg) eio.println(s"\nError: $e\nProgram failed in ${rdr}ms")
+                else eio.println(s"\nError: $e")
+              case Success(_) =>
+                if(timeFlg) eio.println(s"\nProgram completed in ${rdr}ms")
+                else eio.println()}}
+          Done(if(cache) state.cacheFunc(src, lang, efi.getLastModified(src).get, r) else state)}}}
+    
     Trampoline.doOrElse(state){
       DoOrOp(args.get("s"), "Missing Source File", eio){src =>
         DoOrOp(getLang(state)(args, "l", "s"), "Unrecognized Language or File Extension", eio){lang =>
-          val runner: Try[Seq[Char] => LazyList[Char]] = state.runCache.get((src, lang)) match{
+          state.runCache.get((src, lang)) match{
             case Some((prg, lm)) if cache && lm == efi.getLastModified(src).get =>
               if(logFlg) eio.println("Using cached run (disable with 'set -cache off')")
-              Success(prg)
+              runWithRunner(Success(prg), src, lang)
             case _ =>
-              Trampoline{
-                if(logFlg) eio.print("Searching for translator path... ")
-                DoOrOp(findTranslator(state, lang, state.interpNames), "Language Not Recognized", eio){
-                  case (inam, t) =>
-                    if(logFlg) eio.print("Done.\nRetrieving program from file... ")
-                    DoOrErr(efi.readFile(src, normLineFlag), eio){ progRaw =>
-                      if(logFlg) eio.print(s"Done.\nTranslating program... ")
-                      DoOrErr(t(progRaw), eio){prog =>
-                        if(logFlg) eio.print("Done.\nInitializing interpreter... ")
-                        TimeIt(state.interps(inam)(state.config)(prog)) match{
-                          case (i, dur) =>
-                            if(logFlg) {
-                              if(timeFlg) eio.println(s"Done in ${dur}ms.")
-                              else eio.println(s"Done.")}
-                            Done(i)}}}}}}
-          DoOrErr(runner, eio){r =>
-            DoOrErr(inputs, eio){inp =>
-              TimeIt{tryAll{printer(olim(r(inp)))}} match{
-                case (flg, rdr) => flg match{
-                  case Failure(e) =>
-                    if(timeFlg) eio.println(s"\nError: $e\nProgram failed in ${rdr}ms")
-                    else eio.println(s"\nError: $e")
-                  case Success(_) =>
-                    if(timeFlg) eio.println(s"\nProgram completed in ${rdr}ms")
-                    else eio.println()}}
-              Done(if(cache) state.cacheFunc(src, lang, efi.getLastModified(src).get, r) else state)}}}}}}}
+              if(logFlg) eio.print("Searching for translator path... ")
+              DoOrOp(findTranslator(state, lang, state.interpNames), "Language Not Recognized", eio){
+                case (inam, t) =>
+                  if(logFlg) eio.print("Done.\nRetrieving program from file... ")
+                  DoOrErr(efi.readFile(src, normLineFlag), eio){ progRaw =>
+                    if(logFlg) eio.print(s"Done.\nTranslating program... ")
+                    DoOrErr(t(progRaw), eio){prog =>
+                      if(logFlg) eio.print("Done.\nInitializing interpreter... ")
+                      TimeIt(state.interps(inam)(state.config)(prog)) match{
+                        case (i, dur) =>
+                          if(logFlg) {
+                            if(timeFlg) eio.println(s"Done in ${dur}ms.")
+                            else eio.println(s"Done.")}
+                          runWithRunner(i, src, lang)}}}}}}}}}}
 
 case class TranslateHandler(eio: EsoIOInterface = EsoConsoleInterface, efi: EsoFileInterface = SystemFileInterface) extends CommandHandler{
   val nam: String = "translate"

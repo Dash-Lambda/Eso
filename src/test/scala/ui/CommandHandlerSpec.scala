@@ -143,6 +143,10 @@ class RunProgHandlerSpec extends CommandHandlerSpec{
     val efi = MutableContainedFileInterface.withElms("hworld.b" -> (grabFile("hworld.b"), 0))
     runWithArgs(efi=efi)()("s" -> "hworld.b")
     assert(!efi.fileExists("testOutput.txt"))}
+  
+  it should "fail to read program if an inaccessible file is given" in {
+    val res = runWithArgs()()("s" -> "testResources/nope.b")._2
+    assert(res.startsWith("Error: java.io.FileNotFoundException"))}
 }
 
 class TranslateHandlerSpec extends CommandHandlerSpec{
