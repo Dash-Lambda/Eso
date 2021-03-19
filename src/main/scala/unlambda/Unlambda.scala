@@ -10,11 +10,11 @@ import scala.util.control.TailCalls._
 object Unlambda extends Interpreter{
   val name: String = "Unlambda"
   
-  def exprParse: EsoParser[Expr] = junkParse &> (((printParse | quesParse | combParse) map funcExpr) | appParse)
-  def appParse: EsoParser[Expr] = "`" &> (exprParse <&> exprParse) map {case (x, y) => appExpr(x, y)}
-  def printParse: EsoParser[Func] = "." &> """(?s)^.""".r map (c => outcomb(c.head))
-  def quesParse: EsoParser[Func] = "?" &> """(?s)^.""".r map (c => quescomb(c.head))
-  def combParse: EsoParser[Func] = """^[ivkscdr@|e]""".r map {
+  lazy val exprParse: EsoParser[Expr] = junkParse &> (((printParse | quesParse | combParse) map funcExpr) | appParse)
+  val appParse: EsoParser[Expr] = "`" &> (exprParse <&> exprParse) map {case (x, y) => appExpr(x, y)}
+  val printParse: EsoParser[Func] = """(?s)^\.(.)""".r map (c => outcomb(c.head))
+  val quesParse: EsoParser[Func] = """(?s)^\?(.)""".r map (c => quescomb(c.head))
+  val combParse: EsoParser[Func] = """^[ivkscdr@|e]""".r map {
     case "i" => icomb
     case "v" => vcomb
     case "k" => kcomb
@@ -25,22 +25,11 @@ object Unlambda extends Interpreter{
     case "@" => atcomb
     case "|" => pipecomb
     case "e" => ecomb}
-  def junkParse: EsoParser[String] = """^[^ivkscdr@|e`.?#]*(?:#.*\v)?[^ivkscdr@|e`.?#]*""".r
-  
-  def appSParse: EsoParser[String] = ("`" &> (exprSParse <&> exprSParse).map{case (x, y) => s"`$x$y"}) map { s => println(s"Parsed App: $s"); s}
-  def printSParse: EsoParser[String] = "." &> """(?s)^.""".r map { s => println(s"Parsed Out: .$s"); s".$s"}
-  def quesSParse: EsoParser[String] = "?" &> """(?s)^.""".r map { s => println(s"Parsed   ?: ?$s"); s"?$s"}
-  def combSParse: EsoParser[String] = """^[ivkscdr@|e]""".r map { s => println(s"Parsed Com: $s"); s}
-  def exprSParse: EsoParser[String] = {
-    (junkParse map {s => if(s.nonEmpty) println(s"""Parsed Jnk: "${s.replace("\n", "\\n")}""""); s}) &> (printSParse | quesSParse | combSParse | appSParse) map { s => println(s"Parsed Exp: ${s.replace(".\n", "r")}"); s}
-  }
+  val junkParse: EsoParser[String] = """^[^ivkscdr@|e`.?#]*(?:#.*\v)?[^ivkscdr@|e`.?#]*""".r
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
-    //println
-    //exprSParse(progRaw)
     exprParse(progRaw).toTry("Invalid Unlambda Expression") map {prog =>
-      inputs => LazyList.unfold(prog(endCont, Env(None, inputs)))(_.result.resolve)}
-  }
+      inputs => LazyList.unfold(prog(endCont, Env(None, inputs)))(_.result.resolve)}}
   
   case class Env(cur: Option[Char], inp: Seq[Char]){
     def read: Env = inp match{

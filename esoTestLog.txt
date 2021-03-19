@@ -11,6 +11,12 @@ LazyK_CC <=> LazyK
 - should preserve the behavior of hworldIota.lazy when translating from LazyK to LazyK_CC
 - should preserve the behavior of hworldJot.lazy when translating from LazyK to LazyK_CC
 - should preserve the behavior of hworld.lazy when translating from LazyK to LazyK_CC
+EsoLImpParserSpec:
+EsoLImpParser
+- should succeed if both succeed
+- should fail if left fails
+- should fail if right fails
+- should fail if both fail
 BFToMetatapeSpec:
 BFToMetatape
 - should preserve the behavior of bitWidth.b
@@ -18,6 +24,9 @@ EmmentalSpec:
 Emmental
 - should run hworld.emm correctly
 - should return a referentially transparent function for hworld.emm
+EsoLongestMatchParserSpec:
+EsoLongestMatchParser
+- should return the longest match
 GlyphoSpec:
 Glypho
 - should run hworld.glo correctly
@@ -41,6 +50,7 @@ ClearFileAssociationsHandler
 BFToLazyKSpec:
 BFToLazyK
 - should preserve the behavior of bitWidth.b
+EsoConstantParserSpec:
 SNUSPSpec:
 SNUSP
 - should run hworld.snusp correctly
@@ -51,6 +61,8 @@ ThueSpec:
 Thue
 - should run hworld.th correctly
 - should return a referentially transparent function for hworld.th
+EsoParserSpec:
+EsoRImpParserSpec:
 LazyKAnyToUnlSpec:
 LazyK_Unlambda <=> LazyK
 - should preserve the behavior of hworldCC.lazy when translating from LazyK to LazyK_Unlambda
@@ -84,6 +96,7 @@ RunProgHandler
 - should not cache built programs if the cache flag is off
 - should write program output to a file with the -o option
 - should not write program output to a file without the -o option
+- should fail to read program if an inaccessible file is given
 DeadfishSpec:
 Deadfish
 - should run hworld.df correctly
@@ -115,6 +128,9 @@ WhiteSpaceSpec:
 WhiteSpace
 - should run hworld.ws correctly
 - should return a referentially transparent function for hworld.ws
+EsoMapParserSpec:
+EsoMapParser
+- should transform output with f
 SaveBFLangsHandlerSpec:
 SaveBFLangsHandler
 - should save to the default file if none is provided
@@ -126,12 +142,18 @@ Ook <=> BrainFuck
 listVarsHandlerSpec:
 listVarsHandler
 - should correctly list the default runtime parameters
+EsoEarliestMatchParserSpec:
+EsoEarliestMatchParser
+- should return the earliest match
 PreludeSpec:
 Prelude
 - should run hworld.pld correctly in parallel
 - should run hworld.pld correctly in sequence
 - should return a referentially transparent function in parallel
 - should return a referentially transparent function in sequence
+EsoAltParserSpec:
+EsoAltParser
+- should return the first success
 MemTapeSpec:
 MemTape
 - should respect static size
@@ -211,6 +233,7 @@ LoadBFLangsHandlerSpec
 - should fail on an inaccessible file
 - should correctly load languages from a file
 - should correctly load languages through loadOnly
+EsoAllParserSpec:
 listFileAssociationsHandlerSpec:
 ListFileAssociationsHandler
 - should correctly list the default file associations
@@ -224,6 +247,11 @@ ALPL
 - should run cat.alpl correctly
 - should return a referentially transparent function for hworld.alpl
 - should return a referentially transparent function for cat.alpl
+EsoStringParserSpec:
+EsoStringParser
+- should parse the first occurrence of its literal
+- should not parse matches that aren't at the beginning of input
+- should match longer literals
 UnlambdaSpec:
 Unlambda
 - should run hworld.unl correctly
@@ -238,6 +266,12 @@ WSAssemblySpec:
 WSAssembly
 - should preserve the behavior of hworld.wsa
 - should preserve the structure of hworld.ws
+EsoLCondParserSpec:
+EsoLCondParser
+- should succeed if both succeed
+- should fail if left fails
+- should fail if right fails
+- should fail if both fail
 PlattsSpec:
 Platts
 - should run hworld.plts correctly
@@ -339,10 +373,23 @@ WordLang
 - should return a referentially transparent function for someday.wl
 - should return a referentially transparent function for listChars.wl
 - should return a referentially transparent function for cat.wl
+EsoRegexParserSpec:
+EsoRegexParser
+- should return earliest match
+- should match anywhere in input
+- should return whole match without capture groups
+- should return only capture groups if present
+EsoFlatMappedParserSpec:
+EsoFlatMappedParser
+- should work the do good right
+EsoIntoParserSpec:
+EsoIntoParser
+- should pass p's output into q
 SaveFileAssociationsHandlerSpec:
 SaveFileAssociationsHandler
 - should correctly save file associations to the default file with no arguments
 - should correctly save file associations to the provided file with -f option
+EsoProdParserSpec:
 SetVarHandlerSpec:
 SetVarHandler
 - should recognize all true keywords
@@ -361,8 +408,8 @@ Metatape
 - should run bitWidth.mt correctly
 - should return a referentially transparent function for hworld.mt
 - should return a referentially transparent function for bitWidth.mt
-Run completed in 6 minutes, 23 seconds.
-Total number of tests run: 230
-Suites: completed 64, aborted 0
-Tests: succeeded 230, failed 0, canceled 0, ignored 0, pending 0
+Run completed in 5 minutes, 29 seconds.
+Total number of tests run: 252
+Suites: completed 79, aborted 0
+Tests: succeeded 252, failed 0, canceled 0, ignored 0, pending 0
 All tests passed.

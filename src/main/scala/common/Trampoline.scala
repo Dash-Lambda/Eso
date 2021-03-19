@@ -37,12 +37,14 @@ case class DoOrNull[B](inp: JValue, err: String, eio: EsoIOInterface = EsoConsol
     case _ => Some(f(inp))}}
 
 object Trampoline{
-  def apply[A](initTramp: Trampoline[A]): A = {
+  def apply[A](initTramp: Trampoline[A]): Option[A] = {
     @tailrec
-    def tdo(tramp: Trampoline[A]): A = tramp match{
-      case Done(a) => a
+    def tdo(tramp: Trampoline[A]): Option[A] = tramp match{
+      case Done(a) => Some(a)
       case More(call) => tdo(call())
-      case fop: FlatOp[A] => tdo(fop.collapse().get)}
+      case fop: FlatOp[A] => fop.collapse() match{
+        case Some(tmp) => tdo(tmp)
+        case None => None}}
   tdo(initTramp)}
   
   def doOrElse[A](default: A)(initTramp: Trampoline[A]): A = {

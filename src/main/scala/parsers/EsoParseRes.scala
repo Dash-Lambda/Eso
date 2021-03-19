@@ -5,26 +5,19 @@ import common.EsoExcep
 import scala.util.{Failure, Success, Try}
 
 trait EsoParseRes[+A] {
-  def map[B](f: A => B): EsoParseRes[B]
-  
-  def flatMap[B](f: A => EsoParseRes[B]): EsoParseRes[B]
-  
-  def flatMapWithNext[B](f: A => String => EsoParseRes[B]): EsoParseRes[B]
-  
   def passed: Boolean
-  
   def get: Option[A]
-  
-  def length: Int
-  
   def toTry(str: String = "Parse Failed"): Try[A] = get match {
     case Some(res) => Success(res)
-    case None => Failure(EsoExcep(str))
-  }
+    case None => Failure(EsoExcep(str))}
+  
+  def map[B](f: A => B): EsoParseRes[B]
+  def flatMap[B](f: A => EsoParseRes[B]): EsoParseRes[B]
+  def flatMapWithNext[B](f: A => String => EsoParseRes[B]): EsoParseRes[B]
   
   def start: Int
-  
   def end: Int
+  def length: Int
 }
 
 object EsoParseFail extends EsoParseRes[Nothing]{
