@@ -6,7 +6,7 @@ ThisBuild / organizationName := "dashlambda"
 lazy val root = (project in file("."))
   .settings(
     name := "Eso",
-    javaOptions += "-Xmx8g", // Still not sure if this does anything
+    javaOptions += "-XX:+UnlockCommercialFeatures -Xmx8g", // Still not sure if this does anything
     logBuffered in Test := false,
     parallelExecution in Test := false,
     assemblyJarName in assembly := s"Eso-${version.value}.jar",

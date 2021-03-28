@@ -51,6 +51,9 @@ BFToLazyKSpec:
 BFToLazyK
 - should preserve the behavior of bitWidth.b
 EsoConstantParserSpec:
+EsoConstantParser
+- should force parser output to a single value
+- should fail if p fails
 SNUSPSpec:
 SNUSP
 - should run hworld.snusp correctly
@@ -63,6 +66,11 @@ Thue
 - should return a referentially transparent function for hworld.th
 EsoParserSpec:
 EsoRImpParserSpec:
+EsoRImpParser
+- should pass correctly if both p and q pass
+- should fail if p fails
+- should fail if q fails
+- should fail if p and q fail
 LazyKAnyToUnlSpec:
 LazyK_Unlambda <=> LazyK
 - should preserve the behavior of hworldCC.lazy when translating from LazyK to LazyK_Unlambda
@@ -234,6 +242,10 @@ LoadBFLangsHandlerSpec
 - should correctly load languages from a file
 - should correctly load languages through loadOnly
 EsoAllParserSpec:
+EsoAllParser
+- should parse all tokens in input
+- should succeed on none if given 0
+- should fail if number of tokens is below quota
 listFileAssociationsHandlerSpec:
 ListFileAssociationsHandler
 - should correctly list the default file associations
@@ -390,6 +402,11 @@ SaveFileAssociationsHandler
 - should correctly save file associations to the default file with no arguments
 - should correctly save file associations to the provided file with -f option
 EsoProdParserSpec:
+EsoProdParser
+- should pass correctly if both p and q pass
+- should fail if p fails
+- should fail if q fails
+- should fail if p and q fail
 SetVarHandlerSpec:
 SetVarHandler
 - should recognize all true keywords
@@ -408,8 +425,8 @@ Metatape
 - should run bitWidth.mt correctly
 - should return a referentially transparent function for hworld.mt
 - should return a referentially transparent function for bitWidth.mt
-Run completed in 5 minutes, 29 seconds.
-Total number of tests run: 252
+Run completed in 5 minutes, 39 seconds.
+Total number of tests run: 265
 Suites: completed 79, aborted 0
-Tests: succeeded 252, failed 0, canceled 0, ignored 0, pending 0
+Tests: succeeded 265, failed 0, canceled 0, ignored 0, pending 0
 All tests passed.
