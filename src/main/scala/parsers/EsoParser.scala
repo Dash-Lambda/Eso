@@ -5,6 +5,8 @@ import common.{EsoExcep, EsoObj}
 import scala.util.control.TailCalls._
 import scala.util.matching.Regex
 
+case class EsoParserInput(str: String) // Stuck this in to make it easier to play with memoization
+
 abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
   def apply(inp: String): EsoParseRes[A]
   def parseOne(inp: String): A = apply(inp) match{
@@ -66,8 +68,15 @@ abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
   def <&>[B](q: => EsoParser[B]): EsoParser[(A, B)] = new EsoProdParser(this, q)
   /* Into */
   def >>[B](q: => EsoParser[B])(implicit ev: EsoParser[A] <:< EsoParser[String]): EsoParser[B] = EsoIntoParser(ev(this), q)
+  /* Concat */
+  //def ++[B >: A,CC[_] <: IndexedSeq[_], C <: CC[B], DD[_] <: IndexedSeq[_], D <: DD[A]](q: => EsoParser[C with IndexedSeqOps[B, CC, C]])(implicit ev: A <:< D with IndexedSeqOps[A, DD, D]): EsoParser[C] = {
+  //  (this <&> q) map {case (a: D with IndexedSeqOps[A, DD, D], b: C with IndexedSeqOps[B, CC, C]) => ev(a) ++ b}
+  //}
   
-  def tramp[B](inp: String)(cc: EsoParseRes[A] => TailRec[EsoParseRes[B]]): TailRec[EsoParseRes[B]] = tailcall(cc(apply(inp)))
+  def applyByTramp(inp: String): EsoParseRes[A] = tramp(EsoParserInput(inp), 0)(done).result.toFullRes(inp)
+  def tramp[B](inp: EsoParserInput, start_ind: Int)(cc: EsoParseResTramp[A] => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]] = {
+    tailcall(
+      cc(apply(inp.str.drop(start_ind)).toTramp(start_ind)))}
 }
 
 object Implicits{

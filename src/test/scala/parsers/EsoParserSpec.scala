@@ -98,24 +98,24 @@ class EsoMapParserSpec extends EsoParserSpec{
 }
 
 class EsoProdParserSpec extends EsoParserSpec{
-  val p: EsoParser[String] = _ => EsoParsed("p", "q", 0, 1)
-  val q: EsoParser[String] = inp => EsoParsed(inp, "rem", 0, inp.length)
+  val p: EsoParser[String] = EsoStringParser("p")
+  val q: EsoParser[String] = EsoStringParser("q")
   val f: EsoParser[String] = _ => EsoParseFail
   
-  "EsoProdParser" should "pass correctly if both p and q pass" in assertResult(EsoParsed(("p", "q"), "rem", 0, 2))((p <&> q)(""))
-  it should "fail if p fails" in assertResult(EsoParseFail)((f <&> q)(""))
-  it should "fail if q fails" in assertResult(EsoParseFail)((p <&> f)(""))
+  "EsoProdParser" should "pass correctly if both p and q pass" in assertResult(EsoParsed(("p", "q"), "rem", 0, 2))((p <&> q)("pqrem"))
+  it should "fail if p fails" in assertResult(EsoParseFail)((f <&> q)("q"))
+  it should "fail if q fails" in assertResult(EsoParseFail)((p <&> f)("p"))
   it should "fail if p and q fail" in assertResult(EsoParseFail)((f <&> f)(""))
 }
 
 class EsoRImpParserSpec extends EsoParserSpec{
-  val p: EsoParser[String] = _ => EsoParsed("p", "q", 0, 1)
-  val q: EsoParser[String] = inp => EsoParsed(inp, "rem", 0, inp.length)
+  val p: EsoParser[String] = EsoStringParser("p")
+  val q: EsoParser[String] = EsoStringParser("q")
   val f: EsoParser[String] = _ => EsoParseFail
   
-  "EsoRImpParser" should "pass correctly if both p and q pass" in assertResult(EsoParsed("q", "rem", 0, 2))((p &> q)(""))
-  it should "fail if p fails" in assertResult(EsoParseFail)((f &> q)(""))
-  it should "fail if q fails" in assertResult(EsoParseFail)((p &> f)(""))
+  "EsoRImpParser" should "pass correctly if both p and q pass" in assertResult(EsoParsed("q", "rem", 0, 2))((p &> q)("pqrem"))
+  it should "fail if p fails" in assertResult(EsoParseFail)((f &> q)("q"))
+  it should "fail if q fails" in assertResult(EsoParseFail)((p &> f)("p"))
   it should "fail if p and q fail" in assertResult(EsoParseFail)((f &> f)(""))
 }
 
