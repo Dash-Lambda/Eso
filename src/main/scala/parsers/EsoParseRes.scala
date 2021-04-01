@@ -10,6 +10,7 @@ trait EsoParseRes[+A] {
   def toTry(str: String = "Parse Failed"): Try[A] = get match {
     case Some(res) => Success(res)
     case None => Failure(EsoExcep(str))}
+  def orElse[B >: A](alt: => EsoParseRes[B]): EsoParseRes[B]
   def map[B](f: A => B): EsoParseRes[B]
   def flatMap[B](f: A => EsoParseRes[B]): EsoParseRes[B]
   def flatMapWithNext[B](f: A => String => EsoParseRes[B]): EsoParseRes[B]
@@ -20,6 +21,7 @@ trait EsoParseRes[+A] {
 }
 
 object EsoParseFail extends EsoParseRes[Nothing]{
+  def orElse[B >: Nothing](alt: => EsoParseRes[B]): EsoParseRes[B] = alt
   def map[B](f: Nothing => B): EsoParseRes[B] = EsoParseFail
   def flatMap[B](f: Nothing => EsoParseRes[B]): EsoParseRes[B] = EsoParseFail
   def flatMapWithNext[B](f: Nothing => String => EsoParseRes[B]): EsoParseRes[B] = EsoParseFail
@@ -31,6 +33,7 @@ object EsoParseFail extends EsoParseRes[Nothing]{
   def toTramp(start_ind: Int): EsoParseResTramp[Nothing] = EsoParseFailTramp
 }
 case class EsoParsed[+A](parsed: A, rem: String, start: Int, end: Int) extends EsoParseRes[A]{
+  def orElse[B >: A](alt: => EsoParseRes[B]): EsoParseRes[B] = this
   def map[B](f: A => B): EsoParseRes[B] = EsoParsed(f(parsed), rem, start, end)
   def flatMap[B](f: A => EsoParseRes[B]): EsoParseRes[B] = f(parsed)
   def flatMapWithNext[B](f: A => String => EsoParseRes[B]): EsoParseRes[B] = f(parsed)(rem)

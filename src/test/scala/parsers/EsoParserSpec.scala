@@ -3,7 +3,7 @@ package parsers
 import common_test.EsoSpec
 
 class EsoParserSpec extends EsoSpec{
-  
+
 }
 
 class EsoStringParserSpec extends EsoParserSpec{
@@ -22,34 +22,48 @@ class EsoRegexParserSpec extends EsoParserSpec{
 class EsoAltParserSpec extends EsoParserSpec{
   val p: EsoParser[String] = EsoRegexParser("a".r)
   val q: EsoParser[String] = EsoRegexParser("b".r)
+  val a: EsoParser[String] = EsoStringParser("a")
+  val ab: EsoParser[String] = EsoStringParser("ab")
+  val c: EsoParser[String] = EsoStringParser("c")
   
   "EsoAltParser" should "return the first success" in {
     assertResult(EsoParsed("a", "ab", 0, 1))((p | q)("aab"))
     assertResult(EsoParsed("b", "", 2, 3))((q | p)("aab"))
     assertResult(EsoParsed("a", "bb", 0, 1))((p | q)("abb"))
     assertResult(EsoParsed("b", "b", 1, 2))((q | p)("abb"))}
+  it should "backtrack until success" in {
+    assertResult(EsoParsed("abc", "", 0, 3))(((a | ab) <+> c).apply("abc"))}
 }
 
 class EsoEarliestMatchParserSpec extends EsoParserSpec{
   val p: EsoParser[String] = EsoRegexParser("a".r)
   val q: EsoParser[String] = EsoRegexParser("b".r)
+  val ab: EsoParser[String] = EsoRegexParser("ab".r)
+  val c: EsoParser[String] = EsoStringParser("c")
   
   "EsoEarliestMatchParser" should "return the earliest match" in {
     assertResult(EsoParsed("a", "ab", 0, 1))((p || q)("aab"))
     assertResult(EsoParsed("a", "ab", 0, 1))((q || p)("aab"))
     assertResult(EsoParsed("a", "bb", 0, 1))((p || q)("abb"))
     assertResult(EsoParsed("a", "bb", 0, 1))((q || p)("abb"))}
+  it should "backtrack until success" in {
+    assertResult(EsoParsed("abc", "", 1, 4))(((p || ab) <+> c).apply("aabc"))}
 }
 
 class EsoLongestMatchParserSpec extends EsoParserSpec{
   val p: EsoParser[String] = EsoRegexParser("a+".r)
   val q: EsoParser[String] = EsoRegexParser("b+".r)
+  val ps: EsoParser[String] = EsoStringParser("ab")
+  val qs: EsoParser[String] = EsoStringParser("a")
+  val rs: EsoParser[String] = EsoStringParser("bc")
   
   "EsoLongestMatchParser" should "return the longest match" in {
     assertResult(EsoParsed("aa", "b", 0, 2))((p ||| q)("aab"))
     assertResult(EsoParsed("aa", "b", 0, 2))((q ||| p)("aab"))
     assertResult(EsoParsed("bb", "", 1, 3))((p ||| q)("abb"))
     assertResult(EsoParsed("bb", "", 1, 3))((q ||| p)("abb"))}
+  it should "backtrack until success" in {
+    assertResult(EsoParsed("abc", "", 0, 3))(((ps ||| qs) <+> rs).apply("abc"))}
 }
 
 class EsoFlatMappedParserSpec extends EsoParserSpec{

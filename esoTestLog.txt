@@ -27,6 +27,7 @@ Emmental
 EsoLongestMatchParserSpec:
 EsoLongestMatchParser
 - should return the longest match
+- should backtrack until success
 GlyphoSpec:
 Glypho
 - should run hworld.glo correctly
@@ -153,6 +154,7 @@ listVarsHandler
 EsoEarliestMatchParserSpec:
 EsoEarliestMatchParser
 - should return the earliest match
+- should backtrack until success
 PreludeSpec:
 Prelude
 - should run hworld.pld correctly in parallel
@@ -162,6 +164,7 @@ Prelude
 EsoAltParserSpec:
 EsoAltParser
 - should return the first success
+- should backtrack until success
 MemTapeSpec:
 MemTape
 - should respect static size
@@ -430,8 +433,8 @@ Metatape
 - should run bitWidth.mt correctly
 - should return a referentially transparent function for hworld.mt
 - should return a referentially transparent function for bitWidth.mt
-Run completed in 1 minute, 40 seconds.
-Total number of tests run: 268
+Run completed in 1 minute, 35 seconds.
+Total number of tests run: 271
 Suites: completed 80, aborted 0
-Tests: succeeded 268, failed 0, canceled 0, ignored 0, pending 0
+Tests: succeeded 271, failed 0, canceled 0, ignored 0, pending 0
 All tests passed.

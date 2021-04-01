@@ -10,8 +10,6 @@ case class EsoParserInput(str: String){ // Stuck this in to make it easier to pl
 }
 
 abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
-  //type EsoParserInput = String
-  
   def apply(inp: String): EsoParseRes[A]
   def matches(inp: String): Boolean = apply(inp).passed
   
@@ -48,15 +46,15 @@ abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
   
   /* Alternative composition, first match */
   def |[B >: A](q: => EsoParser[B]): EsoParser[B] = q match{
-    case eap: EsoAltParser[B] => EsoAltParser(this #:: eap.ps)
+    case eap: EsoAltParser[B] => EsoAltParser(this #:: eap.parsers)
     case _ => EsoAltParser(this #:: q #:: LazyList())}
   /* Alternative composition, Earliest match */
   def ||[B >: A](q: => EsoParser[B]): EsoParser[B] = q match{
-    case eem: EsoEarliestMatchParser[B] => EsoEarliestMatchParser(this #:: eem.ps)
+    case eem: EsoEarliestMatchParser[B] => EsoEarliestMatchParser(this #:: eem.parsers)
     case _ => EsoEarliestMatchParser(this #:: q #:: LazyList())}
   /* Alternative composition, longest match */
   def |||[B >: A](q: => EsoParser[B]): EsoParser[B] = q match{
-    case elm: EsoLongestMatchParser[B] => EsoLongestMatchParser(this #:: elm.ps)
+    case elm: EsoLongestMatchParser[B] => EsoLongestMatchParser(this #:: elm.parsers)
     case _ => EsoLongestMatchParser(this #:: q #:: LazyList())}
   
   /* p <| q = p if q, ignore input consumed by q*/
