@@ -9,7 +9,7 @@ object FracTran extends Interpreter{
   val name: String = "FracTran"
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
-    Try{FracTranParser.ftParse.parseOne(progRaw)} map{case (init, prog) => _ => fti(init, prog).flatMap(n => s"$n\n")}}
+    FracTranParser.ftParse(progRaw).toTry() map {case (init, prog) => _ => fti(init, prog).flatMap(n => s"$n\n")}}
   
   def fti(init: SafeLong, prog: Vector[(SafeLong, SafeLong)]): LazyList[SafeLong] = init #:: LazyList.unfold(init){num =>
     prog.collectFirst{

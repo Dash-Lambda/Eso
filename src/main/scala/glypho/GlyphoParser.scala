@@ -32,5 +32,5 @@ object GlyphoParser {
         case "0123" => ']'}}}
   
   def parseAll(progRaw: String): Vector[Char] = normParse.parseAllValues(progRaw)
-  def parseOne(tok: String): Char = normParse.parseOne(tok)
+  def parseOne(tok: String): Option[Char] = normParse(tok).get
 }

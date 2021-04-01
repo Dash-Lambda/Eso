@@ -13,7 +13,7 @@ case class EsoRegexParser(reg: Regex) extends EsoParser[String]{
   
   override def tramp[B](inp: EsoParserInput, start_ind: Int)(cc: EsoParseResTramp[String] => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]] = {
     val matcher = reg.pattern.matcher(inp.str)
-    matcher.region(start_ind, inp.str.length) // Yeah, this is a mutable state thing... Don't really have much choice. At least it's totally contained within this method.
+    matcher.region(start_ind, inp.length) // Yeah, this is a mutable state thing... Don't really have much choice. At least it's totally contained within this method. The alternative is to drop the start of the string every time, which makes the time complexity exponential.
     if(matcher.find) // *deep sigh*
       if (matcher.groupCount > 0) tailcall(cc(EsoParsedTramp((1 to matcher.groupCount).map(matcher.group).mkString, matcher.start, matcher.end)))
       else tailcall(cc(EsoParsedTramp(matcher.group(), matcher.start, matcher.end)))

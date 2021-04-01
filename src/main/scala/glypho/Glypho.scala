@@ -54,10 +54,10 @@ object Glypho extends Interpreter{
         c match{
           case 'n' => RunState(env, nxc)
           case 'i' => env.read match{
-              case (c, nenv) => RunState(nenv.push(c.toInt), nxc)}
+            case (c, nenv) => RunState(nenv.push(c.toInt), nxc)}
           case '>' => RunState(env.rollForward, nxc)
           case '\\' => env.pop(2) match{
-              case (a +: b +: _, nenv) => RunState(nenv.push(b, a), nxc)}
+            case (a +: b +: _, nenv) => RunState(nenv.push(b, a), nxc)}
           case '1' => RunState(env.push(1), nxc)
           case '<' => RunState(env.rollBack, nxc)
           case 'd' => RunState(env.push(env.stk.head), nxc)
@@ -66,12 +66,13 @@ object Glypho extends Interpreter{
             if(env.stk.head == 0) RunState(env, SkipCont(0, cs, loops, cc))
             else RunState(env, RunCont(cs, cs +: loops, cc))
           case 'o' => env.pop match{
-              case (n, nenv) => IPrintState(n.toChar.toString, RunState(nenv, nxc))}
+            case (n, nenv) => IPrintState(n.toChar.toString, RunState(nenv, nxc))}
           case '*' => RunState(env.binOp1(_*_), nxc)
           case 'e' => env.pop(4) match{
             case (a +: b +: c +: d +: _, nenv) =>
-              val nop = GlyphoParser.parseOne(Vector(a, b, c, d).map(_.toChar).mkString)
-              RunState(nenv, RunCont(nop +: cs, loops, cc))}
+              GlyphoParser.parseOne(Vector(a, b, c, d).map(_.toChar).mkString) match{
+                case Some(nop) => RunState(nenv, RunCont(nop +: cs, loops, cc))
+                case None => IPrintState("\nError: Invalid Token", IHaltState)}}
           case '-' => RunState(env.singOp(-_), nxc)
           case '!' => RunState(env.pop._2, nxc)
           case ']' =>

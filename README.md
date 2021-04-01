@@ -171,6 +171,7 @@ The combinators are as follows, where `p` and `q` are parsers, `a` is a value, a
 * `p ^^ f` and `p map f`: Traditional map that transforms the result with the function f
 * `p flatMap f`: Takes a function that turns the result into another parser and returns the result of that parser on the remaining input
 * `p ^^^ a`: Returns a if p succeeds (identical to `p map (_ => a)`))
+* `p <+> q`: Concatenates the results of p and q (only when the result type is `String`)
 
 The result is a shockingly versatile, expressive, and readable parser framework. A complete parser for the combinator calculus, for instance, can be expressed in two lines:
 

@@ -135,3 +135,12 @@ class EsoAllParserSpec extends EsoParserSpec{
   it should "succeed on none if given 0" in assertResult(EsoParsed(Vector(), "b", 0, 0))(ap(0)("b"))
   it should "fail if number of tokens is below quota" in assertResult(EsoParseFail)(ap(2)("ab"))
 }
+
+class EsoConcatParserSpec extends EsoParserSpec{
+  val p: EsoParser[String] = EsoStringParser("a") ^^^ "x"
+  val q: EsoParser[String] = EsoStringParser("b") ^^^ "y"
+  
+  "EsoConcatParser" should "correctly combine string output" in assertResult(EsoParsed("xy", "", 0, 2))((p <+> q).apply("ab"))
+  it should "fail if p fails" in assertResult(EsoParseFail)((p <+> q).apply("bb"))
+  it should "fail if q fails" in assertResult(EsoParseFail)((p <+> q).apply("aa"))
+}

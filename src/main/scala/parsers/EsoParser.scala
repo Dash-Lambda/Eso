@@ -1,17 +1,18 @@
 package parsers
 
-import common.{EsoExcep, EsoObj}
+import common.EsoObj
 
 import scala.util.control.TailCalls._
 import scala.util.matching.Regex
 
-case class EsoParserInput(str: String) // Stuck this in to make it easier to play with memoization
+case class EsoParserInput(str: String){ // Stuck this in to make it easier to play with memoization
+  def length: Int = str.length
+}
 
 abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
+  //type EsoParserInput = String
+  
   def apply(inp: String): EsoParseRes[A]
-  def parseOne(inp: String): A = apply(inp) match{
-    case EsoParsed(res, _, _, _) => res
-    case _ => throw EsoExcep("Parse Failure")}
   def matches(inp: String): Boolean = apply(inp).passed
   
   /* p ^^ f = p map f */
@@ -69,9 +70,9 @@ abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
   /* Into */
   def >>[B](q: => EsoParser[B])(implicit ev: EsoParser[A] <:< EsoParser[String]): EsoParser[B] = EsoIntoParser(ev(this), q)
   /* Concat */
-  //def ++[B >: A,CC[_] <: IndexedSeq[_], C <: CC[B], DD[_] <: IndexedSeq[_], D <: DD[A]](q: => EsoParser[C with IndexedSeqOps[B, CC, C]])(implicit ev: A <:< D with IndexedSeqOps[A, DD, D]): EsoParser[C] = {
-  //  (this <&> q) map {case (a: D with IndexedSeqOps[A, DD, D], b: C with IndexedSeqOps[B, CC, C]) => ev(a) ++ b}
-  //}
+  def <+>(q: => EsoParser[String])(implicit ev: EsoParser[A] <:< EsoParser[String]): EsoParser[String] = q match{
+    case EsoConcatParser(parsers) => EsoConcatParser(ev(this) #:: parsers)
+    case _ => EsoConcatParser(LazyList(ev(this), q))}
   
   def applyByTramp(inp: String): EsoParseRes[A] = tramp(EsoParserInput(inp), 0)(done).result.toFullRes(inp)
   def tramp[B](inp: EsoParserInput, start_ind: Int)(cc: EsoParseResTramp[A] => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]] = {

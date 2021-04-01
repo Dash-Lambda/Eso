@@ -28,7 +28,7 @@ object Grass extends Interpreter{
         case as :+ (a: AbsExpr) => as :+ a :+ AppExpr(1, 1)
         case as => as}}}
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{eval(grassParse.parseOne(progRaw))}
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = grassParse(progRaw).toTry() map eval
   
   def eval(prog: Vector[Expr]): Seq[Char] => LazyList[Char] = {
     @tailrec
