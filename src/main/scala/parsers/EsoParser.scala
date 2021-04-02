@@ -45,17 +45,11 @@ abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
   def atLeastOne: EsoParser[Vector[A]] = EsoAllParser(this, 1)
   
   /* Alternative composition, first match */
-  def |[B >: A](q: => EsoParser[B]): EsoParser[B] = q match{
-    case eap: EsoAltParser[B] => EsoAltParser(this #:: eap.parsers)
-    case _ => EsoAltParser(this #:: q #:: LazyList())}
+  def |[B >: A](q: => EsoParser[B]): EsoParser[B] = EsoAltParser(this, q)
   /* Alternative composition, Earliest match */
-  def ||[B >: A](q: => EsoParser[B]): EsoParser[B] = q match{
-    case eem: EsoEarliestMatchParser[B] => EsoEarliestMatchParser(this #:: eem.parsers)
-    case _ => EsoEarliestMatchParser(this #:: q #:: LazyList())}
+  def ||[B >: A](q: => EsoParser[B]): EsoParser[B] = EsoEarliestMatchParser(this, q)
   /* Alternative composition, longest match */
-  def |||[B >: A](q: => EsoParser[B]): EsoParser[B] = q match{
-    case elm: EsoLongestMatchParser[B] => EsoLongestMatchParser(this #:: elm.parsers)
-    case _ => EsoLongestMatchParser(this #:: q #:: LazyList())}
+  def |||[B >: A](q: => EsoParser[B]): EsoParser[B] = EsoLongestMatchParser(this, q)
   
   /* p <| q = p if q, ignore input consumed by q*/
   def <|[B](q: => EsoParser[B]): EsoParser[A] = new EsoLCondParser(this, q)
@@ -68,9 +62,7 @@ abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
   /* Into */
   def >>[B](q: => EsoParser[B])(implicit ev: EsoParser[A] <:< EsoParser[String]): EsoParser[B] = EsoIntoParser(ev(this), q)
   /* Concat */
-  def <+>(q: => EsoParser[String])(implicit ev: EsoParser[A] <:< EsoParser[String]): EsoParser[String] = q match{
-    case EsoConcatParser(parsers) => EsoConcatParser(ev(this) #:: parsers)
-    case _ => EsoConcatParser(LazyList(ev(this), q))}
+  def <+>(q: => EsoParser[String])(implicit ev: EsoParser[A] <:< EsoParser[String]): EsoParser[String] = EsoConcatParser(ev(this), q)
   
   def applyByTramp(inp: String): EsoParseRes[A] = tramp(EsoParserInput(inp), 0)(done).result.toFullRes(inp)
   def tramp[B](inp: EsoParserInput, start_ind: Int)(cc: EsoParseResTramp[A] => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]] = {
