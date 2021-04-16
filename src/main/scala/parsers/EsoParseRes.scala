@@ -5,8 +5,8 @@ import common.EsoExcep
 import scala.util.{Failure, Success, Try}
 
 trait EsoParseRes[+A] {
-  def passed: Boolean
   def get: Option[A]
+  def passed: Boolean = get.nonEmpty
   def toTry(str: String = "Parse Failed"): Try[A] = get match {
     case Some(res) => Success(res)
     case None => Failure(EsoExcep(str))}
@@ -25,7 +25,6 @@ object EsoParseFail extends EsoParseRes[Nothing]{
   def map[B](f: Nothing => B): EsoParseRes[B] = EsoParseFail
   def flatMap[B](f: Nothing => EsoParseRes[B]): EsoParseRes[B] = EsoParseFail
   def flatMapWithNext[B](f: Nothing => String => EsoParseRes[B]): EsoParseRes[B] = EsoParseFail
-  def passed: Boolean = false
   def get: Option[Nothing] = None
   def length: Int = -1
   def start: Int = -1
@@ -37,15 +36,14 @@ case class EsoParsed[+A](parsed: A, rem: String, start: Int, end: Int) extends E
   def map[B](f: A => B): EsoParseRes[B] = EsoParsed(f(parsed), rem, start, end)
   def flatMap[B](f: A => EsoParseRes[B]): EsoParseRes[B] = f(parsed)
   def flatMapWithNext[B](f: A => String => EsoParseRes[B]): EsoParseRes[B] = f(parsed)(rem)
-  def passed: Boolean = true
   def get: Option[A] = Some(parsed)
   def length: Int = end - start
   def toTramp(start_ind: Int): EsoParseResTramp[A] = EsoParsedTramp(parsed, start_ind + start, start_ind + end)
 }
 
 trait EsoParseResTramp[+A]{
-  def passed: Boolean
   def get: Option[A]
+  def passed: Boolean = get.nonEmpty
   def toTry(str: String = "Parse Failed"): Try[A] = get match {
     case Some(res) => Success(res)
     case None => Failure(EsoExcep(str))}
@@ -58,7 +56,6 @@ trait EsoParseResTramp[+A]{
 }
 
 case class EsoParsedTramp[+A](parsed: A, start: Int, end: Int) extends EsoParseResTramp[A]{
-  def passed: Boolean = true
   def get: Option[A] = Some(parsed)
   def map[B](f: A => B): EsoParseResTramp[B] = EsoParsedTramp(f(parsed), start, end)
   def flatMap[B](f: A => EsoParseResTramp[B]): EsoParseResTramp[B] = f(parsed)
@@ -69,7 +66,6 @@ case class EsoParsedTramp[+A](parsed: A, start: Int, end: Int) extends EsoParseR
 object EsoParseFailTramp extends EsoParseResTramp[Nothing]{
   def map[B](f: Nothing => B): EsoParseResTramp[B] = EsoParseFailTramp
   def flatMap[B](f: Nothing => EsoParseResTramp[B]): EsoParseResTramp[B] = EsoParseFailTramp
-  def passed: Boolean = false
   def get: Option[Nothing] = None
   def length: Int = -1
   def start: Int = -1

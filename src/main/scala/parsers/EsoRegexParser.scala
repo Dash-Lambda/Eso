@@ -11,11 +11,11 @@ case class EsoRegexParser(reg: Regex) extends EsoParser[String]{
         else EsoParsed(m.matched, m.after.toString, m.start, m.end)
       case _ => EsoParseFail}}
   
-  override def tramp[B](inp: EsoParserInput, start_ind: Int)(cc: EsoParseResTramp[String] => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]] = {
-    val matcher = reg.pattern.matcher(inp.str)
+  override def tramp[AA >: String, B](inp: EsoParserInput, start_ind: Int)(cc: ParserContinuation[AA, B]): TailRec[ParseTrampResult[B]] = {
+    val matcher = reg.pattern.matcher(inp)
     matcher.region(start_ind, inp.length) // Yeah, this is a mutable state thing... Don't really have much choice. At least it's totally contained within this method. The alternative is to drop the start of the string every time, which makes the time complexity exponential.
     if(matcher.find) // *deep sigh*
-      if (matcher.groupCount > 0) tailcall(cc(EsoParsedTramp((1 to matcher.groupCount).map(matcher.group).mkString, matcher.start, matcher.end)))
+      if (matcher.groupCount > 0) tailcall(cc(EsoParsedTramp((1 to matcher.groupCount).map(matcher.group).mkString, matcher.start, matcher.end))) // Yep... Statement in the if condition changed its state. Why do people do this?
       else tailcall(cc(EsoParsedTramp(matcher.group(), matcher.start, matcher.end)))
     else tailcall(cc(EsoParseFailTramp))}
 }

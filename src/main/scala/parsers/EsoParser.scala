@@ -5,7 +5,10 @@ import common.EsoObj
 import scala.util.control.TailCalls._
 import scala.util.matching.Regex
 
-case class EsoParserInput(str: String){ // Stuck this in to make it easier to play with memoization
+case class EsoParserInput(str: String) extends CharSequence with IndexedSeq[Char]{ // Stuck this in to make it easier to play with memoization
+  def apply(i: Int): Char = str(i)
+  def charAt(index: Int): Char = str(index)
+  def subSequence(start: Int, end: Int): CharSequence = str.subSequence(start, end)
   def length: Int = str.length
 }
 
@@ -29,12 +32,6 @@ abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
   def parseIterator(inp: String): Iterator[EsoParsed[A]] = Iterator.unfold(inp){
     src => apply(src) match{
       case EsoParsed(tok, rem, start, end) => Some((EsoParsed(tok, rem, start, end), rem))
-      case _ => None}}
-  
-  def parseAllInPlaceLazy(inp: String): LazyList[EsoParsed[A]] = parseAllInPlaceIterator(inp).to(LazyList)
-  def parseAllInPlaceIterator(inp: String): Iterator[EsoParsed[A]] = Iterator.unfold((inp, 0)){
-    case (src, stp) => apply(src) match{
-      case EsoParsed(p, r, s, e) => Some((EsoParsed(p, r, stp + s, stp + e), (r, stp + e)))
       case _ => None}}
   
   /* Parse all matches, no fail on empty */
@@ -64,8 +61,10 @@ abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
   /* Concat */
   def <+>(q: => EsoParser[String])(implicit ev: EsoParser[A] <:< EsoParser[String]): EsoParser[String] = EsoConcatParser(ev(this), q)
   
+  type ParseTrampResult[B] = EsoParseResTramp[B]
+  type ParserContinuation[B, C] = EsoParseResTramp[B] => TailRec[EsoParseResTramp[C]]
   def applyByTramp(inp: String): EsoParseRes[A] = tramp(EsoParserInput(inp), 0)(done).result.toFullRes(inp)
-  def tramp[B](inp: EsoParserInput, start_ind: Int)(cc: EsoParseResTramp[A] => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]] = {
+  def tramp[AA >: A, B](inp: EsoParserInput, start_ind: Int)(cc: ParserContinuation[AA, B]): TailRec[ParseTrampResult[B]] = {
     tailcall(
       cc(apply(inp.str.drop(start_ind)).toTramp(start_ind)))}
 }
