@@ -16,10 +16,9 @@ class EsoLImpParser[+A, +B](parser1: => EsoParser[A], parser2: => EsoParser[B]) 
             case (pr, pi, ps, pe) =>
               q.tramp(pi, pe)(
                 qres =>
-                  done(
-                    qres.flatMapAll{
-                      case (_, qi, _, qe) =>
-                        EsoParsedTramp(pr, qi, ps, qe)}))})) flatMap cc}
+                  qres.flatMapAll{
+                    case (_, qi, _, qe) =>
+                      done(EsoParsedTramp(pr, qi, ps, qe))})})) flatMap cc}
 }
 object EsoLImpParser{
   def apply[A,B](p: => EsoParser[A], q: => EsoParser[B]): EsoLImpParser[A,B] = new EsoLImpParser(p, q)

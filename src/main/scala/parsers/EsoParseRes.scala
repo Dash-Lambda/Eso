@@ -72,7 +72,7 @@ case class EsoParsedTramp[+A](parsed: A, inp: EsoParserInput,  start: Int, end: 
   def withInp(ninp: EsoParserInput): EsoParseResTramp[A] = EsoParsedTramp(parsed, ninp, start, end)
   
   def map[B](f: A => B): EsoParseResTramp[B] = EsoParsedTramp(f(parsed), inp, start, end)
-  def map[B](f: A => TailRec[B]): TailRec[EsoParseResTramp[B]] = f(parsed) map (np => EsoParsedTramp(np, inp, start, end))
+  def map[B](f: A => TailRec[B]): TailRec[EsoParseResTramp[B]] = tailcall(f(parsed) map (np => EsoParsedTramp(np, inp, start, end)))
   def flatMap[B](f: A => EsoParseResTramp[B]): EsoParseResTramp[B] = f(parsed)
   def flatMap[B](f: A => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]] = tailcall(f(parsed))
   def flatMapAll[B](f: (A, EsoParserInput, Int, Int) => EsoParseResTramp[B]): EsoParseResTramp[B] = f(parsed, inp, start, end)
