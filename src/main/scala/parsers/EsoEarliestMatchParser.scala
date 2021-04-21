@@ -13,10 +13,16 @@ class EsoEarliestMatchParser[+A](parser1: => EsoParser[A], parser2: => EsoParser
       p.tramp(inp, start_ind)(
         pres =>
           tailcall(
-            q.tramp(inp, start_ind)(
+            q.tramp(pres.inp, start_ind)(
               qres =>
-                if(pres.start <= qres.start && pres.passed) tailcall(cc(pres) flatMap (res => if(res.passed) done(res) else tailcall(cc(qres))))
-                else tailcall(cc(qres) flatMap (res => if(res.passed) done(res) else tailcall(cc(pres))))))))}
+                if(pres.start <= qres.start && pres.passed)
+                  tailcall(cc(pres.withInp(qres.inp)) flatMap (res =>
+                    if(res.passed) done(res)
+                    else tailcall(cc(qres.withInp(res.inp)))))
+                else
+                  tailcall(cc(qres) flatMap (res =>
+                    if(res.passed) done(res)
+                    else tailcall(cc(pres.withInp(res.inp)))))))))}
 }
 object EsoEarliestMatchParser{
   def apply[A](p: => EsoParser[A], q: => EsoParser[A]): EsoEarliestMatchParser[A] = new EsoEarliestMatchParser(p, q)

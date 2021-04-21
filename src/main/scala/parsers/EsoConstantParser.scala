@@ -1,6 +1,6 @@
 package parsers
 
-import scala.util.control.TailCalls.{TailRec, tailcall}
+import scala.util.control.TailCalls.{TailRec, done, tailcall}
 
 class EsoConstantParser[A,+B](parser: => EsoParser[A], v: => B) extends EsoParser[B]{
   private lazy val p = parser
@@ -11,9 +11,11 @@ class EsoConstantParser[A,+B](parser: => EsoParser[A], v: => B) extends EsoParse
   
   override def tramp[AA >: B, C](inp: EsoParserInput, start_ind: Int)(cc: ParserContinuation[AA, C]): TailRec[ParseTrampResult[C]] = {
     tailcall(
-      p.tramp(inp, start_ind)({
-        case EsoParsedTramp(_, s, e) => tailcall(cc(EsoParsedTramp(v, s, e)))
-        case EsoParseFailTramp => tailcall(cc(EsoParseFailTramp))}))}
+      p.tramp(inp, start_ind)(
+        pres =>
+          pres.flatMapAll{
+            case (_, pi, ps, pe) =>
+              done(EsoParsedTramp(v, pi, ps, pe))})) flatMap cc}
 }
 object EsoConstantParser{
   def apply[A,B](p: => EsoParser[A], v: => B): EsoConstantParser[A,B] = new EsoConstantParser(p, v)

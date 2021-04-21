@@ -13,11 +13,12 @@ class EsoProdParser[+A, +B](parser1: => EsoParser[A], parser2: => EsoParser[B]) 
       p.tramp(inp, start_ind)(
         pres =>
           pres.flatMapAll{
-            case (pr, ps, pe) =>
-              q.tramp(inp, pe)(
+            case (pr, pi, ps, pe) =>
+              q.tramp(pi, pe)(
                 qres =>
                   qres.flatMapAll{
-                    case (qr, _, qe) => done(EsoParsedTramp((pr, qr), ps, qe))})})) flatMap cc}
+                    case (qr, qi, _, qe) =>
+                      done(EsoParsedTramp((pr, qr), qi, ps, qe))})})) flatMap cc}
 }
 object EsoProdParser{
   def apply[A,B](p: => EsoParser[A], q: => EsoParser[B]): EsoProdParser[A,B] = new EsoProdParser(p, q)

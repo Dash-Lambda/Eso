@@ -9,12 +9,12 @@ class EsoAltParser[+A](parser1: => EsoParser[A], parser2: => EsoParser[A]) exten
   def apply(inp: String): EsoParseRes[A] = applyByTramp(inp)
   
   override def tramp[AA >: A, B](inp: EsoParserInput, start_ind: Int)(cc: ParserContinuation[AA, B]): TailRec[ParseTrampResult[B]] = {
-    def backtrack(arg: ParseTrampResult[B]): TailRec[ParseTrampResult[B]] = if(arg.passed) done(arg) else tailcall(q.tramp(inp, start_ind)(cc))
+    def backtrack(arg: ParseTrampResult[B]): TailRec[ParseTrampResult[B]] = if(arg.passed) done(arg) else tailcall(q.tramp(arg.inp, start_ind)(cc))
     tailcall(
       p.tramp(inp, start_ind){
-        res =>
-          if(res.passed) tailcall(cc(res) flatMap backtrack)
-          else tailcall(q.tramp(inp, start_ind)(cc))})}
+        pres =>
+          if(pres.passed) done(pres)
+          else tailcall(q.tramp(pres.inp, start_ind)(r => done(r)))}) flatMap cc flatMap backtrack}
 }
 object EsoAltParser{
   def apply[A](p: => EsoParser[A], q: => EsoParser[A]): EsoAltParser[A] = new EsoAltParser(p, q)

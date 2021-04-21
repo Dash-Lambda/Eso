@@ -13,11 +13,12 @@ class EsoConcatParser(parser1: => EsoParser[String], parser2: => EsoParser[Strin
       p.tramp(inp, start_ind)(
         pres =>
           pres.flatMapAll{
-            case (pr, ps, pe) =>
-              q.tramp(inp, pe)(
+            case (pr, pi, ps, pe) =>
+              q.tramp(pi, pe)(
                 qres =>
                   qres.flatMapAll{
-                    case (qr, _, qe) => done(EsoParsedTramp(pr + qr, ps, qe))})})) flatMap cc}
+                    case (qr, qi, _, qe) =>
+                      done(EsoParsedTramp(pr + qr, qi, ps, qe))})})) flatMap cc}
 }
 object EsoConcatParser{
   def apply(p: => EsoParser[String], q: => EsoParser[String]): EsoConcatParser = new EsoConcatParser(p, q)

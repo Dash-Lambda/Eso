@@ -12,11 +12,12 @@ class EsoFlatMappedParser[A, +B](parser: => EsoParser[A], f: A => EsoParser[B]) 
       p.tramp(inp, start_ind)(
         pres =>
           pres.flatMapAll{
-            case (pr, ps, pe) =>
-              f(pr).tramp(inp, pe)(
+            case (pr, pi, ps, pe) =>
+              f(pr).tramp(pi, pe)(
                 fres =>
                   fres.flatMapAll{
-                    case (fr, _, fe) => done(EsoParsedTramp(fr, ps, fe))})})) flatMap cc}
+                    case (fr, fi, _, fe) =>
+                      done(EsoParsedTramp(fr, fi, ps, fe))})})) flatMap cc}
 }
 object EsoFlatMappedParser{
   def apply[A,B](parser: => EsoParser[A], f: A => EsoParser[B]): EsoFlatMappedParser[A,B] = new EsoFlatMappedParser(parser, f)

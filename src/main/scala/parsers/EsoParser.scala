@@ -5,11 +5,19 @@ import common.EsoObj
 import scala.util.control.TailCalls._
 import scala.util.matching.Regex
 
-case class EsoParserInput(str: String) extends CharSequence with IndexedSeq[Char]{ // Stuck this in to make it easier to play with memoization
-  def apply(i: Int): Char = str(i)
-  def charAt(index: Int): Char = str(index)
-  def subSequence(start: Int, end: Int): CharSequence = str.subSequence(start, end)
-  def length: Int = str.length
+case class EsoParserInput(inp: String) extends CharSequence with IndexedSeq[Char]{ // Stuck this in to make it easier to play with memoization
+  def string: String = inp
+  def apply(i: Int): Char = charAt(i)
+  def charAt(index: Int): Char = inp.charAt(index)
+  def subSequence(start: Int, end: Int): CharSequence = inp.subSequence(start, end)
+  def length: Int = inp.length
+  
+  // Explicitly defining these speeds it up a little
+  def startsWith(prefix: String): Boolean = inp.startsWith(prefix)
+  def startsWith(prefix: String, offset: Int): Boolean = inp.startsWith(prefix, offset)
+}
+object EsoParserInput{
+  //def apply(inp: String): EsoParserInput = new EsoParserInput(inp.toArray)
 }
 
 abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
@@ -66,7 +74,7 @@ abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
   def applyByTramp(inp: String): EsoParseRes[A] = tramp(EsoParserInput(inp), 0)(done).result.toFullRes(inp)
   def tramp[AA >: A, B](inp: EsoParserInput, start_ind: Int)(cc: ParserContinuation[AA, B]): TailRec[ParseTrampResult[B]] = {
     tailcall(
-      cc(apply(inp.str.drop(start_ind)).toTramp(start_ind)))}
+      cc(apply(inp.string.drop(start_ind)).toTramp(inp, start_ind)))}
 }
 
 object Implicits{

@@ -83,5 +83,5 @@ object Unlambda extends Interpreter{
   def pipecomb: Func = (f, cc, env) => tailcall(f(env.cur map outcomb getOrElse vcomb, cc, env))
   
   def D1(x: Expr): Func = (f, cc, env) => tailcall(x(dCont(f, cc), env))
-  val dcomb: Func = (f, cc, env) => tailcall(cc(D1(funcExpr(f)), env))
+  lazy val dcomb: Func = (f, cc, env) => tailcall(cc(D1(funcExpr(f)), env))
 }

@@ -15,7 +15,10 @@ case class EsoRegexParser(reg: Regex) extends EsoParser[String]{
     val matcher = reg.pattern.matcher(inp)
     matcher.region(start_ind, inp.length) // Yeah, this is a mutable state thing... Don't really have much choice. At least it's totally contained within this method. The alternative is to drop the start of the string every time, which makes the time complexity exponential.
     if(matcher.find) // *deep sigh*
-      if (matcher.groupCount > 0) tailcall(cc(EsoParsedTramp((1 to matcher.groupCount).map(matcher.group).mkString, matcher.start, matcher.end))) // Yep... Statement in the if condition changed its state. Why do people do this?
-      else tailcall(cc(EsoParsedTramp(matcher.group(), matcher.start, matcher.end)))
-    else tailcall(cc(EsoParseFailTramp))}
+      if (matcher.groupCount > 0)
+        tailcall(cc(EsoParsedTramp((1 to matcher.groupCount).map(matcher.group).mkString, inp, matcher.start, matcher.end))) // Yep... Statement in the if condition changed its state. Why do people do this?
+      else
+        tailcall(cc(EsoParsedTramp(matcher.group(), inp, matcher.start, matcher.end)))
+    else
+      tailcall(cc(EsoParseFailTramp(inp)))}
 }

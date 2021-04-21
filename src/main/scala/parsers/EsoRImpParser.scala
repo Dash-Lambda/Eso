@@ -13,12 +13,13 @@ class EsoRImpParser[+A, +B](parser1: => EsoParser[A], parser2: => EsoParser[B]) 
       p.tramp(inp, start_ind)(
         pres =>
           pres.flatMapAll{
-            case (_, ps, pe) =>
-              q.tramp(inp, pe)(
+            case (_, pi, ps, pe) =>
+              q.tramp(pi, pe)(
                 qres =>
                   done(
                     qres.flatMapAll{
-                      case (qr, _, qe) => EsoParsedTramp(qr, ps, qe)}))})) flatMap cc}
+                      case (qr, qi, _, qe) =>
+                        EsoParsedTramp(qr, qi, ps, qe)}))})) flatMap cc}
 }
 object EsoRImpParser{
   def apply[A,B](p: => EsoParser[A], q: => EsoParser[B]): EsoRImpParser[A,B] = new EsoRImpParser(p, q)

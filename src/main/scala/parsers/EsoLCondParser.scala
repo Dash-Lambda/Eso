@@ -13,10 +13,12 @@ class EsoLCondParser[+A, +B](parser1: => EsoParser[A], parser2: => EsoParser[B])
       p.tramp(inp, start_ind)(
         pres =>
           pres.flatMapAll{
-            case (_, _, pe) =>
-              q.tramp(inp, pe)(
+            case (pr, pi, ps, pe) =>
+              q.tramp(pi, pe)(
                 qres =>
-                  qres.flatMap(_ => done(pres)))})) flatMap cc}
+                  qres.flatMapAll{
+                    case (_, qi, _, _) =>
+                      done(EsoParsedTramp(pr, qi, ps, pe))})})) flatMap cc}
 }
 object EsoLCondParser{
   def apply[A,B](p: => EsoParser[A], q: => EsoParser[B]): EsoLCondParser[A,B] = new EsoLCondParser(p, q)

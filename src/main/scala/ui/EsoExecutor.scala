@@ -17,10 +17,10 @@ case class EsoExecutor(cmds: Vector[CommandHandler]) extends EsoObj{
       case (cmd, args) => handlers.get(cmd) match{
         case Some(h) => h(state)(args)
         case None =>
-          println("Error: Invalid Command")
+          println(s"Error: Invalid Command (Unknown Handler $cmd)")
           state}}
     case _ =>
-      println("Error: Invalid Command")
+      println("Error: Invalid Command (Parse Fail)")
       state}
   
   def parse(binds: immutable.HashMap[String, String])(inp: String): Option[(String, immutable.HashMap[String, String])] = inp match{
