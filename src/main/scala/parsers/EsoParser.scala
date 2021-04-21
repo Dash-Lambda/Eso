@@ -16,9 +16,6 @@ case class EsoParserInput(inp: String) extends CharSequence with IndexedSeq[Char
   def startsWith(prefix: String): Boolean = inp.startsWith(prefix)
   def startsWith(prefix: String, offset: Int): Boolean = inp.startsWith(prefix, offset)
 }
-object EsoParserInput{
-  //def apply(inp: String): EsoParserInput = new EsoParserInput(inp.toArray)
-}
 
 abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
   def apply(inp: String): EsoParseRes[A]
