@@ -11,11 +11,8 @@ class EsoMapParser[A, +B](parser: => EsoParser[A], fun: A => B) extends EsoParse
   
   override def tramp[AA >: B, C](inp: EsoParserInput, start_ind: Int)(cc: ParserContinuation[AA, C]): TailRec[ParseTrampResult[C]] = {
     tailcall(
-      p.tramp(inp, start_ind)(
-        res =>
-          res.flatMapAll{
-            case (pr, pi, ps, pe) =>
-              cc(EsoParsedTramp(fun(pr), pi, ps, pe))}))}
+      p.tramp(inp, start_ind)(res =>
+        tailcall(cc(res map fun))))}
 }
 object EsoMapParser{
   def apply[A,B](parser: => EsoParser[A], fun: A => B): EsoMapParser[A,B] = new EsoMapParser(parser, fun)
