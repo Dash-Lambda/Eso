@@ -3,7 +3,9 @@ package parsers
 import common_test.EsoSpec
 
 class EsoParserSpec extends EsoSpec{
-
+  val as: EsoParser[String] = EsoStringParser("a")
+  val bs: EsoParser[String] = EsoStringParser("b")
+  val cs: EsoParser[String] = EsoStringParser("c")
 }
 
 class EsoStringParserSpec extends EsoParserSpec{
@@ -22,9 +24,7 @@ class EsoRegexParserSpec extends EsoParserSpec{
 class EsoAltParserSpec extends EsoParserSpec{
   val p: EsoParser[String] = EsoRegexParser("a".r)
   val q: EsoParser[String] = EsoRegexParser("b".r)
-  val a: EsoParser[String] = EsoStringParser("a")
   val ab: EsoParser[String] = EsoStringParser("ab")
-  val c: EsoParser[String] = EsoStringParser("c")
   
   "EsoAltParser" should "return the first success" in {
     assertResult(EsoParsed("a", "ab", 0, 1))((p | q)("aab"))
@@ -32,14 +32,13 @@ class EsoAltParserSpec extends EsoParserSpec{
     assertResult(EsoParsed("a", "bb", 0, 1))((p | q)("abb"))
     assertResult(EsoParsed("b", "b", 1, 2))((q | p)("abb"))}
   it should "backtrack until success" in {
-    assertResult(EsoParsed("abc", "", 0, 3))(((a | ab) <+> c).apply("abc"))}
+    assertResult(EsoParsed("abc", "", 0, 3))(((as | ab) <+> cs).apply("abc"))}
 }
 
 class EsoEarliestMatchParserSpec extends EsoParserSpec{
   val p: EsoParser[String] = EsoRegexParser("a".r)
   val q: EsoParser[String] = EsoRegexParser("b".r)
   val ab: EsoParser[String] = EsoRegexParser("ab".r)
-  val c: EsoParser[String] = EsoStringParser("c")
   
   "EsoEarliestMatchParser" should "return the earliest match" in {
     assertResult(EsoParsed("a", "ab", 0, 1))((p || q)("aab"))
@@ -47,7 +46,7 @@ class EsoEarliestMatchParserSpec extends EsoParserSpec{
     assertResult(EsoParsed("a", "bb", 0, 1))((p || q)("abb"))
     assertResult(EsoParsed("a", "bb", 0, 1))((q || p)("abb"))}
   it should "backtrack until success" in {
-    assertResult(EsoParsed("abc", "", 1, 4))(((p || ab) <+> c).apply("aabc"))}
+    assertResult(EsoParsed("abc", "", 1, 4))(((p || ab) <+> cs).apply("aabc"))}
 }
 
 class EsoLongestMatchParserSpec extends EsoParserSpec{
@@ -148,6 +147,7 @@ class EsoAllParserSpec extends EsoParserSpec{
   "EsoAllParser" should "parse all tokens in input" in assertResult(EsoParsed(Vector("a", "a", "a"), "b", 0, 3))(ap(0)("aaab"))
   it should "succeed on none if given 0" in assertResult(EsoParsed(Vector(), "b", 0, 0))(ap(0)("b"))
   it should "fail if number of tokens is below quota" in assertResult(EsoParseFail)(ap(2)("ab"))
+  it should "backtrack if necessary" in assertResult(EsoParsed((Vector("a", "a"), "ab"), "", 0, 4))((as.* <&> (as <+> bs))("aaab"))
 }
 
 class EsoConcatParserSpec extends EsoParserSpec{

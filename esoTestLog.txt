@@ -249,6 +249,7 @@ EsoAllParser
 - should parse all tokens in input
 - should succeed on none if given 0
 - should fail if number of tokens is below quota
+- should backtrack if necessary
 listFileAssociationsHandlerSpec:
 ListFileAssociationsHandler
 - should correctly list the default file associations
@@ -433,8 +434,8 @@ Metatape
 - should run bitWidth.mt correctly
 - should return a referentially transparent function for hworld.mt
 - should return a referentially transparent function for bitWidth.mt
-Run completed in 1 minute, 43 seconds.
-Total number of tests run: 271
+Run completed in 1 minute, 37 seconds.
+Total number of tests run: 272
 Suites: completed 80, aborted 0
-Tests: succeeded 271, failed 0, canceled 0, ignored 0, pending 0
+Tests: succeeded 272, failed 0, canceled 0, ignored 0, pending 0
 All tests passed.
