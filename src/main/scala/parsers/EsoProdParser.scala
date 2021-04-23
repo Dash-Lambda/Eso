@@ -12,11 +12,11 @@ class EsoProdParser[+A, +B](parser1: => EsoParser[A], parser2: => EsoParser[B]) 
     tailcall(
       p.tramp(inp, start_ind)(
         pres =>
-          pres.flatMapAll{
+          pres.flatMap{
             case (pr, pi, ps, pe) =>
               q.tramp(pi, pe)(
                 qres =>
-                  qres.flatMapAll{
+                  qres.flatMap{
                     case (qr, qi, _, qe) =>
                       done(EsoParsedTramp((pr, qr), qi, ps, qe))})})) flatMap cc}
 }

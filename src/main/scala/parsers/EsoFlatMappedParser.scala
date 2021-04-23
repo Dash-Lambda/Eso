@@ -11,11 +11,11 @@ class EsoFlatMappedParser[A, +B](parser: => EsoParser[A], f: A => EsoParser[B]) 
     tailcall(
       p.tramp(inp, start_ind)(
         pres =>
-          pres.flatMapAll{
+          pres.flatMap{
             case (pr, pi, ps, pe) =>
               f(pr).tramp(pi, pe)(
                 fres =>
-                  fres.flatMapAll{
+                  fres.flatMap{
                     case (fr, fi, _, fe) =>
                       done(EsoParsedTramp(fr, fi, ps, fe))})})) flatMap cc}
 }

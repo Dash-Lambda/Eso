@@ -48,35 +48,32 @@ trait EsoParseResTramp[+A]{
   def end: Int
   def length: Int
   def get: Option[A]
-  def orElse[B >: A](alt: => EsoParseResTramp[B]): EsoParseResTramp[B]
+  def toFullRes(inp: String): EsoParseRes[A]
+  def withInp(ninp: EsoParserInput): EsoParseResTramp[A]
+  def map[B](f: (A, EsoParserInput, Int, Int) => TailRec[(B, EsoParserInput, Int, Int)]): TailRec[EsoParseResTramp[B]]
+  def flatMap[B](f: (A, EsoParserInput, Int, Int) => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]]
+  def orElse[B >: A](alt: => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]]
+  
   def passed: Boolean = get.nonEmpty
   def toTry(str: String = "Parse Failed"): Try[A] = get match {
     case Some(res) => Success(res)
     case None => Failure(EsoExcep(str))}
-  def toFullRes(inp: String): EsoParseRes[A]
-  def withInp(ninp: EsoParserInput): EsoParseResTramp[A]
-  
-  def map[B](f: A => B): EsoParseResTramp[B]
-  def map[B](f: A => TailRec[B]): TailRec[EsoParseResTramp[B]]
-  def flatMap[B](f: A => EsoParseResTramp[B]): EsoParseResTramp[B]
-  def flatMap[B](f: A => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]]
-  def flatMapAll[B](f: (A, EsoParserInput, Int, Int) => EsoParseResTramp[B]): EsoParseResTramp[B]
-  def flatMapAll[B](f: (A, EsoParserInput, Int, Int) => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]]
+  def isBefore[B](q: EsoParseResTramp[B]): Boolean = passed && (start <= q.start || !q.passed)
+  def isLongerThan[B](q: EsoParseResTramp[B]): Boolean = passed && (length >= q.length || !q.passed)
+  def map[B](f: (A, EsoParserInput, Int, Int) => (B, EsoParserInput, Int, Int)): EsoParseResTramp[B] = map{case (p, i, s, e) => done(f(p, i, s, e))}.result
+  def flatMap[B](f: (A, EsoParserInput, Int, Int) => EsoParseResTramp[B]): EsoParseResTramp[B] = flatMap{case (p, i, s, e) => done(f(p, i, s, e))}.result
+  def orElse[B >: A](alt: => EsoParseResTramp[B]): EsoParseResTramp[B] = orElse(done(alt)).result
 }
 
 case class EsoParsedTramp[+A](parsed: A, inp: EsoParserInput,  start: Int, end: Int) extends EsoParseResTramp[A]{
   def length: Int = end - start
   def get: Option[A] = Some(parsed)
-  def orElse[B >: A](alt: => EsoParseResTramp[B]): EsoParseResTramp[B] = this
   def toFullRes(inp: String): EsoParseRes[A] = EsoParsed(parsed, inp.drop(end), start, end)
   def withInp(ninp: EsoParserInput): EsoParseResTramp[A] = EsoParsedTramp(parsed, ninp, start, end)
   
-  def map[B](f: A => B): EsoParseResTramp[B] = EsoParsedTramp(f(parsed), inp, start, end)
-  def map[B](f: A => TailRec[B]): TailRec[EsoParseResTramp[B]] = tailcall(f(parsed) map (np => EsoParsedTramp(np, inp, start, end)))
-  def flatMap[B](f: A => EsoParseResTramp[B]): EsoParseResTramp[B] = f(parsed)
-  def flatMap[B](f: A => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]] = tailcall(f(parsed))
-  def flatMapAll[B](f: (A, EsoParserInput, Int, Int) => EsoParseResTramp[B]): EsoParseResTramp[B] = f(parsed, inp, start, end)
-  def flatMapAll[B](f: (A, EsoParserInput, Int, Int) => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]] = tailcall(f(parsed, inp, start, end))
+  def map[B](f: (A, EsoParserInput, Int, Int) => TailRec[(B, EsoParserInput, Int, Int)]): TailRec[EsoParseResTramp[B]] = tailcall(f(parsed, inp, start, end) map {case (p, i, s, e) => EsoParsedTramp(p, i, s, e)})
+  def flatMap[B](f: (A, EsoParserInput, Int, Int) => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]] = tailcall(f(parsed, inp, start, end))
+  def orElse[B >: A](alt: => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]] = done(this)
 }
 
 case class EsoParseFailTramp(inp: EsoParserInput) extends EsoParseResTramp[Nothing]{
@@ -84,14 +81,10 @@ case class EsoParseFailTramp(inp: EsoParserInput) extends EsoParseResTramp[Nothi
   def start: Int = -1
   def end: Int = -1
   def get: Option[Nothing] = None
-  def orElse[B >: Nothing](alt: => EsoParseResTramp[B]): EsoParseResTramp[B] = alt
   def toFullRes(inp: String): EsoParseRes[Nothing] = EsoParseFail
   def withInp(ninp: EsoParserInput): EsoParseResTramp[Nothing] = EsoParseFailTramp(ninp)
   
-  def map[B](f: Nothing => B): EsoParseResTramp[B] = this
-  def map[B](f: Nothing => TailRec[B]): TailRec[EsoParseResTramp[B]] = done(this)
-  def flatMap[B](f: Nothing => EsoParseResTramp[B]): EsoParseResTramp[B] = this
-  def flatMap[B](f: Nothing => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]] = done(this)
-  def flatMapAll[B](f: (Nothing, EsoParserInput, Int, Int) => EsoParseResTramp[B]): EsoParseResTramp[B] = this
-  def flatMapAll[B](f: (Nothing, EsoParserInput, Int, Int) => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]] = done(this)
+  def map[B](f: (Nothing, EsoParserInput, Int, Int) => TailRec[(B, EsoParserInput, Int, Int)]): TailRec[EsoParseResTramp[B]] = done(this)
+  def flatMap[B](f: (Nothing, EsoParserInput, Int, Int) => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]] = done(this)
+  def orElse[B >: Nothing](alt: => TailRec[EsoParseResTramp[B]]): TailRec[EsoParseResTramp[B]] = tailcall(alt)
 }

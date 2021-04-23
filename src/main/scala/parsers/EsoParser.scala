@@ -15,6 +15,8 @@ case class EsoParserInput(inp: String) extends CharSequence with IndexedSeq[Char
   // Explicitly defining these speeds it up a little
   def startsWith(prefix: String): Boolean = inp.startsWith(prefix)
   def startsWith(prefix: String, offset: Int): Boolean = inp.startsWith(prefix, offset)
+  
+  override def toString: String = inp
 }
 
 abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
@@ -23,9 +25,9 @@ abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
   
   /* p ^^ f = p map f */
   def ^^[B](f: A => B): EsoParser[B] = map(f)
-  def map[B](f: A => B): EsoParser[B] = EsoMapParser(this, f)
+  def map[B](f: A => B): EsoParser[B] = EsoMapParser(this)(f)
   /* p ^^^ v = if p then v */
-  def ^^^[B](v: => B): EsoParser[B] = EsoConstantParser(this, v)
+  def ^^^[B](v: => B): EsoParser[B] = EsoMapParser(this)(_ => v)
   def flatMap[B](f: A => EsoParser[B]): EsoParser[B] = EsoFlatMappedParser(this, f)
   
   def parseAllValues(inp: String): Vector[A] = parseValuesIterator(inp).toVector
@@ -45,26 +47,35 @@ abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
   /* Parse all matches, fail on empty */
   def + : EsoParser[Vector[A]] = atLeastOne
   def atLeastOne: EsoParser[Vector[A]] = EsoAllParser(this, 1)
+  /* Only pass if cond is true */
+  def onlyif(cond: (A, Int, Int) => Boolean): EsoParser[A] = EsoFlatMapResultParser(this){case (pr, pi, ps, pe) => done(if(cond(pr, ps, pe)) EsoParsedTramp(pr, pi, ps, pe) else EsoParseFailTramp(pi))}
   
   /* Alternative composition, first match */
   def |[B >: A](q: => EsoParser[B]): EsoParser[B] = EsoAltParser(this, q)
   /* Alternative composition, Earliest match */
-  def ||[B >: A](q: => EsoParser[B]): EsoParser[B] = EsoEarliestMatchParser(this, q)
+  def ||[B >: A](q: => EsoParser[B]): EsoParser[B] = EsoSortedAltParser(this, q)(_ isBefore _)
   /* Alternative composition, longest match */
-  def |||[B >: A](q: => EsoParser[B]): EsoParser[B] = EsoLongestMatchParser(this, q)
+  def |||[B >: A](q: => EsoParser[B]): EsoParser[B] = EsoSortedAltParser(this, q)(_ isLongerThan _)
   
   /* p <| q = p if q, ignore input consumed by q*/
-  def <|[B](q: => EsoParser[B]): EsoParser[A] = new EsoLCondParser(this, q)
+  def <|[B](q: => EsoParser[B]): EsoParser[A] = EsoFlatMapResultParser(this){
+    case (pr, pi, ps, pe) =>
+      tailcall(
+        q.tramp(pi, pe){
+          qres =>
+            qres.flatMap{
+              case (_, qi, _, _) =>
+                done(EsoParsedTramp(pr, qi, ps, pe))}})}
   /* p <& q = p if q, q consumes input */
-  def <&[B](q: => EsoParser[B]): EsoParser[A] = new EsoLImpParser(this, q)
+  def <&[B](q: => EsoParser[B]): EsoParser[A] = <&>(q) map {case (a, _) => a}
   /* p &> q = if p then q, p consumes input */
-  def &>[B](q: => EsoParser[B]): EsoParser[B] = new EsoRImpParser(this, q)
+  def &>[B](q: => EsoParser[B]): EsoParser[B] = <&>(q) map {case (_, b) => b}
   /* p <&> q = (p, q) */
   def <&>[B](q: => EsoParser[B]): EsoParser[(A, B)] = new EsoProdParser(this, q)
   /* Into */
   def >>[B](q: => EsoParser[B])(implicit ev: EsoParser[A] <:< EsoParser[String]): EsoParser[B] = EsoIntoParser(ev(this), q)
   /* Concat */
-  def <+>(q: => EsoParser[String])(implicit ev: EsoParser[A] <:< EsoParser[String]): EsoParser[String] = EsoConcatParser(ev(this), q)
+  def <+>(q: => EsoParser[String])(implicit ev: EsoParser[A] <:< EsoParser[String]): EsoParser[String] = ev(this).<&>(q) map {case (a, b) => a + b}
   
   type ParseTrampResult[B] = EsoParseResTramp[B]
   type ParserContinuation[B, C] = EsoParseResTramp[B] => TailRec[EsoParseResTramp[C]]

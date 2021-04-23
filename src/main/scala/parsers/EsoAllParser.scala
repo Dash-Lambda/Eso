@@ -11,7 +11,7 @@ class EsoAllParser[+A](parser: => EsoParser[A], num: Int) extends EsoParser[Vect
     def backtrack(ac: Vector[EsoParsedTramp[A]])(res: ParseTrampResult[B]): TailRec[ParseTrampResult[B]] = {
       if(res.passed) done(res)
       else if(ac.sizeIs >= num) {
-        def nxt = tailcall(cc(EsoParsedTramp(ac map (_.parsed), res.inp, ac.headOption.map(_.start).getOrElse(0), ac.lastOption.map(_.end).getOrElse(0))))
+        def nxt: TailRec[EsoParseResTramp[B]] = tailcall(cc(EsoParsedTramp(ac map (_.parsed), res.inp, ac.headOption.map(_.start).getOrElse(0), ac.lastOption.map(_.end).getOrElse(0))))
         if(ac.nonEmpty) nxt flatMap backtrack(ac.dropRight(1))
         else nxt}
       else tailcall(cc(EsoParseFailTramp(res.inp)))}
