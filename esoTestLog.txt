@@ -39,7 +39,18 @@ LazyBird
 - should run fibComb.lzb correctly
 - should run asciiCat.lzb correctly
 - should run equals.lzb correctly
-- should interpret named combinators correctly
+- should interpret named combinator m correctly
+- should interpret named combinator 0 correctly
+- should interpret named combinator w correctly
+- should interpret named combinator u correctly
+- should interpret named combinator o correctly
+- should interpret named combinator t correctly
+- should interpret named combinator l correctly
+- should interpret named combinator b correctly
+- should interpret named combinator c correctly
+- should interpret named combinator q correctly
+- should interpret named combinator v correctly
+- should interpret named combinator @ correctly
 - should return a referentially transparent function for hworld.lzb
 - should return a referentially transparent function for fib.lzb
 - should return a referentially transparent function for fibComb.lzb
@@ -165,6 +176,7 @@ EsoAltParserSpec:
 EsoAltParser
 - should return the first success
 - should backtrack until success
+- should backtrack to middle cases
 MemTapeSpec:
 MemTape
 - should respect static size
@@ -434,8 +446,8 @@ Metatape
 - should run bitWidth.mt correctly
 - should return a referentially transparent function for hworld.mt
 - should return a referentially transparent function for bitWidth.mt
-Run completed in 1 minute, 43 seconds.
-Total number of tests run: 272
+Run completed in 1 minute, 33 seconds.
+Total number of tests run: 284
 Suites: completed 80, aborted 0
-Tests: succeeded 272, failed 0, canceled 0, ignored 0, pending 0
+Tests: succeeded 284, failed 0, canceled 0, ignored 0, pending 0
 All tests passed.
