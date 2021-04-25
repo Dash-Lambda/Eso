@@ -1,7 +1,8 @@
 package platts
 
 import common.{Config, Interpreter}
-import parsers.{EsoParseFail, EsoParsed, EsoParser}
+import parsers.{EsoParser, ParseFail, Parsed}
+import parsers.EsoParser._
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -12,8 +13,7 @@ object Platts extends Interpreter{
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = Try{parse(progRaw)} map{
     case (symLen, ruleMap, initData) =>
-      import parsers.Implicits._
-      def stepper: EsoParser[POP] = (s"^.{$symLen}".r <& s"^.{$symLen}".r) map (s => ruleMap.getOrElse(s, REP("", toggle=false)))
+      def stepper: EsoParser[POP] = (R(s"^.{$symLen}".r) <& R(s"^.{$symLen}".r)) map (s => ruleMap.getOrElse(s, REP("", toggle=false)))
       
       @tailrec
       def repInp(ac: String, inp: Seq[Char]): (String, Seq[Char]) = {
@@ -23,8 +23,9 @@ object Platts extends Interpreter{
       
       @tailrec
       def rdo(ac: String, out: Boolean, inp: Seq[Char]): Option[(String, (String, Boolean, Seq[Char]))] = stepper(ac) match{
-        case EsoParseFail => None
-        case EsoParsed(op, tl, _, _) =>
+        case ParseFail => None
+        case Parsed((op, rem, _, end)) =>
+          val tl = rem.drop(end)
           op match{
             case Halt => None
             case REP(str, toggle) => repInp(str, inp) match{

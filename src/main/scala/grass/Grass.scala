@@ -2,7 +2,8 @@ package grass
 
 import common.{Config, Interpreter}
 import parsers.EsoParser
-import parsers.Implicits._
+import parsers.EsoParser._
+import parsers.NewParsers._
 
 import scala.annotation.tailrec
 import scala.util.Try
@@ -13,22 +14,22 @@ object Grass extends Interpreter{
   def absArity(n: Int, p: Vector[Expr]): Vector[Expr] = {
     if(n > 0) absArity(n - 1, Vector(AbsExpr(p)))
     else p}
-  def firstParse: EsoParser[String] = "(?s)[ｗw].*".r map (s =>
+  def firstParse: EsoParser[String] = R("(?s)[ｗw].*".r) map (s =>
     filterChars(s, "\uff37\uff57\uFF56\uFF36WwVv")
       .replace("\uff37", "W")
       .replace("\uff57", "w")
       .replace("\uFF56", "v")
       .replace("\uFF36", "v"))
-  def appsParse: EsoParser[Vector[Expr]] = (("^W+".r <&> "^w+".r) map {case (x, y) => AppExpr(x.length, y.length)}).*
-  def abstractParse: EsoParser[Vector[Expr]] = "^w[Ww]*".r >> ("w".all flatMap (v => appsParse.map{ es => absArity(v.length, es)}))
-  def applyParse: EsoParser[Vector[Expr]] = "^W[Ww]*".r >> appsParse
-  def grassParse: EsoParser[Vector[Expr]] = firstParse >> {
-    ("^v?".r &> (abstractParse | applyParse)).all map {res =>
+  def appsParse: EsoParser[Vector[Expr]] = ((R("^W+".r) <&> R("^w+".r)) map {case (x, y) => AppExpr(x.length, y.length)}).*
+  def abstractParse: EsoParser[Vector[Expr]] = into(R("^w[Ww]*".r), S("w").* flatMap (v => appsParse.map{ es => absArity(v.length, es)}))
+  def applyParse: EsoParser[Vector[Expr]] = into(R("^W[Ww]*".r), appsParse)
+  def grassParse: EsoParser[Vector[Expr]] = into(firstParse, {
+    (R("^v?".r) &> (abstractParse | applyParse)).* map {res =>
       res.flatten match{
         case as :+ (a: AbsExpr) => as :+ a :+ AppExpr(1, 1)
-        case as => as}}}
+        case as => as}}})
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = grassParse(progRaw).toTry() map eval
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = grassParse(progRaw).toTry() map {case (expr, _, _, _) => eval(expr)}
   
   def eval(prog: Vector[Expr]): Seq[Char] => LazyList[Char] = {
     @tailrec

@@ -37,9 +37,9 @@ object PDP extends Interpreter{
       lines
         .tail.tail
         .mkString
-        .replaceAllLiterally("L", "r'A")
-        .replaceAllLiterally("r'", "r"*(alpha.length - 1))
-        .replaceAllLiterally("r", "AR"),
+        .replace("L", "r'A")
+        .replace("r'", "r"*(alpha.length - 1))
+        .replace("r", "AR"),
       "()RA")
       .toVector
     lazy val jMap = mdo(Vector[(Int, Int)](), List[Int](), 0)

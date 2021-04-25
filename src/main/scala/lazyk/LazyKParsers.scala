@@ -3,7 +3,8 @@ package lazyk
 import common.EsoObj
 import lazyk.LazyKFuncs._
 import parsers._
-import parsers.Implicits._
+import parsers.EsoParser._
+import parsers.NewParsers._
 
 import scala.util.Try
 
@@ -15,31 +16,32 @@ object LazyKParsers extends EsoObj{
   def appExpr(p: (Expr, Expr)): Expr = AppExpr(p._1, p._2)
   
   val jotExprParse: EsoParser[Expr] = {
-    (inp: String) =>
-      val res = inp.toVector
+    (inp: String, ind: Int) =>
+      val res = (ind until inp.length)
         .foldRight(Vector[Expr]()){
-          case ('0', ac) => sexpr +: kexpr +: ac
-          case ('1', x +: y +: ac) => AppExpr(x, y) +: ac
-          case ('1', x +: ac) => AppExpr(x, iexpr) +: ac
-          case ('1', ac) => AppExpr(iexpr, iexpr) +: ac
-          case (_, ac) => ac}
-      if(res.nonEmpty) EsoParsed(res.reduceLeft(AppExpr), "", 0, inp.length)
-      else EsoParseFail}
-  val jotParse: EsoParser[Expr] = "^[01]+".r >> jotExprParse
+          case (i, es) => (inp(i), es) match{
+            case ('0', ac) => sexpr +: kexpr +: ac
+            case ('1', x +: y +: ac) => AppExpr(x, y) +: ac
+            case ('1', x +: ac) => AppExpr(x, iexpr) +: ac
+            case ('1', ac) => AppExpr(iexpr, iexpr) +: ac
+            case (_, ac) => ac}}
+      if(res.nonEmpty) Parsed((res.reduceLeft(AppExpr), "", ind, inp.length))
+      else ParseFail}
+  val jotParse: EsoParser[Expr] = into(R("^[01]+".r), jotExprParse)
   
-  val unlExpParse: EsoParser[Expr] = ("s" ^^^ sexpr) | ("k" ^^^ kexpr) | ("i" ^^^ iexpr) | (("`" &> (unlExpParse <&> unlExpParse)) map appExpr)
+  val unlExpParse: EsoParser[Expr] = (S("s") ^^^ sexpr) | (S("k") ^^^ kexpr) | (S("i") ^^^ iexpr) | ((S("`") &> (unlExpParse <&> unlExpParse)) map appExpr)
   
-  lazy val combParse: EsoParser[Expr] = ("S" ^^^ sexpr) | ("K" ^^^ kexpr) | ("I" ^^^ iexpr) | ("(" &> ccParse <& ")")
-  val ccParse: EsoParser[Expr] = combParse.+ map (_.foldLeft(iexpr: Expr)(AppExpr))
+  lazy val combParse: EsoParser[Expr] = (S("S") ^^^ sexpr) | (S("K") ^^^ kexpr) | (S("I") ^^^ iexpr) | (S("(") &> ccParse <& S(")"))
+  lazy val ccParse: EsoParser[Expr] = combParse.+ map (_.foldLeft(iexpr: Expr)(AppExpr))
   
-  val iotaParse: EsoParser[Expr] = ("i" ^^^ iotaexpr) | (("*" &> (iotaParse <&> iotaParse)) map appExpr)
+  val iotaParse: EsoParser[Expr] = (S("i") ^^^ iotaexpr) | ((S("*") &> (iotaParse <&> iotaParse)) map appExpr)
   
-  val emptyParser: EsoParser[Expr] = """^\Z""".r ^^^ iexpr
+  val emptyParser: EsoParser[Expr] = R("""^\Z""".r) ^^^ iexpr
   
   val lkParser: EsoParser[Expr] = unlExpParse | ccParse | iotaParse | jotParse | emptyParser
   
   def parse(progRaw: String): Try[Expr] = {
     def uncommented = progRaw.replaceAll("""(?m)^#.*$""", "")
     def scrubbed =  filterChars(uncommented, "`*skiSKI01()")
-    lkParser(scrubbed).toTry("Invalid Expression")}
+    lkParser(scrubbed).toTry("Invalid Expression") map (_._1)}
 }

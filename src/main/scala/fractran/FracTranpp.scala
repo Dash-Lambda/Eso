@@ -12,7 +12,7 @@ object FracTranpp extends Interpreter{
   val name: String = "FracTran++"
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = FracTranParser.fppParse(progRaw).toTry() flatMap{
-    case (initNum, prog) => Try{fppRun(initNum, prog)}}
+    case ((initNum, prog), _, _, _) => Try{fppRun(initNum, prog)}}
   
   def fppRun(initNum: SafeLong, blk: Vector[Vector[FOP]]): Seq[Char] => LazyList[Char] = {
     val primes = PrimeNumTools.birdPrimes

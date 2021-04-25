@@ -2,16 +2,16 @@ package lazyk
 
 import common.AbstractionEliminator
 import parsers.EsoParser
-import parsers.Implicits._
+import parsers.EsoParser._
 
 object LambdaToLazyKUnl extends AbstractionEliminator{
   val dst: String = "LazyK_Unlambda"
   
   val parser: EsoParser[Expr] = {
-    def junkParse: EsoParser[String] = "^[ \t\r\n]*".r
-    def abstraction: EsoParser[Expr] = "^" &> ("^.".r <&> expression) map {case (c, a) => a.elim(c.head)}
-    def application: EsoParser[Expr] = "`" &> (expression <&> expression) map {case (x, y) => AppExpr(x, y)}
-    def character: EsoParser[Expr] = "^.".r map (s => CharExpr(s.head))
+    def junkParse: EsoParser[String] = R("^[ \t\r\n]*".r)
+    def abstraction: EsoParser[Expr] = S("^") &> (R("^.".r) <&> expression) map {case (c, a) => a.elim(c.head)}
+    def application: EsoParser[Expr] = S("`") &> (expression <&> expression) map {case (x, y) => AppExpr(x, y)}
+    def character: EsoParser[Expr] = R("^.".r) map (s => CharExpr(s.head))
     def expression: EsoParser[Expr] = junkParse &> (application | abstraction | character)
     expression}
   

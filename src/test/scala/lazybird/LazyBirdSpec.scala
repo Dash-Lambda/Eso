@@ -12,22 +12,22 @@ class LazyBirdSpec extends EsoSpec{
     ("asciiCat.lzb", ('a' to 'z').mkString, ('a' to 'z').map(c => "*"*c.toInt).mkString("\n"), true),
     ("equals.lzb", "", "10", false))
   
-  it should "interpret named combinators correctly" in {
-    def parsedEquals(a: String, b: String): Unit = assertResult(LazyBird.lzbParse(a).get)(LazyBird.lzbParse(b).get)
-    val pairs = Vector(
-      "m" -> "``sii",
-      "0" -> "`ki",
-      "w" -> "``ss`ki",
-      "u" -> "``s`k`si``sii",
-      "o" -> "`si",
-      "t" -> "``s`k`sik",
-      "l" -> "``s``s`ksk`k``sii",
-      "b" -> "``s`ksk",
-      "c" -> "``s``s`k``s`ksks`kk",
-      "q" -> "``s`k`s``s`kskk",
-      "v" -> "``s`k``s``s`k``s`ksks`kk``s`k`sik",
-      "@" -> "``s``si`ks`kk")
-    for((a, b) <- pairs) parsedEquals(a, b)}
+  def parsedEquals(a: String, b: String): Unit = assertResult(LazyBird.lzbParse(a).get.map(_._1))(LazyBird.lzbParse(b).get.map(_._1))
+  val pairs = Vector(
+    "m" -> "``sii",
+    "0" -> "`ki",
+    "w" -> "``ss`ki",
+    "u" -> "``s`k`si``sii",
+    "o" -> "`si",
+    "t" -> "``s`k`sik",
+    "l" -> "``s``s`ksk`k``sii",
+    "b" -> "``s`ksk",
+    "c" -> "``s``s`k``s`ksks`kk",
+    "q" -> "``s`k`s``s`kskk",
+    "v" -> "``s`k``s``s`k``s`ksks`kk``s`k`sik",
+    "@" -> "``s``si`ks`kk")
+  for((a, b) <- pairs) it should s"interpret named combinator $a correctly" in parsedEquals(a, b)
+  
   testRTWithAllFilesLimited(LazyBird)(
     ("hworld.lzb", "", -1),
     ("fib.lzb", "", fibStr(20).length),

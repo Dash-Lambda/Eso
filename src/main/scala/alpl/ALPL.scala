@@ -2,7 +2,7 @@ package alpl
 
 import common.{Config, Interpreter}
 import parsers.EsoParser
-import parsers.Implicits._
+import parsers.EsoParser._
 
 import scala.annotation.tailrec
 import scala.collection.immutable
@@ -12,13 +12,13 @@ import scala.util.control.TailCalls._
 object ALPL extends Interpreter{
   val name: String = "ALPL"
   
-  def asnParse: EsoParser[Expr] = "=" &> """^.""".r map (s => FuncExpr(assign(s.head)))
-  def prmParse: EsoParser[Expr] = """^[^\[\].`=]""".r map {
+  def asnParse: EsoParser[Expr] = S("=") &> R("""^.""".r) map (s => FuncExpr(assign(s.head)))
+  def prmParse: EsoParser[Expr] = R("""^[^\[\].`=]""".r) map {
     case "?" => FuncExpr(inpFunc)
     case "0" => FuncExpr(printFunc(false))
     case "1" => FuncExpr(printFunc(true))
     case str => RefExpr(str.head)}
-  def lamParse: EsoParser[Expr] = ("[" &> ("""^[^.]*""".r <&> ("." &> """^[^]]*""".r)) <& "]") map {
+  def lamParse: EsoParser[Expr] = (S("[") &> (R("""^[^.]*""".r) <&> (S(".") &> R("""^[^]]*""".r))) <& S("]")) map {
     case (p, f) =>
       val binds = p.toVector
       val ops = f.toVector.map{
@@ -33,13 +33,13 @@ object ALPL extends Interpreter{
               case i => BoundExpr(i)}}
           Some(expr)}
       FuncExpr(Lambda(ops, Vector(), binds.size))}
-  def junkParse: EsoParser[String] = """^\s*""".r
-  def alplParse: EsoParser[Expr] = junkParse &> (asnParse | prmParse | lamParse | ("`" &> (alplParse <&> alplParse) map {case (x, y) => AppExpr(x, y)}))
+  def junkParse: EsoParser[String] = R("""^\s*""".r)
+  def alplParse: EsoParser[Expr] = junkParse &> (asnParse | prmParse | lamParse | (S("`") &> (alplParse <&> alplParse) map {case (x, y) => AppExpr(x, y)}))
   def allParse: EsoParser[Vector[Expr]] = alplParse.*
   
   def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = {
     allParse(progRaw).toTry() map{
-      case prog +: es =>
+      case (prog +: es, _, _, _) =>
         inputs => {
           val width = config.num("charWidth")
           val initEnv = Env(immutable.HashMap(), binInp(inputs, width), 0, width - 1)

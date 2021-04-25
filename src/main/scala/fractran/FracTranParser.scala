@@ -4,7 +4,8 @@ import common.{EsoObj, PrimeNumTools}
 import common.PrimeNumTools.factor
 import fractran.FracTranpp.{BRK, FOP, INP, JMP, MLT, MSC, OUT}
 import parsers.EsoParser
-import parsers.Implicits._
+import parsers.EsoParser._
+import parsers.NewParsers._
 import spire.math.SafeLong
 import spire.implicits._
 
@@ -12,13 +13,13 @@ object FracTranParser extends EsoObj{
   val primes: LazyList[SafeLong] = PrimeNumTools.birdPrimes.to(LazyList)
   
   val termParse: EsoParser[SafeLong] = {
-    def elmParse: EsoParser[SafeLong] = ("""\d+""".r ^^ (_.toInt)).* ^^ (v => (primes zip v) map {case (p, e) => p**e} reduce (_*_))
-    def vecParse: EsoParser[String] = "<" &> """[\d ]+""".r <& ">"
-    def numParse: EsoParser[SafeLong] = """-?\d+""".r ^^ (n => SafeLong(BigInt(n)))
-    (vecParse >> elmParse) | numParse}
+    def elmParse: EsoParser[SafeLong] = (R("""\d+""".r) ^^ (_.toInt)).* ^^ (v => (primes zip v) map {case (p, e) => p**e} reduce (_*_))
+    def vecParse: EsoParser[String] = S("<") &> R("""[\d ]+""".r) <& S(">")
+    def numParse: EsoParser[SafeLong] = R("""-?\d+""".r) ^^ (n => SafeLong(BigInt(n)))
+    into(vecParse, elmParse) | numParse}
   
-  val fracParse: EsoParser[(SafeLong, SafeLong)] = """(?m)^-?(?:<[\d ]+>|\d+)/-?(?:<[\d ]+>|\d+)$""".r >> ((termParse <& "/") <&> termParse)
-  val initParse: EsoParser[SafeLong] = """(?m)^-?(?:\d+|<[\d ]+>)$""".r >> termParse
+  val fracParse: EsoParser[(SafeLong, SafeLong)] = into(R("""(?m)^-?(?:<[\d ]+>|\d+)/-?(?:<[\d ]+>|\d+)$""".r), (termParse <& S("/")) <&> termParse)
+  val initParse: EsoParser[SafeLong] = into(R("""(?m)^-?(?:\d+|<[\d ]+>)$""".r), termParse)
   
   val ftParse: EsoParser[(SafeLong, Vector[(SafeLong, SafeLong)])] = initParse <&> fracParse.*
   val fppParse: EsoParser[(SafeLong, Vector[Vector[FOP]])] = {

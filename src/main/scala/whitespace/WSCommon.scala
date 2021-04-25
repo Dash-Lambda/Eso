@@ -2,7 +2,7 @@ package whitespace
 
 import common.EsoObj
 import parsers.EsoParser
-import parsers.Implicits._
+import parsers.EsoParser._
 import spire.math.SafeLong
 import spire.implicits._
 
@@ -41,14 +41,14 @@ object WSCommon extends EsoObj {
   val argMaps: Vector[(String, String)] = syntax.filter{case (_, b) => argOps.contains(b)}
   val nonArgMaps: Vector[(String, String)] = syntax.filter{case (_, b) => nonArgOps.contains(b)}
   
-  def mappingParse(maps: Vector[(String, String)]): EsoParser[String] = maps.map{case (f, t) => f ^^^ t}.reduce[EsoParser[String]]{case (a, b) => a | b}
-  val digitsParser: EsoParser[SafeLong] = ("^[ \t]+".r <& "\n") map {_
+  def mappingParse(maps: Vector[(String, String)]): EsoParser[String] = maps.map{case (f, t) => S(f) ^^^ t}.reduce[EsoParser[String]]{case (a, b) => a | b}
+  val digitsParser: EsoParser[SafeLong] = (R("^[ \t]+".r) <& S("\n")) map {_
     .toVector
     .reverse
     .zipWithIndex
     .map{case (c, i) => if (c == '\t') SafeLong(2).pow(i) else SafeLong(0)}
     .foldLeft(SafeLong(0)){case (a, b) => a + b}}
-  val numParse: EsoParser[SafeLong] = ((" " | "\t") <&> digitsParser) map {
+  val numParse: EsoParser[SafeLong] = ((S(" ") | S("\t")) <&> digitsParser) map {
     case (" ", n) => n
     case ("\t", n) => -n}
   def nonArgParse: EsoParser[(String, SafeLong)] = mappingParse(nonArgMaps) map (s => (s, SafeLong(0)))
@@ -64,5 +64,5 @@ object WSCommon extends EsoObj {
     s"${if (num < 0) '\t' else ' '}$digs\n"}
   
   def getCalls(prog: Vector[(String, SafeLong)]): immutable.HashMap[SafeLong, Int] = mkMap(prog.zipWithIndex.collect { case (("label", id), n) => (id, n + 1) })
-  def parse(progRaw: String): Vector[(String, SafeLong)] = wsParse.parseAllValues(filterChars(progRaw, "\t\n "))
+  def parse(progRaw: String): Vector[(String, SafeLong)] = wsParse.*(filterChars(progRaw, "\t\n ")).mapped(_._1).getOrElse(Vector())
 }

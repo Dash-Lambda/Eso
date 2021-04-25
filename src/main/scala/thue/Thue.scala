@@ -2,7 +2,7 @@ package thue
 
 import common.{Config, Interpreter}
 import parsers.EsoParser
-import parsers.Implicits._
+import parsers.EsoParser._
 
 import scala.annotation.tailrec
 import scala.util.Try
@@ -10,11 +10,11 @@ import scala.util.Try
 object Thue extends Interpreter{
   val name: String = "Thue"
   
-  def ruleParse: EsoParser[(String, String)] = """(?m)^(.*\S.*)::=""".r <&> """^(.*)\v""".r
-  def initParse: EsoParser[String] = """(?m)^\s*::=.*\v""".r &> "(?s).*".r
+  def ruleParse: EsoParser[(String, String)] = R("""(?m)^(.*\S.*)::=""".r) <&> R("""^(.*)\v""".r)
+  def initParse: EsoParser[String] = R("""(?m)^\s*::=.*\v""".r) &> R("(?s).*".r)
   def thueParse: EsoParser[(Vector[(String, String)], String)] = ruleParse.* <&> initParse
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = thueParse(progRaw).toTry() map{case (prog, init) => thi(init, prog, config.rands)}
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = thueParse(progRaw).toTry() map{case ((prog, init), _, _, _) => thi(init, prog, config.rands)}
   
   def thi(init: String, prog: Vector[(String, String)], initRands: LazyList[Int]): Seq[Char] => LazyList[Char] = {
     def collapse(inp: Seq[Char]): Seq[String] = LazyList.unfold(inp){lst =>

@@ -17,9 +17,9 @@ object Slashes extends Interpreter{
   def slashRun(progRaw: String): LazyList[Char] = {
     @tailrec
     def nxt(src: String): Option[(Char, String)] = src match{
-      case patrepReg(p, r, str) => nxt(Iterator.iterate(str)(_.replaceAllLiterally(p, r)).find(s => !s.contains(p)).get)
+      case patrepReg(p, r, str) => nxt(Iterator.iterate(str)(_.replace(p, r)).find(s => !s.contains(p)).get)
       case partRepReg() => None
       case popReg(c, s) => Some((c.head, s))
       case _ => None}
-    LazyList.unfold(progRaw.replaceAllLiterally("]\n[", ""))(nxt)}
+    LazyList.unfold(progRaw.replace("]\n[", ""))(nxt)}
 }

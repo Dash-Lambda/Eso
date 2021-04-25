@@ -2,7 +2,7 @@ package volatile
 
 import common.{Config, Interpreter}
 import parsers.EsoParser
-import parsers.Implicits._
+import parsers.EsoParser._
 import spire.math.SafeLong
 
 import scala.annotation.tailrec
@@ -11,7 +11,7 @@ import scala.util.{Success, Try}
 object Volatile extends Interpreter{
   val name: String = "Volatile"
 
-  def volParse: EsoParser[VOP] = """^[~+\-*/:.()]""".r map{
+  def volParse: EsoParser[VOP] = R("""^[~+\-*/:.()]""".r) map{
     case "~" => PUSH
     case "+" => ADD
     case "-" => SUBT
@@ -55,7 +55,7 @@ object Volatile extends Interpreter{
           case n +: ns => sdo(ops, ac.updated(n, LSTART(i + 1)) :+ LEND(n + 1), ns)}
         case _ => sdo(ops, ac :+ op, stk)}
       case _ => ac}
-    sdo(volParse.parseAllValuesLazy(filterChars(progRaw, "~+-*/:.()")).zipWithIndex)}
+    sdo(volParse.*(filterChars(progRaw, "~+-*/:.()")).mapped(_._1).getOrElse(Vector()).to(LazyList).zipWithIndex)}
   
   trait VOP
   object PUSH extends VOP

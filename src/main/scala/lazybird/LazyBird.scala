@@ -2,18 +2,18 @@ package lazybird
 
 import common.{Config, Interpreter}
 import parsers.EsoParser
-import parsers.Implicits._
+import parsers.EsoParser._
 
 import scala.util.Try
 import scala.util.control.TailCalls._
 
 object LazyBird extends Interpreter{
   val name: String = "LazyBird"
-  val sexpr: Expr = FE(S)
+  val sexpr: Expr = FE(S0)
   val kexpr: Expr = FE(K)
   val iexpr: Expr = FE(I)
   
-  def primParse: EsoParser[Expr] = "^.".r map {
+  def primParse: EsoParser[Expr] = R("^.".r) map {
     case "s" => sexpr
     case "k" => kexpr
     case "i" => iexpr
@@ -34,12 +34,12 @@ object LazyBird extends Interpreter{
     case "&" => FE(Eql)
     case "r" => FE(PrintComb('\n'))
     case cl => CharExpr(cl.head)}
-  def printParse: EsoParser[Expr] = "." &> "^.".r map (c => FE(PrintComb(c.head)))
-  def absParse: EsoParser[Expr] = "^" &> ("^.".r <&> lzbParse) map {case (c, e) => e.elim(c.head.toLower)}
-  def appParse: EsoParser[Expr] = "`" &> (lzbParse <&> lzbParse) map {case (x, y) => AppExpr(x, y)}
+  def printParse: EsoParser[Expr] = S(".") &> R("^.".r) map (c => FE(PrintComb(c.head)))
+  def absParse: EsoParser[Expr] = S("^") &> (R("^.".r) <&> lzbParse) map {case (c, e) => e.elim(c.head.toLower)}
+  def appParse: EsoParser[Expr] = S("`") &> (lzbParse <&> lzbParse) map {case (x, y) => AppExpr(x, y)}
   def lzbParse: EsoParser[Expr] = appParse | absParse | printParse | primParse
   
-  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = lzbParse(progRaw).toTry() map{ prog =>
+  def apply(config: Config)(progRaw: String): Try[Seq[Char] => LazyList[Char]] = lzbParse(progRaw).toTry() map{case (prog, _, _, _) =>
     inputs => LazyList.unfold(tailcall(prog(endCont, Env(inputs))))(nxt => nxt.result.resolve)}
   
   case class Env(inp: Seq[Char]){
@@ -66,7 +66,7 @@ object LazyBird extends Interpreter{
   def AE(x: Expr, y: Expr): AppExpr = AppExpr(x, y)
   case class AppExpr(x: Expr, y: Expr) extends Expr{
     def apply(cc: Cont, env: Env): TailRec[Ret] = tailcall(x(exprCont(y, cc), env))
-    def elim(c: Char): Expr = AE(AE(FE(S), x.elim(c)), y.elim(c))}
+    def elim(c: Char): Expr = AE(AE(FE(S0), x.elim(c)), y.elim(c))}
   
   def FE(f: Func): FuncExpr = FuncExpr(f)
   case class FuncExpr(f: Func) extends Expr{
@@ -94,7 +94,7 @@ object LazyBird extends Interpreter{
     def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = tailcall(x(exprCont(f, exprCont(AE(y, f), cc)), env))}
   case class S1(x: Expr) extends Func{
     def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(S2(x, f), env))}
-  object S extends Func {
+  object S0 extends Func {
     def apply(f: Expr, cc: Cont, env: Env): TailRec[Ret] = tailcall(cc(S1(f), env))}
   
   case class K1(x: Expr) extends Func{

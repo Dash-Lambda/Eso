@@ -9,7 +9,7 @@ abstract class AbstractionEliminator extends Transpiler{
   
   val parser: EsoParser[Expr]
   
-  def apply(config: Config)(progRaw: String): Try[String] = parser(progRaw).toTry() map (_.toString)
+  def apply(config: Config)(progRaw: String): Try[String] = parser(progRaw).toTry() map (_._1.toString)
   
   abstract class Expr{
     def elim(c: Char): Expr

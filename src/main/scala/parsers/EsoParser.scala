@@ -2,90 +2,152 @@ package parsers
 
 import common.EsoObj
 
-import scala.util.control.TailCalls._
 import scala.util.matching.Regex
 
-case class EsoParserInput(inp: String) extends CharSequence with IndexedSeq[Char]{ // Stuck this in to make it easier to play with memoization
-  def string: String = inp
-  def apply(i: Int): Char = charAt(i)
-  def charAt(index: Int): Char = inp.charAt(index)
-  def subSequence(start: Int, end: Int): CharSequence = inp.subSequence(start, end)
-  def length: Int = inp.length
-  
-  // Explicitly defining these speeds it up a little
-  def startsWith(prefix: String): Boolean = inp.startsWith(prefix)
-  def startsWith(prefix: String, offset: Int): Boolean = inp.startsWith(prefix, offset)
-  
-  override def toString: String = inp
-}
+import ParserCalls._
 
-abstract class EsoParser[+A] extends (String => EsoParseRes[A]) with EsoObj{
-  def apply(inp: String): EsoParseRes[A]
+trait EsoParser[+A] extends ((String, Int) => ParseTramp[(A, String, Int, Int)]) with (String => ParseRes[(A, String, Int, Int)]) with EsoObj{
+  import NewParsers._
+  def apply(inp: String): ParseRes[(A, String, Int, Int)] = apply(inp, 0).result
+  
   def matches(inp: String): Boolean = apply(inp).passed
   
-  /* p ^^ f = p map f */
-  def ^^[B](f: A => B): EsoParser[B] = map(f)
-  def map[B](f: A => B): EsoParser[B] = EsoMapParser(this)(f)
-  /* p ^^^ v = if p then v */
-  def ^^^[B](v: => B): EsoParser[B] = EsoMapParser(this)(_ => v)
-  def flatMap[B](f: A => EsoParser[B]): EsoParser[B] = EsoFlatMappedParser(this, f)
+  def iterator(inp: String): Iterator[(A, String, Int, Int)] = Iterator.unfold(0: Int)(i => apply(inp, i).result.get.map(r => (r, r._4)))
   
-  def parseAllValues(inp: String): Vector[A] = parseValuesIterator(inp).toVector
-  def parseAllValuesLazy(inp: String): LazyList[A] = parseValuesIterator(inp).to(LazyList)
-  def parseValuesIterator(inp: String): Iterator[A] = parseIterator(inp) map (_.parsed)
+  def <|[B](q: => EsoParser[B]): EsoParser[A] = lcond(this, q)
+  def |>[B](q: => EsoParser[B]): EsoParser[B] = rcond(this, q)
+  def &>[B](q: => EsoParser[B]): EsoParser[B] = rimp(this, q)
+  def <&[B](q: => EsoParser[B]): EsoParser[A] = limp(this, q)
+  def <&>[B](q: => EsoParser[B]): EsoParser[(A, B)] = prod(this, q)
   
-  def parseAll(inp: String): Vector[EsoParsed[A]] = parseIterator(inp).toVector
-  def parseAllLazy(inp: String): LazyList[EsoParsed[A]] = parseIterator(inp).to(LazyList)
-  def parseIterator(inp: String): Iterator[EsoParsed[A]] = Iterator.unfold(inp){
-    src => apply(src) match{
-      case EsoParsed(tok, rem, start, end) => Some((EsoParsed(tok, rem, start, end), rem))
-      case _ => None}}
+  def |[B >: A](q: => EsoParser[B]): EsoParser[B] = alt(this, q)
+  def ||[B >: A](q: => EsoParser[B]): EsoParser[B] = earliest(this, q)
+  def |||[B >: A](q: => EsoParser[B]): EsoParser[B] = longest(this, q)
   
-  /* Parse all matches, no fail on empty */
-  def * : EsoParser[Vector[A]] = all
-  def all: EsoParser[Vector[A]] = EsoAllParser(this, 0)
-  /* Parse all matches, fail on empty */
-  def + : EsoParser[Vector[A]] = atLeastOne
-  def atLeastOne: EsoParser[Vector[A]] = EsoAllParser(this, 1)
-  /* Only pass if cond is true */
-  def onlyif(cond: (A, Int, Int) => Boolean): EsoParser[A] = EsoFlatMapResultParser(this){case (pr, pi, ps, pe) => done(if(cond(pr, ps, pe)) EsoParsedTramp(pr, pi, ps, pe) else EsoParseFailTramp(pi))}
+  def * : EsoParser[Vector[A]] = all(this)
+  def + : EsoParser[Vector[A]] = all(this, 1)
   
-  /* Alternative composition, first match */
-  def |[B >: A](q: => EsoParser[B]): EsoParser[B] = EsoAltParser(this, q)
-  /* Alternative composition, Earliest match */
-  def ||[B >: A](q: => EsoParser[B]): EsoParser[B] = EsoSortedAltParser(this, q)(_ isBefore _)
-  /* Alternative composition, longest match */
-  def |||[B >: A](q: => EsoParser[B]): EsoParser[B] = EsoSortedAltParser(this, q)(_ isLongerThan _)
+  def onlyIf(cond: (A, String, Int, Int) => Boolean): EsoParser[A] = conditional(this)(cond)
   
-  /* p <| q = p if q, ignore input consumed by q*/
-  def <|[B](q: => EsoParser[B]): EsoParser[A] = EsoFlatMapResultParser(this){
-    case (pr, pi, ps, pe) =>
-      tailcall(
-        q.tramp(pi, pe){
-          qres =>
-            qres.flatMap{
-              case (_, qi, _, _) =>
-                done(EsoParsedTramp(pr, qi, ps, pe))}})}
-  /* p <& q = p if q, q consumes input */
-  def <&[B](q: => EsoParser[B]): EsoParser[A] = <&>(q) map {case (a, _) => a}
-  /* p &> q = if p then q, p consumes input */
-  def &>[B](q: => EsoParser[B]): EsoParser[B] = <&>(q) map {case (_, b) => b}
-  /* p <&> q = (p, q) */
-  def <&>[B](q: => EsoParser[B]): EsoParser[(A, B)] = new EsoProdParser(this, q)
-  /* Into */
-  def >>[B](q: => EsoParser[B])(implicit ev: EsoParser[A] <:< EsoParser[String]): EsoParser[B] = EsoIntoParser(ev(this), q)
-  /* Concat */
-  def <+>(q: => EsoParser[String])(implicit ev: EsoParser[A] <:< EsoParser[String]): EsoParser[String] = ev(this).<&>(q) map {case (a, b) => a + b}
-  
-  type ParseTrampResult[B] = EsoParseResTramp[B]
-  type ParserContinuation[B, C] = EsoParseResTramp[B] => TailRec[EsoParseResTramp[C]]
-  def applyByTramp(inp: String): EsoParseRes[A] = tramp(EsoParserInput(inp), 0)(done).result.toFullRes(inp)
-  def tramp[AA >: A, B](inp: EsoParserInput, start_ind: Int)(cc: ParserContinuation[AA, B]): TailRec[ParseTrampResult[B]] = {
-    tailcall(
-      cc(apply(inp.string.drop(start_ind)).toTramp(inp, start_ind)))}
+  def ^^[U](f: A => U): EsoParser[U] = map(f)
+  def ^^^[U](v: => U): EsoParser[U] = map(_ => v)
+  def map[U](f: A => U): EsoParser[U] = (inp, ind) => apply(inp, ind) map {case (r, i, s, e) => (f(r), i, s, e)}
+  def flatMap[U](f: A => EsoParser[U]): EsoParser[U] = (inp, ind) => apply(inp, ind) flatMap{
+    case (r, i, s, e) =>
+      f(r)(i, e) map{
+        case (fr, fi, _, fe) =>
+          (fr, fi, s, fe)}}
+}
+object EsoParser{
+  import parsers.NewParsers.{regexparse, stringparse}
+  def empty[A](v: => A): EsoParser[A] = (inp, ind) => Parsed((v, inp, ind, ind))
+  def S(str: String): EsoParser[String] = stringparse(str)
+  def R(regex: Regex): EsoParser[String] = regexparse(regex)
+  def R(regex: String): EsoParser[String] = regexparse(regex.r)
 }
 
-object Implicits{
-  implicit def string2parser(str: String): EsoParser[String] = EsoStringParser(str)
-  implicit def regex2parser(reg: Regex): EsoParser[String] = EsoRegexParser(reg)
+object NewParsers{
+  def regexparse(reg: Regex): EsoParser[String] = {
+    (inp, ind) =>
+      val matcher = reg.pattern.matcher(inp)
+      matcher.region(ind, inp.length)
+      if(matcher.find)
+        if(matcher.groupCount > 0) Parsed(((1 to matcher.groupCount).map(matcher.group).mkString, inp, matcher.start, matcher.end))
+        else Parsed(matcher.group(), inp, matcher.start, matcher.end)
+      else ParseFail}
+  def stringparse(str: String): EsoParser[String] =
+    (inp, ind) =>
+      if(inp.startsWith(str, ind)) Parsed((str, inp, ind, ind + str.length))
+      else ParseFail
+  
+  def alt[A, B >: A](parser1: => EsoParser[A], parser2: => EsoParser[B]): EsoParser[B] = {
+    lazy val p = parser1
+    lazy val q = parser2
+    (inp, ind) =>
+      p(inp, ind) orElse q(inp, ind)
+  }
+  
+  def prod[A, B](parser1: => EsoParser[A], parser2: => EsoParser[B]): EsoParser[(A, B)] = {
+    lazy val p = parser1
+    lazy val q = parser2
+    (inp, ind) =>
+      p(inp, ind) flatMap {
+        case (pr, pi, ps, pe) => q(pi, pe) map {
+          case (qr, qi, _, qe) => ((pr, qr), qi, ps, qe)}}}
+  
+  // Higher-order combinators
+  def concat(p: => EsoParser[String], q: => EsoParser[String]): EsoParser[String] = prod(p, q) map {case (a, b) => a + b}
+  
+  def longest[A](parser1: => EsoParser[A], parser2: => EsoParser[A]): EsoParser[A] = {
+    lazy val p = parser1
+    lazy val q = parser2
+    (inp, ind) =>
+      p(inp, ind) flatMap{
+        case (pr, pi, ps, pe) =>
+          q(inp, ind) flatMap{
+            case (qr, qi, qs, qe) =>
+              val qres = Parsed((qr, qi, qs, qe))
+              val pres = Parsed((pr, pi, ps, pe))
+              if((pe - ps) >= (qe - qs)) pres orElse qres
+              else qres orElse pres} orElse Parsed((pr, pi, ps, pe))} orElse q(inp, ind)}
+  
+  def earliest[A](parser1: => EsoParser[A], parser2: => EsoParser[A]): EsoParser[A] = {
+    lazy val p = parser1
+    lazy val q = parser2
+    (inp, ind) =>
+      p(inp, ind) flatMap{
+        case (pr, pi, ps, pe) =>
+          q(inp, ind) flatMap{
+            case (qr, qi, qs, qe) =>
+              val qres = Parsed((qr, qi, qs, qe))
+              val pres = Parsed((pr, pi, ps, pe))
+              if(pe <= qe) pres orElse qres
+              else qres orElse pres} orElse Parsed((pr, pi, ps, pe))} orElse q(inp, ind)}
+  
+  def all[A](parser: => EsoParser[A], num: Int = 0): EsoParser[Vector[A]] = {
+    lazy val p = parser
+    lazy val base = EsoParser.empty(Vector[A]())
+    lazy val init: EsoParser[Vector[A]] =
+      Vector.fill(num)(p).foldLeft(base){
+        case (ac, np) =>
+          prod(ac, np) map {
+            case (vec, e) => vec :+ e}}
+    lazy val s: EsoParser[Vector[A]] = ((p <&> s) map (x => x._1 +: x._2)) | base
+    (init <&> s) map {case (a, b) => a ++ b}}
+  
+  def into[A](parser1: => EsoParser[String], parser2: => EsoParser[A]): EsoParser[A] = {
+    lazy val p = parser1
+    lazy val q = parser2
+    (inp, ind) =>
+      p(inp, ind) flatMap {
+        case (pr, pi, ps, pe) =>
+          q(pr, 0) map {
+            case (qr, _, _, _) =>
+              (qr, pi, ps, pe)}}}
+  
+  def conditional[A](parser: => EsoParser[A])(cond: (A, String, Int, Int) => Boolean): EsoParser[A] = {
+    lazy val p = parser
+    (inp, ind) =>
+      p(inp, ind) flatMap{
+        case (pr, pi, ps, pe) =>
+          if(cond(pr, pi, ps, pe)) Parsed((pr, pi, ps, pe))
+          else ParseFail}}
+  
+  def limp[A, B](p: => EsoParser[A], q: => EsoParser[B]): EsoParser[A] = prod(p, q) map {case (a, _) => a}
+  def rimp[A, B](p: => EsoParser[A], q: => EsoParser[B]): EsoParser[B] = prod(p, q) map {case (_, b) => b}
+  def lcond[A, B](parser1: => EsoParser[A], parser2: => EsoParser[B]): EsoParser[A] = {
+    lazy val p = parser1
+    lazy val q = parser2
+    (inp, ind) =>
+      p(inp, ind) flatMap{
+        case (pr, pi, ps, pe) =>
+          q(pi, pe) map(_ => (pr, pi, ps, pe))}}
+  def rcond[A, B](parser1: => EsoParser[A], parser2: => EsoParser[B]): EsoParser[B] = {
+    lazy val p = parser1
+    lazy val q = parser2
+    (inp, ind) =>
+      p(inp, ind) flatMap{
+        case (_, pi, _, pe) => q(pi, pe)}}
+  
+  def const[A, B](p: => EsoParser[A], v: => B): EsoParser[B] = p map (_ => v)
 }

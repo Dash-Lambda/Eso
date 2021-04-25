@@ -1,7 +1,7 @@
 package glypho
 
 import parsers.EsoParser
-import parsers.Implicits._
+import parsers.EsoParser._
 
 import scala.annotation.tailrec
 
@@ -13,7 +13,7 @@ object GlyphoParser {
         case -1 => normalize(cs, ac :+ maps.size, maps :+ c)
         case n => normalize(cs, ac :+ n, maps)}
       case _ => ac.mkString}
-    """....""".r map {s =>
+    R("""....""".r) map {s =>
       normalize(s) match{
         case "0000" => 'n'
         case "0001" => 'i'
@@ -31,6 +31,6 @@ object GlyphoParser {
         case "0122" => '!'
         case "0123" => ']'}}}
   
-  def parseAll(progRaw: String): Vector[Char] = normParse.parseAllValues(progRaw)
-  def parseOne(tok: String): Option[Char] = normParse(tok).get
+  def parseAll(progRaw: String): Vector[Char] = normParse.*(progRaw).mapped(_._1).getOrElse(Vector())
+  def parseOne(tok: String): Option[Char] = normParse(tok).mapped(_._1).get
 }
