@@ -2,7 +2,7 @@ package parsers
 
 import common_test.EsoSpec
 import parsers.EsoParser._
-import parsers.NewParsers._
+import parsers.CombinatorFuncs._
 
 class EsoParserSpec extends EsoSpec{
   val as: EsoParser[String] = S("a")
@@ -36,9 +36,9 @@ class EsoAltParserSpec extends EsoParserSpec{
     assertResult(Parsed(("a", "abb", 0, 1)))((ar | br)("abb"))
     assertResult(Parsed(("b", "abb", 1, 2)))((br | ar)("abb"))}
   it should "backtrack until success" in {
-    assertResult(Parsed(("abc", "abc", 0, 3)))(concat(as | ab, cs)("abc"))}
+    assertResult(Parsed(("abc", "abc", 0, 3)))(concatString(as | ab, cs)("abc"))}
   it should "backtrack to middle cases" in {
-    assertResult(Parsed(("abbc", "abbc", 0, 4)))(concat(abb | ab | as, S("bc"))("abbc"))}
+    assertResult(Parsed(("abbc", "abbc", 0, 4)))(concatString(abb | ab | as, S("bc"))("abbc"))}
 }
 
 class EsoEarliestMatchParserSpec extends EsoParserSpec{
@@ -50,7 +50,7 @@ class EsoEarliestMatchParserSpec extends EsoParserSpec{
     assertResult(Parsed(("a", "abb", 0, 1)))((ar || br)("abb"))
     assertResult(Parsed(("a", "abb", 0, 1)))((br || ar)("abb"))}
   it should "backtrack until success" in {
-    assertResult(Parsed(("abc", "aabc", 1, 4)))(concat(ar || ab, cs)("aabc"))}
+    assertResult(Parsed(("abc", "aabc", 1, 4)))(concatString(ar || ab, cs)("aabc"))}
 }
 
 class EsoLongestMatchParserSpec extends EsoParserSpec{
@@ -65,7 +65,7 @@ class EsoLongestMatchParserSpec extends EsoParserSpec{
     assertResult(Parsed(("bb", "abb", 1, 3)))((p ||| q)("abb"))
     assertResult(Parsed(("bb", "abb", 1, 3)))((q ||| p)("abb"))}
   it should "backtrack until success" in {
-    assertResult(Parsed(("abc", "abc", 0, 3)))(concat(ps ||| as, rs)("abc"))}
+    assertResult(Parsed(("abc", "abc", 0, 3)))(concatString(ps ||| as, rs)("abc"))}
 }
 
 class EsoFlatMappedParserSpec extends EsoParserSpec{
@@ -146,14 +146,14 @@ class EsoAllParserSpec extends EsoParserSpec{
   "EsoAllParser" should "parse all tokens in input" in assertResult(Parsed((Vector("a", "a", "a"), "aaab", 0, 3)))(ap(0)("aaab"))
   it should "succeed on none if given 0" in assertResult(Parsed((Vector(), "b", 0, 0)))(ap(0)("b"))
   it should "fail if number of tokens is below quota" in assertResult(ParseFail)(ap(2)("ab"))
-  it should "backtrack if necessary" in assertResult(Parsed(((Vector("a", "a"), "ab"), "aaab", 0, 4)))((as.* <&> concat(as, bs))("aaab"))
+  it should "backtrack if necessary" in assertResult(Parsed(((Vector("a", "a"), "ab"), "aaab", 0, 4)))((as.* <&> concatString(as, bs))("aaab"))
 }
 
 class EsoConcatParserSpec extends EsoParserSpec{
   val p: EsoParser[String] = as ^^^ "x"
   val q: EsoParser[String] = bs ^^^ "y"
   
-  "EsoConcatParser" should "correctly combine string output" in assertResult(Parsed(("xy", "ab", 0, 2)))(concat(p, q)("ab"))
-  it should "fail if p fails" in assertResult(ParseFail)(concat(p, q)("bb"))
-  it should "fail if q fails" in assertResult(ParseFail)(concat(p, q)("aa"))
+  "EsoConcatParser" should "correctly combine string output" in assertResult(Parsed(("xy", "ab", 0, 2)))(concatString(p, q)("ab"))
+  it should "fail if p fails" in assertResult(ParseFail)(concatString(p, q)("bb"))
+  it should "fail if q fails" in assertResult(ParseFail)(concatString(p, q)("aa"))
 }

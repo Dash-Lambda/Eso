@@ -4,7 +4,7 @@ import common.EsoObj
 import lazyk.LazyKFuncs._
 import parsers._
 import parsers.EsoParser._
-import parsers.NewParsers._
+import parsers.CombinatorFuncs._
 
 import scala.util.Try
 

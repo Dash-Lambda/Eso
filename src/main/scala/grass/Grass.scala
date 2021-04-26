@@ -3,7 +3,7 @@ package grass
 import common.{Config, Interpreter}
 import parsers.EsoParser
 import parsers.EsoParser._
-import parsers.NewParsers._
+import parsers.CombinatorFuncs._
 
 import scala.annotation.tailrec
 import scala.util.Try

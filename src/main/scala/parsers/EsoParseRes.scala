@@ -18,6 +18,10 @@ object ParserCalls{
       rec(this, Set())}
   }
   
+  case class ParseApp[U](parser: (String, Int) => ParseTramp[U], inp: String, ind: Int) extends ParseTramp[U]{
+    override def toString: String = s"ParseApp($parser, $inp, $ind)"
+    def resume: ParseTramp[U] = parser(inp, ind)}
+  
   case class ParseCall[A](next: () => ParseTramp[A]) extends ParseTramp[A] {
     override def toString: String = s"Call(() => ${next()})"
     def resume: ParseTramp[A] = next()}
@@ -29,10 +33,12 @@ object ParserCalls{
         case Parsed(res) => fun(res)
         case ParseFail => ParseFail
         case ParseCall(t) => ParseCont(t(), fun)
+        case ParseApp(p, inp, ind) => ParseCont(p(inp, ind), fun)
         case ParseAlt(a, b) => a match{
           case Parsed(res) => ParseAlt(fun(res), ParseCont(b, fun))
           case ParseFail => ParseCont(b, fun)
           case ParseCall(t) => ParseCont(ParseAlt(t(), b), fun)
+          case ParseApp(p, inp, ind) => ParseCont(ParseAlt(p(inp, ind), b), fun)
           case ParseAlt(c, d) => ParseCont(ParseAlt(c, ParseAlt(d, b)), fun)
           case _: ParseCont[_, _] => ParseBack.curry(a)(x => ParseCont(ParseAlt(x, b), fun)) //ParseCont(v.resume, fun)
           case ParseBack(c, h) => ParseBack.curry(c)(x => ParseCont(ParseAlt(h(x), b), fun))}
@@ -48,6 +54,7 @@ object ParserCalls{
         case Parsed(res) => Parsed(res)
         case ParseFail => b
         case ParseCall(t) => ParseAlt(t(), b)
+        case ParseApp(p, inp, ind) => ParseAlt(p(inp, ind), b)
         case ParseAlt(c, d) => ParseAlt(c, ParseAlt(d, b))
         case _: ParseCont[_, _] => ParseBack.curry(a)(x => ParseAlt(x, b)) // ParseAlt(a.resume, b)
         case ParseBack(c, f) => ParseBack.curry(c)(x => ParseAlt(f(x), b))}}
@@ -58,11 +65,13 @@ object ParserCalls{
       case Parsed(res) => f(Parsed(res))
       case ParseFail => f(ParseFail)
       case ParseCall(t) => ParseBack(t(), f)
+      case ParseApp(p, inp, ind) => ParseBack(p(inp, ind), f)
       case ParseAlt(b, c) => f(ParseAlt(b, c))
       case ParseCont(b, g) => b match{
         case Parsed(res) => f(g(res))
         case ParseFail => f(ParseFail)
         case ParseCall(t) => ParseBack(ParseCont(t(), g), f)
+        case ParseApp(p, inp, ind) => ParseBack(ParseCont(p(inp, ind), g), f)
         case ParseAlt(c, d) => c match{
           case Parsed(res) => f(ParseAlt(g(res), ParseCont(d, g)))
           case ParseFail => f(ParseCont(d, g))
@@ -73,8 +82,7 @@ object ParserCalls{
       case ParseBack(b, g) => ParseBack.curry(b)(x => ParseBack(g(x), f))}
   }
   object ParseBack{
-    def curry[A, B](a: ParseTramp[A])(f: ParseTramp[A] => ParseTramp[B]): ParseBack[A, B] = ParseBack(a, f)
-  }
+    def curry[A, B](a: ParseTramp[A])(f: ParseTramp[A] => ParseTramp[B]): ParseBack[A, B] = ParseBack(a, f)}
 }
 
 trait ParseRes[+A] extends ParserCalls.ParseTramp[A]{

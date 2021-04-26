@@ -7,8 +7,10 @@ import scala.util.matching.Regex
 import ParserCalls._
 
 trait EsoParser[+A] extends ((String, Int) => ParseTramp[(A, String, Int, Int)]) with (String => ParseRes[(A, String, Int, Int)]) with EsoObj{
-  import NewParsers._
+  override def toString: String = s"EsoParser[A]"
+  import CombinatorFuncs._
   def apply(inp: String): ParseRes[(A, String, Int, Int)] = apply(inp, 0).result
+  def delay(inp: String, ind: Int): ParseTramp[(A, String, Int, Int)] = ParseApp(this, inp, ind)
   
   def matches(inp: String): Boolean = apply(inp).passed
   
@@ -31,78 +33,123 @@ trait EsoParser[+A] extends ((String, Int) => ParseTramp[(A, String, Int, Int)])
   
   def ^^[U](f: A => U): EsoParser[U] = map(f)
   def ^^^[U](v: => U): EsoParser[U] = map(_ => v)
-  def map[U](f: A => U): EsoParser[U] = (inp, ind) => apply(inp, ind) map {case (r, i, s, e) => (f(r), i, s, e)}
-  def flatMap[U](f: A => EsoParser[U]): EsoParser[U] = (inp, ind) => apply(inp, ind) flatMap{
+  def map[U](f: A => U): EsoParser[U] = mapped(this)(f)
+  def flatMap[U](f: A => EsoParser[U]): EsoParser[U] = (inp, ind) => delay(inp, ind) flatMap{
     case (r, i, s, e) =>
-      f(r)(i, e) map{
+      f(r).delay(i, e) map{
         case (fr, fi, _, fe) =>
           (fr, fi, s, fe)}}
+  def flatMapAll[U](f: (A, String, Int, Int) => EsoParser[U]): EsoParser[U] = (inp, ind) => delay(inp, ind) flatMap{
+    case (r, i, s, e) =>
+      f(r, i, s, e).delay(i, e)}
 }
 object EsoParser{
-  import parsers.NewParsers.{regexparse, stringparse}
+  import CombinatorFuncs.{RegexParse, StringParse}
   def empty[A](v: => A): EsoParser[A] = (inp, ind) => Parsed((v, inp, ind, ind))
-  def S(str: String): EsoParser[String] = stringparse(str)
-  def R(regex: Regex): EsoParser[String] = regexparse(regex)
-  def R(regex: String): EsoParser[String] = regexparse(regex.r)
+  def S(str: String): EsoParser[String] = StringParse(str)
+  def R(regex: Regex): EsoParser[String] = RegexParse(regex)
+  def R(regex: String): EsoParser[String] = RegexParse(regex.r)
 }
 
-object NewParsers{
-  def regexparse(reg: Regex): EsoParser[String] = {
-    (inp, ind) =>
+object CombinatorFuncs{
+  case class RegexParse(reg: Regex) extends EsoParser[String]{
+    def apply(inp: String, ind: Int): ParseTramp[(String, String, Int, Int)] = {
       val matcher = reg.pattern.matcher(inp)
       matcher.region(ind, inp.length)
       if(matcher.find)
         if(matcher.groupCount > 0) Parsed(((1 to matcher.groupCount).map(matcher.group).mkString, inp, matcher.start, matcher.end))
         else Parsed(matcher.group(), inp, matcher.start, matcher.end)
-      else ParseFail}
-  def stringparse(str: String): EsoParser[String] =
-    (inp, ind) =>
+      else ParseFail}}
+  
+  case class StringParse(str: String) extends EsoParser[String]{
+    def apply(inp: String, ind: Int): ParseTramp[(String, String, Int, Int)] = {
       if(inp.startsWith(str, ind)) Parsed((str, inp, ind, ind + str.length))
-      else ParseFail
+      else ParseFail}
+    override def toString: String = s"S($str)"}
   
-  def alt[A, B >: A](parser1: => EsoParser[A], parser2: => EsoParser[B]): EsoParser[B] = {
-    lazy val p = parser1
-    lazy val q = parser2
-    (inp, ind) =>
-      p(inp, ind) orElse q(inp, ind)
-  }
+  class AltParse[A](parser1: => EsoParser[A], parser2: => EsoParser[A]) extends EsoParser[A]{
+    private lazy val p = parser1
+    private lazy val q = parser2
+    def apply(inp: String, ind: Int): ParseTramp[(A, String, Int, Int)] = {
+      ParserCalls.ParseAlt(ParseApp(p, inp, ind), ParseApp(q, inp, ind))}}
   
-  def prod[A, B](parser1: => EsoParser[A], parser2: => EsoParser[B]): EsoParser[(A, B)] = {
-    lazy val p = parser1
-    lazy val q = parser2
-    (inp, ind) =>
-      p(inp, ind) flatMap {
-        case (pr, pi, ps, pe) => q(pi, pe) map {
-          case (qr, qi, _, qe) => ((pr, qr), qi, ps, qe)}}}
-  
-  // Higher-order combinators
-  def concat(p: => EsoParser[String], q: => EsoParser[String]): EsoParser[String] = prod(p, q) map {case (a, b) => a + b}
-  
-  def longest[A](parser1: => EsoParser[A], parser2: => EsoParser[A]): EsoParser[A] = {
-    lazy val p = parser1
-    lazy val q = parser2
-    (inp, ind) =>
-      p(inp, ind) flatMap{
+  class SortedAltParse[A](parser1: => EsoParser[A], parser2: => EsoParser[A], comp: ((A, String, Int, Int), (A, String, Int, Int)) => Boolean) extends EsoParser[A]{
+    private lazy val p = parser1
+    private lazy val q = parser2
+    def apply(inp: String, ind: Int): ParseTramp[(A, String, Int, Int)] = {
+      p.delay(inp, ind) flatMap{
         case (pr, pi, ps, pe) =>
-          q(inp, ind) flatMap{
+          q.delay(inp, ind) flatMap{
             case (qr, qi, qs, qe) =>
-              val qres = Parsed((qr, qi, qs, qe))
               val pres = Parsed((pr, pi, ps, pe))
-              if((pe - ps) >= (qe - qs)) pres orElse qres
-              else qres orElse pres} orElse Parsed((pr, pi, ps, pe))} orElse q(inp, ind)}
+              val qres = Parsed((qr, qi, qs, qe))
+              if(comp(pres.res, qres.res)) pres orElse qres
+              else qres orElse pres} orElse Parsed((pr, pi, ps, pe))} orElse q.delay(inp, ind)}}
   
-  def earliest[A](parser1: => EsoParser[A], parser2: => EsoParser[A]): EsoParser[A] = {
+  class ProdParse[A, B](parser1: => EsoParser[A], parser2: => EsoParser[B]) extends EsoParser[(A, B)]{
+    private lazy val p = parser1
+    private lazy val q = parser2
+    def apply(inp: String, ind: Int): ParseTramp[((A, B), String, Int, Int)] = {
+      p.delay(inp, ind) flatMap {
+        case (pr, pi, ps, pe) => q.delay(pi, pe) map {
+          case (qr, qi, _, qe) => ((pr, qr), qi, ps, qe)}}}}
+  
+  class IntoParse[A](parser1: => EsoParser[String], parser2: => EsoParser[A]) extends EsoParser[A]{
+    private lazy val p = parser1
+    private lazy val q = parser2
+    def apply(inp: String, ind: Int): ParseTramp[(A, String, Int, Int)] = {
+      p.delay(inp, ind) flatMap {
+        case (pr, pi, ps, pe) =>
+          q.delay(pr, 0) map {
+            case (qr, _, _, _) =>
+              (qr, pi, ps, pe)}}}}
+  
+  class ConditionParse[A](parser: => EsoParser[A], cond: (A, String, Int, Int) => Boolean) extends EsoParser[A]{
+    private lazy val p = parser
+    def apply(inp: String, ind: Int): ParseTramp[(A, String, Int, Int)] = {
+      p.delay(inp, ind) flatMap{
+        case (pr, pi, ps, pe) =>
+          if(cond(pr, pi, ps, pe)) Parsed((pr, pi, ps, pe))
+          else ParseFail}}}
+  
+  class AllFlatMapParse[A, B](parser1: => EsoParser[A], comp: (A, String, Int, Int) => ParseTramp[(B, String, Int, Int)]) extends EsoParser[B]{
+    private lazy val p = parser1
+    def apply(inp: String, ind: Int): ParseTramp[(B, String, Int, Int)] = {
+      p.delay(inp, ind) flatMap{
+        case (pr, pi, ps, pe) =>
+          comp(pr, pi, ps, pe)}}}
+  
+  def alt[A](p: => EsoParser[A], q: => EsoParser[A]): EsoParser[A] = new AltParse(p, q)
+  def sortAlt[A](p: => EsoParser[A], q: => EsoParser[A])(comp: ((A, String, Int, Int), (A, String, Int, Int)) => Boolean): EsoParser[A] = new SortedAltParse(p, q, comp)
+  def prod[A, B](p: => EsoParser[A], q: => EsoParser[B]): EsoParser[(A, B)] = new ProdParse(p, q)
+  def into[A](p: => EsoParser[String], q: => EsoParser[A]): EsoParser[A] = new IntoParse(p, q)
+  def conditional[A](p: => EsoParser[A])(cond: (A, String, Int, Int) => Boolean): EsoParser[A] = new ConditionParse(p, cond)
+  def allFlatMapped[A, B](p: => EsoParser[A])(comp: (A, String, Int, Int) => ParseTramp[(B, String, Int, Int)]): EsoParser[B] = new AllFlatMapParse(p, comp)
+  def mapped[A, B](p: => EsoParser[A])(f: A => B): EsoParser[B] = {
+    def fun(r: A, i: String, s: Int, e: Int): ParseTramp[(B, String, Int, Int)] = Parsed((f(r), i, s, e))
+    new AllFlatMapParse(p, fun)}
+  
+  def lcond[A, B](parser1: => EsoParser[A], parser2: => EsoParser[B]): EsoParser[A] = {
     lazy val p = parser1
     lazy val q = parser2
     (inp, ind) =>
-      p(inp, ind) flatMap{
+      p.delay(inp, ind) flatMap{
         case (pr, pi, ps, pe) =>
-          q(inp, ind) flatMap{
-            case (qr, qi, qs, qe) =>
-              val qres = Parsed((qr, qi, qs, qe))
-              val pres = Parsed((pr, pi, ps, pe))
-              if(pe <= qe) pres orElse qres
-              else qres orElse pres} orElse Parsed((pr, pi, ps, pe))} orElse q(inp, ind)}
+          q.delay(pi, pe) map(_ => (pr, pi, ps, pe))}}
+  def rcond[A, B](parser1: => EsoParser[A], parser2: => EsoParser[B]): EsoParser[B] = {
+    lazy val p = parser1
+    lazy val q = parser2
+    (inp, ind) =>
+      p.delay(inp, ind) flatMap{
+        case (_, pi, _, pe) => q.delay(pi, pe)}}
+  
+  // Derived combinators
+  import scala.collection.IterableOps
+  def concat[A, SS[_] <: Iterable[_], S, B >: A, T <: IterableOnce[B]](p: => EsoParser[IterableOps[A, SS, S]], q: => EsoParser[T]): EsoParser[SS[B]] = prod(p, q) map {case (a, b) => a ++ b}
+  def concatString(p: => EsoParser[String], q: => EsoParser[String]): EsoParser[String] = prod(p, q) map {case (a, b) => a + b}
+  
+  def longest[A](p: => EsoParser[A], q: => EsoParser[A]): EsoParser[A] = sortAlt(p, q){case ((_, _, ps, pe), (_, _, qs, qe)) => (pe - ps) >= (qe - qs)}
+  def earliest[A](p: => EsoParser[A], q: => EsoParser[A]): EsoParser[A] = sortAlt(p, q){case ((_, _, ps, _), (_, _, qs, _)) => ps <= qs}
   
   def all[A](parser: => EsoParser[A], num: Int = 0): EsoParser[Vector[A]] = {
     lazy val p = parser
@@ -112,42 +159,11 @@ object NewParsers{
         case (ac, np) =>
           prod(ac, np) map {
             case (vec, e) => vec :+ e}}
-    lazy val s: EsoParser[Vector[A]] = ((p <&> s) map (x => x._1 +: x._2)) | base
-    (init <&> s) map {case (a, b) => a ++ b}}
-  
-  def into[A](parser1: => EsoParser[String], parser2: => EsoParser[A]): EsoParser[A] = {
-    lazy val p = parser1
-    lazy val q = parser2
-    (inp, ind) =>
-      p(inp, ind) flatMap {
-        case (pr, pi, ps, pe) =>
-          q(pr, 0) map {
-            case (qr, _, _, _) =>
-              (qr, pi, ps, pe)}}}
-  
-  def conditional[A](parser: => EsoParser[A])(cond: (A, String, Int, Int) => Boolean): EsoParser[A] = {
-    lazy val p = parser
-    (inp, ind) =>
-      p(inp, ind) flatMap{
-        case (pr, pi, ps, pe) =>
-          if(cond(pr, pi, ps, pe)) Parsed((pr, pi, ps, pe))
-          else ParseFail}}
+    lazy val s: EsoParser[Vector[A]] = alt(prod(p, s) map (x => x._1 +: x._2), base)
+    concat(init, s)}
   
   def limp[A, B](p: => EsoParser[A], q: => EsoParser[B]): EsoParser[A] = prod(p, q) map {case (a, _) => a}
   def rimp[A, B](p: => EsoParser[A], q: => EsoParser[B]): EsoParser[B] = prod(p, q) map {case (_, b) => b}
-  def lcond[A, B](parser1: => EsoParser[A], parser2: => EsoParser[B]): EsoParser[A] = {
-    lazy val p = parser1
-    lazy val q = parser2
-    (inp, ind) =>
-      p(inp, ind) flatMap{
-        case (pr, pi, ps, pe) =>
-          q(pi, pe) map(_ => (pr, pi, ps, pe))}}
-  def rcond[A, B](parser1: => EsoParser[A], parser2: => EsoParser[B]): EsoParser[B] = {
-    lazy val p = parser1
-    lazy val q = parser2
-    (inp, ind) =>
-      p(inp, ind) flatMap{
-        case (_, pi, _, pe) => q(pi, pe)}}
   
   def const[A, B](p: => EsoParser[A], v: => B): EsoParser[B] = p map (_ => v)
 }

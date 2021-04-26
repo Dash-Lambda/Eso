@@ -5,7 +5,7 @@ import common.PrimeNumTools.factor
 import fractran.FracTranpp.{BRK, FOP, INP, JMP, MLT, MSC, OUT}
 import parsers.EsoParser
 import parsers.EsoParser._
-import parsers.NewParsers._
+import parsers.CombinatorFuncs._
 import spire.math.SafeLong
 import spire.implicits._
 
