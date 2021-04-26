@@ -10,7 +10,7 @@ trait EsoParser[+A] extends ((String, Int) => ParseTramp[(A, String, Int, Int)])
   override def toString: String = s"EsoParser[A]"
   import CombinatorFuncs._
   def apply(inp: String): ParseRes[(A, String, Int, Int)] = apply(inp, 0).result
-  def delay(inp: String, ind: Int): ParseTramp[(A, String, Int, Int)] = ParseApp(this, inp, ind)
+  def delay(inp: String, ind: Int): ParseTramp[(A, String, Int, Int)] = ParserCalls.delayParse(this, inp, ind)
   
   def matches(inp: String): Boolean = apply(inp).passed
   
@@ -52,6 +52,7 @@ object EsoParser{
 }
 
 object CombinatorFuncs{
+  // Primitives (combinators which other combinators are made from)
   case class RegexParse(reg: Regex) extends EsoParser[String]{
     def apply(inp: String, ind: Int): ParseTramp[(String, String, Int, Int)] = {
       val matcher = reg.pattern.matcher(inp)
@@ -71,7 +72,7 @@ object CombinatorFuncs{
     private lazy val p = parser1
     private lazy val q = parser2
     def apply(inp: String, ind: Int): ParseTramp[(A, String, Int, Int)] = {
-      ParserCalls.ParseAlt(ParseApp(p, inp, ind), ParseApp(q, inp, ind))}}
+      ParserCalls.delayParse(p, inp, ind) orElse ParserCalls.delayParse(q, inp, ind)}}
   
   class SortedAltParse[A](parser1: => EsoParser[A], parser2: => EsoParser[A], comp: ((A, String, Int, Int), (A, String, Int, Int)) => Boolean) extends EsoParser[A]{
     private lazy val p = parser1
@@ -119,6 +120,20 @@ object CombinatorFuncs{
         case (pr, pi, ps, pe) =>
           comp(pr, pi, ps, pe)}}}
   
+  class LCondParse[A, B](parser1: => EsoParser[A], parser2: => EsoParser[B]) extends EsoParser[A]{
+    private lazy val p = parser1
+    private lazy val q = parser2
+    def apply(inp: String, ind: Int): ParseTramp[(A, String, Int, Int)] = {
+      p.delay(inp, ind) flatMap {
+        case (pr, pi, ps, pe) => q.delay(pi, pe) map (_ => (pr, pi, ps,pe))}}}
+  
+  class RCondParse[A, B](parser1: => EsoParser[A], parser2: => EsoParser[B]) extends EsoParser[B]{
+    private lazy val p = parser1
+    private lazy val q = parser2
+    def apply(inp: String, ind: Int): ParseTramp[(B, String, Int, Int)] = {
+      p.delay(inp, ind) flatMap {
+        case (_, pi, _, pe) => q.delay(pi, pe)}}}
+  
   def alt[A](p: => EsoParser[A], q: => EsoParser[A]): EsoParser[A] = new AltParse(p, q)
   def sortAlt[A](p: => EsoParser[A], q: => EsoParser[A])(comp: ((A, String, Int, Int), (A, String, Int, Int)) => Boolean): EsoParser[A] = new SortedAltParse(p, q, comp)
   def prod[A, B](p: => EsoParser[A], q: => EsoParser[B]): EsoParser[(A, B)] = new ProdParse(p, q)
@@ -126,25 +141,15 @@ object CombinatorFuncs{
   def conditional[A](p: => EsoParser[A])(cond: (A, String, Int, Int) => Boolean): EsoParser[A] = new ConditionParse(p, cond)
   def allFlatMapped[A, B](p: => EsoParser[A])(comp: (A, String, Int, Int) => ParseTramp[(B, String, Int, Int)]): EsoParser[B] = new AllFlatMapParse(p, comp)
   def mapped[A, B](p: => EsoParser[A])(f: A => B): EsoParser[B] = {
-    def fun(r: A, i: String, s: Int, e: Int): ParseTramp[(B, String, Int, Int)] = Parsed((f(r), i, s, e))
+    def fun(r: A, i: String, s: Int, e: Int): ParseTramp[(B, String, Int, Int)] = Parsed((f(r), i, s, e)) // Maybe Scala 3 will have more robust lambda typing...
     new AllFlatMapParse(p, fun)}
-  
-  def lcond[A, B](parser1: => EsoParser[A], parser2: => EsoParser[B]): EsoParser[A] = {
-    lazy val p = parser1
-    lazy val q = parser2
-    (inp, ind) =>
-      p.delay(inp, ind) flatMap{
-        case (pr, pi, ps, pe) =>
-          q.delay(pi, pe) map(_ => (pr, pi, ps, pe))}}
-  def rcond[A, B](parser1: => EsoParser[A], parser2: => EsoParser[B]): EsoParser[B] = {
-    lazy val p = parser1
-    lazy val q = parser2
-    (inp, ind) =>
-      p.delay(inp, ind) flatMap{
-        case (_, pi, _, pe) => q.delay(pi, pe)}}
+  def lcond[A, B](p: => EsoParser[A], q: => EsoParser[B]): EsoParser[A] = new LCondParse(p, q)
+  def rcond[A, B](p: => EsoParser[A], q: => EsoParser[B]): EsoParser[B] = new RCondParse(p, q)
   
   // Derived combinators
-  import scala.collection.IterableOps
+  import scala.collection.{IterableOps, IndexedSeqOps}
+  def append[A, SS[_] <: IndexedSeq[_], S, B >: A](p: => EsoParser[IndexedSeqOps[A, SS, S]], q: => EsoParser[B]): EsoParser[SS[B]] = prod(p, q) map {case (v, e) => v :+ e}
+  def prepend[A, SS[_] <: IndexedSeq[_], S, B >: A](p: => EsoParser[B], q: => EsoParser[IndexedSeqOps[A, SS, S]]): EsoParser[SS[B]] = prod(p, q) map {case (e, v) => e +: v}
   def concat[A, SS[_] <: Iterable[_], S, B >: A, T <: IterableOnce[B]](p: => EsoParser[IterableOps[A, SS, S]], q: => EsoParser[T]): EsoParser[SS[B]] = prod(p, q) map {case (a, b) => a ++ b}
   def concatString(p: => EsoParser[String], q: => EsoParser[String]): EsoParser[String] = prod(p, q) map {case (a, b) => a + b}
   
@@ -154,12 +159,8 @@ object CombinatorFuncs{
   def all[A](parser: => EsoParser[A], num: Int = 0): EsoParser[Vector[A]] = {
     lazy val p = parser
     lazy val base = EsoParser.empty(Vector[A]())
-    lazy val init: EsoParser[Vector[A]] =
-      Vector.fill(num)(p).foldLeft(base){
-        case (ac, np) =>
-          prod(ac, np) map {
-            case (vec, e) => vec :+ e}}
-    lazy val s: EsoParser[Vector[A]] = alt(prod(p, s) map (x => x._1 +: x._2), base)
+    lazy val init: EsoParser[Vector[A]] = Vector.fill(num)(p).foldLeft(base){case (v, e) => append(v, e)}
+    lazy val s: EsoParser[Vector[A]] = alt(prepend(p, s), base)
     concat(init, s)}
   
   def limp[A, B](p: => EsoParser[A], q: => EsoParser[B]): EsoParser[A] = prod(p, q) map {case (a, _) => a}

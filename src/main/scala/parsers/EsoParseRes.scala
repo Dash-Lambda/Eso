@@ -1,92 +1,99 @@
 package parsers
 
 import common.EsoExcep
-
-import scala.util.control.TailCalls.{TailRec, done, tailcall}
 import scala.util.{Failure, Success, Try}
+
 object ParserCalls{
-  abstract class ParseTramp[+A] {
-    def map[U](f: A => U): ParseTramp[U] = flatMap(a => ParseCall(() => Parsed(f(a))))
-    def flatMap[U](f: A => ParseTramp[U]): ParseTramp[U] = ParseCont(this, f)
-    def orElse[U >: A](alt: => ParseTramp[U]): ParseTramp[U] = ParseAlt(this, ParseCall(() => alt))
-    def resume: ParseTramp[A]
+  def delayParse[A](p: => EsoParser[A], inp: String, ind: Int): ParserCalls.ParseTramp[(A, String, Int, Int)] = ParserCalls.ParseApp(p, inp, ind)
+  
+  trait ParseNode[+A] extends ParseTramp[A]
+  trait ParseTramp[+A] {
+    final def map[U](f: A => U): ParseTramp[U] = flatMap(a => ParseCall(() => Parsed(f(a))))
+    final def flatMap[U](f: A => ParseTramp[U]): ParseTramp[U] = ParseFMap(this, f)
+    final def orElse[U >: A](alt: => ParseTramp[U]): ParseTramp[U] = ParseAlt(this, ParseCall(() => alt))
+    final def withCont[C](f: ParseNode[A] => ParseTramp[C]): ParseTramp[C] = ParseCont(this, f)
     def result: ParseRes[A] = {
       @annotation.tailrec
-      def rec(a: ParseTramp[A], ac: Set[ParseTramp[A]]): ParseRes[A] = a match{
-        case r: ParseRes[A] => r
-        case _ => rec(a.resume, ac)}
-      rec(this, Set())}
-  }
-  
-  case class ParseApp[U](parser: (String, Int) => ParseTramp[U], inp: String, ind: Int) extends ParseTramp[U]{
-    override def toString: String = s"ParseApp($parser, $inp, $ind)"
-    def resume: ParseTramp[U] = parser(inp, ind)}
-  
-  case class ParseCall[A](next: () => ParseTramp[A]) extends ParseTramp[A] {
-    override def toString: String = s"Call(() => ${next()})"
-    def resume: ParseTramp[A] = next()}
-  
-  case class ParseCont[A, B](v: ParseTramp[A], fun: A => ParseTramp[B]) extends ParseTramp[B] {
-    override def toString: String = s"Cont($v)"
-    def resume: ParseTramp[B] = {
-      v match{
-        case Parsed(res) => fun(res)
-        case ParseFail => ParseFail
-        case ParseCall(t) => ParseCont(t(), fun)
-        case ParseApp(p, inp, ind) => ParseCont(p(inp, ind), fun)
-        case ParseAlt(a, b) => a match{
-          case Parsed(res) => ParseAlt(fun(res), ParseCont(b, fun))
-          case ParseFail => ParseCont(b, fun)
-          case ParseCall(t) => ParseCont(ParseAlt(t(), b), fun)
-          case ParseApp(p, inp, ind) => ParseCont(ParseAlt(p(inp, ind), b), fun)
-          case ParseAlt(c, d) => ParseCont(ParseAlt(c, ParseAlt(d, b)), fun)
-          case _: ParseCont[_, _] => ParseBack.curry(a)(x => ParseCont(ParseAlt(x, b), fun)) //ParseCont(v.resume, fun)
-          case ParseBack(c, h) => ParseBack.curry(c)(x => ParseCont(ParseAlt(h(x), b), fun))}
-        case _: ParseCont[_, _] => ParseBack.curry(v)(x => ParseCont(x, fun)) //ParseCont(v.resume, fun)
-        case ParseBack(b, g) => ParseBack.curry(b)(x => ParseCont(g(x), fun))}}
-  }
-  
-  case class ParseAlt[A](a: ParseTramp[A], b: ParseTramp[A]) extends ParseTramp[A] {
-    override def toString: String = s"Alt($a, $b)"
-    override def orElse[U >: A](alt: => ParseTramp[U]): ParseTramp[U] = ParseAlt(a, ParseAlt(b, ParseCall(() => alt)))
-    def resume: ParseTramp[A] = {
-      a match{
+      def rec(a: ParseTramp[A], ac: Set[ParseTramp[A]]): ParseRes[A] = a match{ // ac it here for the purpose of memoization, not used yet and I don't wanna take it out
+        // Result
         case Parsed(res) => Parsed(res)
-        case ParseFail => b
-        case ParseCall(t) => ParseAlt(t(), b)
-        case ParseApp(p, inp, ind) => ParseAlt(p(inp, ind), b)
-        case ParseAlt(c, d) => ParseAlt(c, ParseAlt(d, b))
-        case _: ParseCont[_, _] => ParseBack.curry(a)(x => ParseAlt(x, b)) // ParseAlt(a.resume, b)
-        case ParseBack(c, f) => ParseBack.curry(c)(x => ParseAlt(f(x), b))}}
+        case ParseFail => ParseFail
+        
+        // Delayed Call
+        case ParseCall(t) => rec(t(), ac)
+        
+        // Delayed Parser Application
+        case ParseApp(p, inp, ind) => rec(p(inp, ind), ac)
+        
+        // OrElse
+        case ParseAlt(Parsed(res), _) => Parsed(res)
+        case ParseAlt(ParseFail, b) => rec(b, ac)
+        case ParseAlt(ParseAlt(a, b), c) => rec(ParseAlt(a, ParseAlt(b, c)), ac)
+        case ParseAlt(a, b) => rec(a.withCont(x => ParseAlt(x, b)), ac)
+        
+        // FlatMap
+        case ParseFMap(Parsed(res), f) => rec(f(res), ac)
+        case ParseFMap(ParseFail, _) => ParseFail
+        case ParseFMap(ParseAlt(Parsed(res), b), f) => rec(ParseAlt(f(res), ParseFMap(b, f)), ac)
+        case ParseFMap(ParseAlt(ParseFail, b), f) => rec(ParseFMap(b, f), ac)
+        case ParseFMap(ParseAlt(ParseFMap(a, g), b), f) => rec(ParseFMap(a, g).withCont(x => ParseFMap(ParseAlt(x, b), f)), ac)
+        case ParseFMap(ParseAlt(a, b), f) => rec(ParseAlt(a, b).withCont(x => ParseFMap(x, f)), ac)
+        case ParseFMap(a, f) => rec(a.withCont(x => ParseFMap(x, f)), ac)
+        
+        // Continue (Result)
+        case ParseCont(Parsed(res), f) => rec(f(Parsed(res)), ac)
+        case ParseCont(ParseFail, f) => rec(f(ParseFail), ac)
+        
+        // Continue (Delayed Call)
+        case ParseCont(ParseCall(t), f) => rec(ParseCont(t(), f), ac)
+        
+        // Continue (Delayed Parser Application)
+        case ParseCont(ParseApp(p, inp, ind), f) => rec(ParseCont(p(inp, ind), f), ac)
+        
+        // Continue (OrElse)
+        case ParseCont(ParseAlt(Parsed(res), b), f) => rec(ParseAlt(f(Parsed(res)), ParseCont(b, f)), ac)
+        case ParseCont(ParseAlt(ParseFail, b), f) => rec(ParseCont(b, f), ac)
+        case ParseCont(ParseAlt(ParseCall(t), b), f) => rec(f(ParseAlt(t(), b)), ac)
+        case ParseCont(ParseAlt(ParseApp(p, inp, ind), b), f) => rec(f(ParseAlt(p(inp, ind), b)), ac)
+        case ParseCont(ParseAlt(ParseAlt(a, b), c), f) => rec(f(ParseAlt(a, ParseAlt(b, c))), ac)
+        case ParseCont(ParseAlt(a, b), f) => rec(f(ParseAlt(a, b)), ac)
+        
+        // Continue (FlatMap)
+        case ParseCont(ParseFMap(Parsed(res), g), f) => rec(ParseCont(g(res), f), ac)
+        case ParseCont(ParseFMap(ParseFail, _), f) => rec(f(ParseFail), ac)
+        case ParseCont(ParseFMap(ParseCall(t), g), f) => rec(ParseCont(ParseFMap(t(), g), f), ac)
+        case ParseCont(ParseFMap(ParseApp(p, inp, ind), g), f) => rec(ParseCont(ParseFMap(p(inp, ind), g), f), ac)
+        case ParseCont(ParseFMap(ParseFMap(a, h), g), f) => rec(ParseFMap(a, h).withCont(x => ParseCont(ParseFMap(x, g), f)), ac)
+        case ParseCont(ParseFMap(ParseCont(a, h), g), f) => rec(a.withCont(x => ParseCont(ParseFMap(h(x), g), f)), ac)
+        case ParseCont(ParseFMap(ParseAlt(Parsed(res), b), g), f) => rec(f(ParseAlt(g(res), ParseFMap(b, g))), ac)
+        case ParseCont(ParseFMap(ParseAlt(ParseFail, b), g), f) => rec(ParseCont(ParseFMap(b, g), f), ac)
+        case ParseCont(ParseFMap(ParseAlt(ParseAlt(a, b), c), g), f) => rec(ParseCont(ParseFMap(ParseAlt(a, ParseAlt(b, c)), g), f), ac)
+        case ParseCont(ParseFMap(ParseAlt(a, b), g), f) => rec(a.withCont(x => ParseCont(ParseFMap(ParseAlt(x, b), g), f)), ac)
+        
+        // Continue (Continue)
+        case ParseCont(ParseCont(a, g), f) => rec(a.withCont(x => ParseCont(g(x), f)), ac)
+      }
+      rec(this, Set())
+    }
   }
   
-  case class ParseBack[A, B](a: ParseTramp[A], f: ParseTramp[A] => ParseTramp[B]) extends ParseTramp[B]{
-    def resume: ParseTramp[B] = a match{
-      case Parsed(res) => f(Parsed(res))
-      case ParseFail => f(ParseFail)
-      case ParseCall(t) => ParseBack(t(), f)
-      case ParseApp(p, inp, ind) => ParseBack(p(inp, ind), f)
-      case ParseAlt(b, c) => f(ParseAlt(b, c))
-      case ParseCont(b, g) => b match{
-        case Parsed(res) => f(g(res))
-        case ParseFail => f(ParseFail)
-        case ParseCall(t) => ParseBack(ParseCont(t(), g), f)
-        case ParseApp(p, inp, ind) => ParseBack(ParseCont(p(inp, ind), g), f)
-        case ParseAlt(c, d) => c match{
-          case Parsed(res) => f(ParseAlt(g(res), ParseCont(d, g)))
-          case ParseFail => f(ParseCont(d, g))
-          case ParseAlt(x, y) => ParseBack(ParseCont(ParseAlt(x, ParseAlt(y, d)), g), f)
-          case _ => ParseBack.curry(c)(x => ParseBack(ParseCont(ParseAlt(x, d), g), f))}
-        case ParseCont(c, h) => ParseBack.curry(ParseCont(c, h))(x => ParseBack(ParseCont(x, g), f))
-        case ParseBack(c, h) => ParseBack.curry(c)(x => ParseBack(ParseCont(h(x), g), f))}
-      case ParseBack(b, g) => ParseBack.curry(b)(x => ParseBack(g(x), f))}
-  }
-  object ParseBack{
-    def curry[A, B](a: ParseTramp[A])(f: ParseTramp[A] => ParseTramp[B]): ParseBack[A, B] = ParseBack(a, f)}
+  protected case class ParseApp[U](parser: (String, Int) => ParseTramp[U], inp: String, ind: Int) extends ParseTramp[U]{
+    override def toString: String = s"App($parser, $inp, $ind)"}
+  
+  protected case class ParseCall[A](next: () => ParseTramp[A]) extends ParseTramp[A] {
+    override def toString: String = s"Call(() => ${next()})"}
+  
+  protected case class ParseFMap[A, B](a: ParseTramp[A], f: A => ParseTramp[B]) extends ParseTramp[B] {
+    override def toString: String = s"FMap($a)"}
+  
+  protected case class ParseAlt[A](a: ParseTramp[A], b: ParseTramp[A]) extends ParseNode[A] {
+    override def toString: String = s"Alt($a, $b)"}
+  
+  case class ParseCont[A, B](a: ParseTramp[A], f: ParseNode[A] => ParseTramp[B]) extends ParseTramp[B]{
+    override def toString: String = s"Cont($a)"}
 }
 
-trait ParseRes[+A] extends ParserCalls.ParseTramp[A]{
-  def resume: ParserCalls.ParseTramp[A] = this
+trait ParseRes[+A] extends ParserCalls.ParseNode[A]{
   def passed: Boolean = get.nonEmpty
   def getOrElse[B >: A](alt: => B): B = get.getOrElse(alt)
   def toTry(str: String = "Parse Failure"): Try[A] = get match{
