@@ -106,21 +106,21 @@ class RunProgHandlerSpec extends CommandHandlerSpec{
     assertResult("Hello World!\n\n")(res)}
   
   it should "cache built programs if the cache flag is on" in {
-    val cacheState = runWithArgs()("log" -> "true")("s" -> "hworld.b")
+    val cacheState = runWithArgs()("log" -> "true")("s" -> "testResources/hworld.b")
     cacheState match{
       case (rs: EsoRunState, _) =>
         val eio = defaultIO()
-        runStateWithArgs(eio)(rs)("s" -> "hworld.b")
+        runStateWithArgs(eio)(rs)("s" -> "testResources/hworld.b")
         val res = eio.collectOutput()
         assertResult("Using cached run (disable with 'set -cache off')\nHello World!\n\n")(res)
       case _ => fail("Unexpected Halt State")}}
   
   it should "not cache built programs if the cache flag is off" in {
-    val cacheState = runWithArgs()("log" -> "true", "cache" -> "false")("s" -> "hworld.b")
+    val cacheState = runWithArgs()("log" -> "true", "cache" -> "false")("s" -> "testResources/hworld.b")
     cacheState match{
       case (rs: EsoRunState, _) =>
         val eio = defaultIO()
-        runStateWithArgs(eio)(rs)("s" -> "hworld.b")
+        runStateWithArgs(eio)(rs)("s" -> "testResources/hworld.b")
         val res = eio.collectOutput()
         val chkStr =
           s"""|Searching for translator path... Done.
