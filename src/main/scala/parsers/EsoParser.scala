@@ -81,9 +81,6 @@ object CombinatorFuncs{
   case class AltParser[A](parser1: () => EsoParser[A], parser2: () => EsoParser[A]) extends EsoParser[A]{
     lazy val p: EsoParser[A] = parser1()
     lazy val q: EsoParser[A] = parser2()
-    lazy val fixed: EsoParser[A] = {
-      lazy val fp = LRFix(this)
-      (inp, ind) => fp.delay(inp, ind)}
     
     override def alternatives: LazyList[EsoParser[A]] = LazyList.unfold(Some(this): Option[EsoParser[A]])(_.map{
       case AltParser(a, b) => (a(), Some(b()))
@@ -106,8 +103,8 @@ object CombinatorFuncs{
       
       if(lrs.isEmpty) this
       else{
-        @annotation.tailrec
-        def makeNLR(lr: EsoParser[A])(src: EsoParser[A], ins: EsoParser[A]): CombineParser[A, A, A] = src match{
+        def makeNLR(lr: EsoParser[A])(src: EsoParser[A], ins: EsoParser[A]): EsoParser[A] = src match{
+          case AllFlatMapParser(p1: PA, f1) => AllFlatMapParser(() => makeNLR(lr)(p1(), ins), f1)
           case CombineParser(p1: PA, _: PA, f1: FUNC) => p1() match{
             case `checkAgainst` => CombineParser(() => ins, () => lr, f1)
             case nxt => makeNLR(lr)(nxt, ins)}}
@@ -131,7 +128,6 @@ object CombinatorFuncs{
         lazy val n: EsoParser[A] = EsoParser.collapse((for(lr <- lrs; nlr <- nlrs) yield (lr, nlr)).collect{case (a, b) => makeNLR(m)(a, b)})
         AltParser(() => n, () => EsoParser.collapse(nlrs))}}
     
-    override def apply(inp: String): ParseRes[(A, String, Int, Int)] = fixed(inp)
     def apply(inp: String, ind: Int): ParseTramp[(A, String, Int, Int)] = p.delay(inp, ind) orElse q.delay(inp, ind)}
   
   case class CombineParser[A, B, C](parser1: () => EsoParser[A], parser2: () => EsoParser[B], comp: ((A, String, Int, Int), (B, String, Int, Int)) => (C, String, Int, Int)) extends EsoParser[C]{
@@ -140,6 +136,8 @@ object CombinatorFuncs{
     
     override def isNonLR[U](prev: => EsoParser[U]): Boolean = p.isNonLR(prev)
     override def isLR[U](prev: => EsoParser[U]): Boolean = (p == prev) || p.isLR(prev)
+  
+    override def LRFix[U](prev: => EsoParser[U]): EsoParser[C] = CombineParser(() => p.LRFix(prev), () => q.LRFix(prev), comp)
     
     def apply(inp: String, ind: Int): ParseTramp[(C, String, Int, Int)] = {
       p.delay(inp, ind) flatMap{
