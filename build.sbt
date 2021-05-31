@@ -9,7 +9,6 @@ lazy val root = (project in file("."))
     javaOptions += "-XX:+UnlockCommercialFeatures -Xmx8g", // Still not sure if this does anything
     logBuffered in Test := false,
     parallelExecution in Test := false,
-    assemblyJarName in assembly := s"Eso-${version.value}.jar",
     scalacOptions ++= Seq("-deprecation", "-feature"),
     testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-fFW", "esoTestLog.txt", "-o"),
     resolvers ++= Seq(
@@ -21,4 +20,7 @@ lazy val root = (project in file("."))
       "org.typelevel" %% "jawn-parser" % "0.14.2",
       "org.typelevel" %% "jawn-ast" % "0.14.2",
       "org.scalactic" %% "scalactic" % "3.1.0",
-      "org.scalatest" %% "scalatest" % "3.1.0" % "test"))
+      "org.scalatest" %% "scalatest" % "3.1.0" % "test"),
+    assemblyJarName in assembly := s"Eso-${version.value}.jar",
+    mainClass in assembly := Some("ui.NonPersistent")
+  )

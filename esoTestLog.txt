@@ -1,149 +1,37 @@
 Run starting. Expected test count is: 0
-LambdaToUnlambdaSpace:
-Lambda_Calculus => Unlambda
-- should preserve the behavior of absCountUnlambda.txt
-SaveFileAssociationsHandlerSpec:
-SaveFileAssociationsHandler
-- should correctly save file associations to the default file with no arguments
-- should correctly save file associations to the provided file with -f option
-EsoAltParserSpec:
-EsoAltParser
-- should return the first success
-- should backtrack until success
-- should backtrack to middle cases
-EsoRegexParserSpec:
-EsoRegexParser
-- should return earliest match
-- should match anywhere in input
-- should return whole match without capture groups
-- should return only capture groups if present
-PrimeNumToolsSpec:
-PrimeNumTools
-- should generate a list of prime number Ints by trial division
-- should generate a list of prime number SafeLongs by trial division
-EsoLImpParserSpec:
-EsoLImpParser
-- should succeed if both succeed
-- should fail if left fails
-- should fail if right fails
-- should fail if both fail
-EsoEarliestMatchParserSpec:
-EsoEarliestMatchParser
-- should return the earliest match
-- should backtrack until success
-ExitHandlerSpec:
-ExitHandler
-- should return the halt state
-EsoConcatParserSpec:
-EsoConcatParser
-- should correctly combine string output
-- should fail if p fails
-- should fail if q fails
-EsoProdParserSpec:
-EsoProdParser
-- should pass correctly if both p and q pass
-- should fail if p fails
-- should fail if q fails
-- should fail if p and q fail
-WhiteSpaceSpec:
-WhiteSpace
-- should run hworld.ws correctly
-- should return a referentially transparent function for hworld.ws
-PlattsSpec:
-Platts
-- should run hworld.plts correctly
-- should return a referentially transparent function for hworld.plts
-BFToSNUSPSpec:
-BFToSNUSP
-- should generate a list of prime number SafeLongs by incremental SOE
-- should correctly identify primes numbers
-- should factor a number such that it is equal to the product of its factors
-OokSpec:
-Ook <=> BrainFuck
-- should preserve the behavior of hworld.ook when translating from BrainFuck to Ook
-- should preserve the behavior of hworld.b when translating from Ook to BrainFuck
-WordLangSpec:
-WordLang
-- should run helloo.wl correctly
-- should run camo.wl correctly
-- should run listing.wl correctly
-- should run flag.wl correctly
-- should run letsLive.wl correctly
-- should run someday.wl correctly
-- should run listChars.wl correctly
-- should run cat.wl correctly
-- should return a referentially transparent function for helloo.wl
-- should return a referentially transparent function for camo.wl
-- should return a referentially transparent function for listing.wl
-- should return a referentially transparent function for flag.wl
-- should return a referentially transparent function for letsLive.wl
-- should return a referentially transparent function for someday.wl
-- should return a referentially transparent function for listChars.wl
-- should return a referentially transparent function for cat.wl
-ShowSyntaxHandlerSpec:
-ShowSyntaxHandler
-- should correctly display syntax for FlufflePuff
-BFToPreludeSpec:
-BFToPrelude
-- should preserve the behavior of hworld.b
-DropFileAssociationHandlerSpec:
-DropFileAssociationHandler
-- should drop individual file associations
-TranspileHandlerSpec:
-TranspileHandler
-- should fail on unknown file extensions
-- should transpile hworldb.txt to Metatape correctly with language override
-- should recognize known file extensions
-- should build a translator path if needed
-- should write transpilation to a file with the -o option
-- should not write transpilation to a file without the -o option
+EsoCommandParserSpec:
+EsoCommandParser
+- should fail on empty input
+- should recognize unary commands
+- should recognize commands followed by an argument
+- should recognize commands followed by multiple arguments
 LazyKAnyToCCSpec:
 LazyK_CC <=> LazyK
 - should preserve the behavior of hworldCC.lazy when translating from LazyK_CC to LazyK
 - should preserve the behavior of hworldIota.lazy when translating from LazyK to LazyK_CC
 - should preserve the behavior of hworldJot.lazy when translating from LazyK to LazyK_CC
 - should preserve the behavior of hworld.lazy when translating from LazyK to LazyK_CC
-LoadFileAssociationsHandlerSpec:
-LoadFileAssociationsHandler
-- should correctly load file associations from the default file with no arguments
-- should correctly load file associations from the provided file with -f
-- should correctly load file associations from the default file with loadOnly
-SaveBFLangsHandlerSpec:
-SaveBFLangsHandler
-- should save to the default file if none is provided
-- should save to the provided file with -f option
-DeadfishSpec:
-Deadfish
-- should run hworld.df correctly
-- should return a referentially transparent function for hworld.df
+EsoLImpParserSpec:
+EsoLImpParser
+- should succeed if both succeed
+- should fail if left fails
+- should fail if right fails
+- should fail if both fail
+BFToMetatapeSpec:
+BFToMetatape
+- should preserve the behavior of bitWidth.b
 EmmentalSpec:
 Emmental
 - should run hworld.emm correctly
 - should return a referentially transparent function for hworld.emm
-GrassSpec:
-Grass
-- should run hworld.grs correctly
-- should return a referentially transparent function for hworld.grs
-SlashesSpec:
-///
-- should run hworld.slash correctly
-- should return a referentially transparent function for hworld.slash
-PDPSpec:
-P''
-- should run hworld.pdp correctly
-- should return a referentially transparent function for hworld.pdp
-EsoParserSpec:
-EsoStringParserSpec:
-EsoStringParser
-- should parse the first occurrence of its literal
-- should not parse matches that aren't at the beginning of input
-- should match longer literals
-ClearFileAssociationsHandlerSpec:
-ClearFileAssociationsHandler
-- should clear all file associations
-LambdaToLazyKUnlSpec:
-Lambda_Calculus => LazyK_Unlambda
-- should preserve the behavior of absSpaceLazyK.txt
+EsoLongestMatchParserSpec:
+EsoLongestMatchParser
+- should return the longest match
+- should backtrack until success
+GlyphoSpec:
+Glypho
+- should run hworld.glo correctly
+- should return a referentially transparent function for hworld.glo
 LazyBirdSpec:
 LazyBird
 - should run hworld.lzb correctly
@@ -164,47 +52,159 @@ LazyBird
 - should interpret named combinator v correctly
 - should interpret named combinator @ correctly
 - should return a referentially transparent function for hworld.lzb
-BFToLazyKSpec:
-BFToLazyK
-- should preserve the behavior of bitWidth.b
 - should return a referentially transparent function for fib.lzb
 - should return a referentially transparent function for fibComb.lzb
 - should return a referentially transparent function for asciiCat.lzb
 - should return a referentially transparent function for equals.lzb
-SetDefaultsHandlerSpec:
-SetDefaultHandler
-- should reset the state to defaults
+ClearFileAssociationsHandlerSpec:
+ClearFileAssociationsHandler
+- should clear all file associations
+BFToLazyKSpec:
+BFToLazyK
 - should preserve the behavior of bitWidth.b
-UnlambdaSpec:
-Unlambda
-- should run hworld.unl correctly
-- should run alphatest.unl correctly
-listFileAssociationsHandlerSpec:
-ListFileAssociationsHandler
-- should correctly list the default file associations
-- should correctly list the current file associations
-EsoCommandParserSpec:
-EsoCommandParser
-- should fail on empty input
-- should recognize unary commands
-- should recognize commands followed by an argument
-- should recognize commands followed by multiple arguments
-EsoLCondParserSpec:
-EsoLCondParser
-- should succeed if both succeed
-- should fail if left fails
-- should fail if right fails
-- should fail if both fail
+EsoConstantParserSpec:
+EsoConstantParser
+- should force parser output to a single value
+- should fail if p fails
+SNUSPSpec:
+SNUSP
+- should run hworld.snusp correctly
+- should run bitWidth.snusp correctly
+- should return a referentially transparent function for hworld.snusp
+- should return a referentially transparent function for bitWidth.snusp
+ThueSpec:
+Thue
+- should run hworld.th correctly
+- should return a referentially transparent function for hworld.th
+EsoParserSpec:
 EsoRImpParserSpec:
 EsoRImpParser
 - should pass correctly if both p and q pass
 - should fail if p fails
 - should fail if q fails
 - should fail if p and q fail
-GlyphoShorthandSpec:
-GlyphoShorthand <=> Glypho
-- should preserve the behavior of hworld.glos when translating from Glypho to GlyphoShorthand
-- should preserve the behavior of hworld.glo
+LazyKAnyToUnlSpec:
+LazyK_Unlambda <=> LazyK
+- should preserve the behavior of hworldCC.lazy when translating from LazyK to LazyK_Unlambda
+- should preserve the behavior of hworldIota.lazy when translating from LazyK to LazyK_Unlambda
+- should preserve the behavior of hworldJot.lazy when translating from LazyK to LazyK_Unlambda
+- should preserve the behavior of hworld.lazy when translating from LazyK_Unlambda to LazyK
+ClearBindingsHandlerSpec:
+ClearBindingsHandler
+- should clear all bindings
+LoadBindingsHandlerSpec:
+LoadBindingsHandler
+- should correctly load bindings from provided file using -f option
+- should correctly load bindings from default file with no arguments
+- should correctly load bindings from default file with loadOnly
+RunProgHandlerSpec:
+RunProgHandler
+- should fail on an unknown file extension
+- should run hworldb.txt correctly with language override arg
+- should recognize known file extensions
+- should print ASCII values if printNum is on
+- should print detailed information if log is on
+- should print the program duration if time is on
+- should print initialization time if log and time flags are on
+- should fail to read input if an inaccessible file is given
+- should read input from a file if given one
+- should correctly append console input to file input if appendInp is on
+- should not append console input to file input if appendInp is off
+- should limit output length if olen >= 0
+- should build a translator path if needed
+- should cache built programs if the cache flag is on
+- should not cache built programs if the cache flag is off
+- should write program output to a file with the -o option
+- should not write program output to a file without the -o option
+- should fail to read program if an inaccessible file is given
+DeadfishSpec:
+Deadfish
+- should run hworld.df correctly
+- should return a referentially transparent function for hworld.df
+LambdaToLazyKUnlSpec:
+Lambda_Calculus => LazyK_Unlambda
+- should preserve the behavior of absSpaceLazyK.txt
+AddFileAssociationHandlerSpec:
+AddFileAssociationHandler
+- should add individual file associations
+- should add multiple file associations
+NULLSpec:
+NULL
+- should run hworld.nul correctly
+- should return a referentially transparent function for hworld.nul
+WierdSpec:
+Wierd
+- should run quine.wd correctly
+- should return a referentially transparent function for quine.wd
+TranslateHandlerSpec:
+TranslateHandler
+- should fail on unknown file extensions
+- should translate hworldfl.txt to BrainFuck correctly with language override
+- should recognize known file extensions
+- should chain translators if needed
+- should write translation to a file with the -o option
+- should not write translation to a file without the -o option
+WhiteSpaceSpec:
+WhiteSpace
+- should run hworld.ws correctly
+- should return a referentially transparent function for hworld.ws
+EsoMapParserSpec:
+EsoMapParser
+- should transform output with f
+SaveBFLangsHandlerSpec:
+SaveBFLangsHandler
+- should save to the default file if none is provided
+- should save to the provided file with -f option
+OokSpec:
+Ook <=> BrainFuck
+- should preserve the behavior of hworld.ook when translating from BrainFuck to Ook
+- should preserve the behavior of hworld.b when translating from Ook to BrainFuck
+listVarsHandlerSpec:
+listVarsHandler
+- should correctly list the default runtime parameters
+EsoEarliestMatchParserSpec:
+EsoEarliestMatchParser
+- should return the earliest match
+- should backtrack until success
+PreludeSpec:
+Prelude
+- should run hworld.pld correctly in parallel
+- should run hworld.pld correctly in sequence
+- should return a referentially transparent function in parallel
+- should return a referentially transparent function in sequence
+EsoAltParserSpec:
+EsoAltParser
+- should return the first success
+- should backtrack until success
+- should backtrack to middle cases
+MemTapeSpec:
+MemTape
+- should respect static size
+- should respect out-of-bounds gets when dynamic
+- should respect out-of-bounds sets when dynamic
+SetDefaultsHandlerSpec:
+SetDefaultHandler
+- should reset the state to defaults
+ShowSyntaxHandlerSpec:
+ShowSyntaxHandler
+- should correctly display syntax for FlufflePuff
+DropFileAssociationHandlerSpec:
+DropFileAssociationHandler
+- should drop individual file associations
+SaveBindingsHandlerSpec:
+SaveBindingsHandler
+- should correctly save bindings to default file with no arguments
+- should correctly save bindings to provided file using -f option
+DefineBFLangHandlerSpec:
+DefineBFLangHandler
+- should correctly define a BF lang
+FungeSpec:
+Befunge-93
+- should pass mycology
+- should return a referentially transparent function for mycology.b98
+Befunge-98
+- should pass mycology
+- should return a referentially transparent function for hworld.b98
 LazyKSpec:
 LazyK
 - should run hworld.lazy correctly
@@ -219,179 +219,117 @@ LazyK
 - should return a referentially transparent function for fib.lazy
 - should return a referentially transparent function for reverse.lazy
 - should return a referentially transparent function for cat.lazy
-LoadBFLangsHandlerSpec:
-LoadBFLangsHandlerSpec
-- should fail on an inaccessible file
-- should correctly load languages from a file
-- should correctly load languages through loadOnly
-ListLangsHandlerSpec:
-ListLangsHandler
-- should correctly list the default language components
-TranslateHandlerSpec:
-TranslateHandler
+TranspileHandlerSpec:
+TranspileHandler
 - should fail on unknown file extensions
-- should translate hworldfl.txt to BrainFuck correctly with language override
+- should transpile hworldb.txt to Metatape correctly with language override
 - should recognize known file extensions
-- should chain translators if needed
-- should write translation to a file with the -o option
-- should not write translation to a file without the -o option
+- should build a translator path if needed
+- should write transpilation to a file with the -o option
+- should not write transpilation to a file without the -o option
+GlyphoShorthandSpec:
+GlyphoShorthand <=> Glypho
+- should preserve the behavior of hworld.glos when translating from Glypho to GlyphoShorthand
+- should preserve the behavior of hworld.glo
 FlufflePuffSpec:
 FlufflePuff <=> BrainFuck
 - should preserve the behavior of hworld.fl when translating from BrainFuck to FlufflePuff
 - should preserve the behavior of hworld.b when translating from FlufflePuff to BrainFuck
-EsoLongestMatchParserSpec:
-EsoLongestMatchParser
-- should return the longest match
-- should backtrack until success
 VolatileSpec:
 Volatile
 - should run hworld.vol correctly
 - should return a referentially transparent function for hworld.vol
-AddFileAssociationHandlerSpec:
-AddFileAssociationHandler
-- should add individual file associations
-- should add multiple file associations
+BFToPreludeSpec:
+BFToPrelude
+- should preserve the behavior of hworld.b
+BFToSNUSPSpec:
+BFToSNUSP
+- should preserve the behavior of bitWidth.b
 LazyKAnyToIotaSpec:
 LazyK_Iota <=> LazyK
 - should preserve the behavior of hworldCC.lazy when translating from LazyK to LazyK_Iota
 - should preserve the behavior of hworldIota.lazy when translating from LazyK_Iota to LazyK
 - should preserve the behavior of hworldJot.lazy when translating from LazyK to LazyK_Iota
 - should preserve the behavior of hworld.lazy when translating from LazyK to LazyK_Iota
-EsoMapParserSpec:
-EsoMapParser
-- should transform output with f
-ThueSpec:
-Thue
-- should run hworld.th correctly
-- should return a referentially transparent function for hworld.th
-RunProgHandlerSpec:
-RunProgHandler
-- should fail on an unknown file extension
-- should run hworldb.txt correctly with language override arg
-- should run adventure.unl correctly
-NULLSpec:
-NULL
-- should run hworld.nul correctly
-- should return a referentially transparent function for hworld.nul
-EsoConstantParserSpec:
-EsoConstantParser
-- should force parser output to a single value
-- should fail if p fails
-DefineBFLangHandlerSpec:
-DefineBFLangHandler
-- should correctly define a BF lang
-WSAssemblySpec:
-WSAssembly
-- should preserve the behavior of hworld.wsa
-- should preserve the structure of hworld.ws
-LazyKToJotSpec:
-LazyK_Jot <=> LazyK
-- should preserve the behavior of hworldCC.lazy when translating from LazyK to LazyK_Jot
-- should preserve the behavior of hworldIota.lazy when translating from LazyK to LazyK_Jot
-- should preserve the behavior of hworldJot.lazy when translating from LazyK_Jot to LazyK
-- should preserve the behavior of hworld.lazy when translating from LazyK to LazyK_Jot
-ClearCacheHandlerSpec:
-ClearCacheHandler
-- should clear the built program cache
-MetatapeSpec:
-Metatape
-- should run hworld.mt correctly
-- should run bitWidth.mt correctly
-- should return a referentially transparent function for hworld.mt
-- should return a referentially transparent function for bitWidth.mt
-SNUSPSpec:
-SNUSP
-- should run hworld.snusp correctly
-- should run bitWidth.snusp correctly
-- should return a referentially transparent function for hworld.snusp
-- should return a referentially transparent function for bitWidth.snusp
-ALPLSpec:
-ALPL
-- should run hworld.alpl correctly
-- should run cat.alpl correctly
-- should return a referentially transparent function for hworld.alpl
-- should return a referentially transparent function for cat.alpl
-MemTapeSpec:
-MemTape
-- should respect static size
-- should respect out-of-bounds gets when dynamic
-- should respect out-of-bounds sets when dynamic
-EsoIntoParserSpec:
-EsoIntoParser
-- should pass p's output into q
-listVarsHandlerSpec:
-listVarsHandler
-- should correctly list the default runtime parameters
-FracTranSpec:
-FracTran++
-- should run hworld.ftp correctly
-- should recognize known file extensions
-LoadBindingsHandlerSpec:
-LoadBindingsHandler
-- should correctly load bindings from provided file using -f option
-- should correctly load bindings from default file with no arguments
-- should correctly load bindings from default file with loadOnly
-WierdSpec:
-Wierd
-- should run quine.wd correctly
-- should return a referentially transparent function for quine.wd
+LoadBFLangsHandlerSpec:
+LoadBFLangsHandlerSpec
+- should fail on an inaccessible file
+- should correctly load languages from a file
+- should correctly load languages through loadOnly
 EsoAllParserSpec:
 EsoAllParser
 - should parse all tokens in input
 - should succeed on none if given 0
 - should fail if number of tokens is below quota
 - should backtrack if necessary
-FungeSpec:
-Befunge-93
-- should pass mycology
-- should return a referentially transparent function for mycology.b98
-Befunge-98
-EsoFlatMappedParserSpec:
-EsoFlatMappedParser
-- should work the do good right
-SetVarHandlerSpec:
-SetVarHandler
-- should recognize all true keywords
-- should recognize all false keywords
-- should recognize positive and negative numbers
-- should recognize character input
-- should recognize multiple assignments
-- should report invalid variable names
-- should report invalid value types
-PreludeSpec:
-Prelude
-- should run hworld.pld correctly in parallel
-- should run hworld.pld correctly in sequence
-- should return a referentially transparent function in parallel
-- should return a referentially transparent function in sequence
-BFToMetatapeSpec:
-BFToMetatape
-- should preserve the behavior of bitWidth.b
-SaveBindingsHandlerSpec:
-SaveBindingsHandler
-- should correctly save bindings to default file with no arguments
-- should correctly save bindings to provided file using -f option
+listFileAssociationsHandlerSpec:
+ListFileAssociationsHandler
+- should correctly list the default file associations
+- should correctly list the current file associations
 ListBindingsHandlerSpec:
 ListBindingsHandler
 - should correctly list the current bindings
-ClearBindingsHandlerSpec:
-ClearBindingsHandler
-- should clear all bindings
-LazyKAnyToUnlSpec:
-LazyK_Unlambda <=> LazyK
-- should preserve the behavior of hworldCC.lazy when translating from LazyK to LazyK_Unlambda
-- should preserve the behavior of hworldIota.lazy when translating from LazyK to LazyK_Unlambda
-- should preserve the behavior of hworldJot.lazy when translating from LazyK to LazyK_Unlambda
-- should preserve the behavior of hworld.lazy when translating from LazyK_Unlambda to LazyK
-GlyphoSpec:
-Glypho
-- should run hworld.glo correctly
-- should return a referentially transparent function for hworld.glo
-PATHSpec:
-PATH
-- should run hworld.path correctly
-- should return a referentially transparent function for hworld.path
-- should print ASCII values if printNum is on
+ALPLSpec:
+ALPL
+- should run hworld.alpl correctly
+- should run cat.alpl correctly
+- should return a referentially transparent function for hworld.alpl
+- should return a referentially transparent function for cat.alpl
+EsoStringParserSpec:
+EsoStringParser
+- should parse the first occurrence of its literal
+- should not parse matches that aren't at the beginning of input
+- should match longer literals
+UnlambdaSpec:
+Unlambda
+- should run hworld.unl correctly
+- should run alphatest.unl correctly
+- should run adventure.unl correctly
+- should run primes.unl correctly
+- should return a referentially transparent function for hworld.unl
+- should return a referentially transparent function for alphatest.unl
+- should return a referentially transparent function for adventure.unl
+- should return a referentially transparent function for primes.unl
+WSAssemblySpec:
+WSAssembly
+- should preserve the behavior of hworld.wsa
+- should preserve the structure of hworld.ws
+EsoLCondParserSpec:
+EsoLCondParser
+- should succeed if both succeed
+- should fail if left fails
+- should fail if right fails
+- should fail if both fail
+PlattsSpec:
+Platts
+- should run hworld.plts correctly
+- should return a referentially transparent function for hworld.plts
+FracTranSpec:
+FracTran++
+- should run hworld.ftp correctly
+- should run primes.ftp correctly
+- should return a referentially transparent function for hworld.ftp
+- should return a referentially transparent function for primes.ftp
+FracTran
+- should run primes.ft correctly
+- should return a referentially transparent function for primes.ft
+SlashesSpec:
+///
+- should run hworld.slash correctly
+- should return a referentially transparent function for hworld.slash
+LazyKToJotSpec:
+LazyK_Jot <=> LazyK
+- should preserve the behavior of hworldCC.lazy when translating from LazyK to LazyK_Jot
+- should preserve the behavior of hworldIota.lazy when translating from LazyK to LazyK_Jot
+- should preserve the behavior of hworldJot.lazy when translating from LazyK_Jot to LazyK
+- should preserve the behavior of hworld.lazy when translating from LazyK to LazyK_Jot
+PDPSpec:
+P''
+- should run hworld.pdp correctly
+- should return a referentially transparent function for hworld.pdp
+ListLangsHandlerSpec:
+ListLangsHandler
+- should correctly list the default language components
 BFISpec:
 BFBase
 - should run hworld.b correctly
@@ -413,40 +351,102 @@ bfOpt
 BFComp
 - should run hworld.b correctly
 - should run hworldBugTest.b correctly
-- should run primes.unl correctly
-- should return a referentially transparent function for hworld.unl
-- should return a referentially transparent function for alphatest.unl
-- should print detailed information if log is on
-- should print the program duration if time is on
 - should run bitWidth.b correctly
-- should print initialization time if log and time flags are on
-- should fail to read input if an inaccessible file is given
-- should read input from a file if given one
-- should run primes.ftp correctly
-- should return a referentially transparent function for hworld.ftp
-- should correctly append console input to file input if appendInp is on
-- should return a referentially transparent function for adventure.unl
-- should not append console input to file input if appendInp is off
-- should return a referentially transparent function for primes.unl
-- should limit output length if olen >= 0
-- should build a translator path if needed
-- should return a referentially transparent function for primes.ftp
-FracTran
-- should run primes.ft correctly
-- should return a referentially transparent function for primes.ft
-- should cache built programs if the cache flag is on
-- should pass mycology
-- should return a referentially transparent function for hworld.b98
-- should not cache built programs if the cache flag is off
-- should write program output to a file with the -o option
-- should not write program output to a file without the -o option
-- should fail to read program if an inaccessible file is given
 - should run mandelbrot.b correctly
 - should respect dynamic tape size setting
 - should return a referentially transparent function for hworld.b
 - should return a referentially transparent function for hworldBugTest.b
 - should return a referentially transparent function for bitWidth.b
-Run completed in 41 seconds, 473 milliseconds.
+LoadFileAssociationsHandlerSpec:
+LoadFileAssociationsHandler
+- should correctly load file associations from the default file with no arguments
+- should correctly load file associations from the provided file with -f
+- should correctly load file associations from the default file with loadOnly
+ClearCacheHandlerSpec:
+ClearCacheHandler
+- should clear the built program cache
+GrassSpec:
+Grass
+- should run hworld.grs correctly
+- should return a referentially transparent function for hworld.grs
+PrimeNumToolsSpec:
+PrimeNumTools
+- should generate a list of prime number Ints by trial division
+- should generate a list of prime number SafeLongs by trial division
+- should generate a list of prime number SafeLongs by incremental SOE
+- should correctly identify primes numbers
+- should factor a number such that it is equal to the product of its factors
+LambdaToUnlambdaSpace:
+Lambda_Calculus => Unlambda
+- should preserve the behavior of absCountUnlambda.txt
+PATHSpec:
+PATH
+- should run hworld.path correctly
+- should return a referentially transparent function for hworld.path
+WordLangSpec:
+WordLang
+- should run helloo.wl correctly
+- should run camo.wl correctly
+- should run listing.wl correctly
+- should run flag.wl correctly
+- should run letsLive.wl correctly
+- should run someday.wl correctly
+- should run listChars.wl correctly
+- should run cat.wl correctly
+- should return a referentially transparent function for helloo.wl
+- should return a referentially transparent function for camo.wl
+- should return a referentially transparent function for listing.wl
+- should return a referentially transparent function for flag.wl
+- should return a referentially transparent function for letsLive.wl
+- should return a referentially transparent function for someday.wl
+- should return a referentially transparent function for listChars.wl
+- should return a referentially transparent function for cat.wl
+EsoRegexParserSpec:
+EsoRegexParser
+- should return earliest match
+- should match anywhere in input
+- should return whole match without capture groups
+- should return only capture groups if present
+EsoFlatMappedParserSpec:
+EsoFlatMappedParser
+- should work the do good right
+EsoIntoParserSpec:
+EsoIntoParser
+- should pass p's output into q
+SaveFileAssociationsHandlerSpec:
+SaveFileAssociationsHandler
+- should correctly save file associations to the default file with no arguments
+- should correctly save file associations to the provided file with -f option
+EsoProdParserSpec:
+EsoProdParser
+- should pass correctly if both p and q pass
+- should fail if p fails
+- should fail if q fails
+- should fail if p and q fail
+EsoConcatParserSpec:
+EsoConcatParser
+- should correctly combine string output
+- should fail if p fails
+- should fail if q fails
+SetVarHandlerSpec:
+SetVarHandler
+- should recognize all true keywords
+- should recognize all false keywords
+- should recognize positive and negative numbers
+- should recognize character input
+- should recognize multiple assignments
+- should report invalid variable names
+- should report invalid value types
+ExitHandlerSpec:
+ExitHandler
+- should return the halt state
+MetatapeSpec:
+Metatape
+- should run hworld.mt correctly
+- should run bitWidth.mt correctly
+- should return a referentially transparent function for hworld.mt
+- should return a referentially transparent function for bitWidth.mt
+Run completed in 1 minute, 39 seconds.
 Total number of tests run: 284
 Suites: completed 80, aborted 0
 Tests: succeeded 284, failed 0, canceled 0, ignored 0, pending 0
