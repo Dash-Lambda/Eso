@@ -546,6 +546,7 @@ class ListLangsHandlerSpec extends CommandHandlerSpec{
       |- BrainFuck => Prelude
       |- BrainFuck => SNUSP
       |- BrainFuck => Scala
+      |- Deadfish => BrainFuck
       |- Lambda_Calculus => LazyK_Unlambda
       |- Lambda_Calculus => Unlambda
       |- WhiteSpace => Scala

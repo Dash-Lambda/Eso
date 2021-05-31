@@ -89,6 +89,10 @@ LazyK_Unlambda <=> LazyK
 - should preserve the behavior of hworldIota.lazy when translating from LazyK to LazyK_Unlambda
 - should preserve the behavior of hworldJot.lazy when translating from LazyK to LazyK_Unlambda
 - should preserve the behavior of hworld.lazy when translating from LazyK_Unlambda to LazyK
+DFToBFSpec:
+DFToBF
+- should preserve the behavior of hworld.df
+- should print numbers if dfChar is false
 ClearBindingsHandlerSpec:
 ClearBindingsHandler
 - should clear all bindings
@@ -446,8 +450,8 @@ Metatape
 - should run bitWidth.mt correctly
 - should return a referentially transparent function for hworld.mt
 - should return a referentially transparent function for bitWidth.mt
-Run completed in 1 minute, 39 seconds.
-Total number of tests run: 284
-Suites: completed 80, aborted 0
-Tests: succeeded 284, failed 0, canceled 0, ignored 0, pending 0
+Run completed in 1 minute, 37 seconds.
+Total number of tests run: 286
+Suites: completed 81, aborted 0
+Tests: succeeded 286, failed 0, canceled 0, ignored 0, pending 0
 All tests passed.
