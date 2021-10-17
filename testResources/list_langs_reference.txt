@@ -1,0 +1,52 @@
+Languages...
+- ///
+- ALPL
+- Befunge-93
+- Befunge-98
+- BrainFuck
+- Deadfish
+- Emmental
+- FracTran
+- FracTran++
+- Glypho
+- Grass
+- LazyBird
+- LazyK
+- Metatape
+- NULL
+- P''
+- PATH
+- Platts
+- Prelude
+- SNUSP
+- Scala
+- Senpai
+- Thue
+- Unlambda
+- Volatile
+- WhiteSpace
+- Wierd
+- WordLang
+
+Translators...
+- FlufflePuff <=> BrainFuck
+- GlyphoShorthand <=> Glypho
+- LazyK_CC <=> LazyK
+- LazyK_Iota <=> LazyK
+- LazyK_Jot <=> LazyK
+- LazyK_Unlambda <=> LazyK
+- Ook <=> BrainFuck
+- WSAssembly <=> WhiteSpace
+
+Transpilers...
+- BrainFuck => C++
+- BrainFuck => LazyK
+- BrainFuck => Metatape
+- BrainFuck => Prelude
+- BrainFuck => SNUSP
+- BrainFuck => Scala
+- Deadfish => BrainFuck
+- Lambda_Calculus => LazyK_Unlambda
+- Lambda_Calculus => Unlambda
+- WhiteSpace => Scala
+

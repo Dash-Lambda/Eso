@@ -1,5 +1,5 @@
 ThisBuild / scalaVersion     := "2.13.3"
-ThisBuild / version          := "2.5.5"
+ThisBuild / version          := "2.6.0"
 ThisBuild / organization     := "com.github.dashlambda"
 ThisBuild / organizationName := "dashlambda"
 
@@ -22,5 +22,6 @@ lazy val root = (project in file("."))
       "org.scalactic" %% "scalactic" % "3.2.9",
       "org.scalatest" %% "scalatest" % "3.2.9" % "test"),
     assembly / assemblyJarName := s"Eso-${version.value}.jar",
-    assembly / mainClass := Some("ui.NonPersistent")
+    assembly / mainClass := Some("ui.NonPersistent"),
+    assembly / assemblyOption ~= { _.withCacheOutput(false) }
   )

@@ -18,6 +18,7 @@ import pdoubleprime.PDP
 import platts.Platts
 import prelude.{BFToPrelude, Prelude}
 import scala_run.ScalaRun
+import senpai.Senpai
 import slashes.Slashes
 import snusp.{BFToSNUSP, SNUSP}
 import thue.Thue
@@ -70,7 +71,8 @@ object EsoDefaults extends EsoObj{
     ("wl", "WordLang"),
     ("lazy", "LazyK"),
     ("alpl", "ALPL"),
-    ("lzb", "LazyBird"))
+    ("lzb", "LazyBird"),
+    ("senpai", "Senpai"))
   val fileExtensionMap: immutable.HashMap[String, String] = mkMap(fileExtensionsVec)
   
   val defInterpVec: Vector[Interpreter] = Vector[Interpreter](
@@ -100,7 +102,8 @@ object EsoDefaults extends EsoObj{
     WordLang,
     LazyK,
     ALPL,
-    LazyBird)
+    LazyBird,
+    Senpai)
   val defTransVec: Vector[Translator] = Vector[Translator](FlufflePuff, Ook, WSAssembly, GlyphoShorthand, LazyKAnyToUnl, LazyKAnyToIota, LazyKAnyToCC, LazyKAnyToJot)
   val defGenVec: Vector[Transpiler] = Vector[Transpiler](BFToScala, BFToCPP, WhiteSpaceToScala, BFToSNUSP, BFToMetatape, BFToPrelude, BFToLazyK, LambdaToLazyKUnl, LambdaToUnlambda, DFToBF)
   

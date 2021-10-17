@@ -89,7 +89,8 @@ Current native language support (mostly in chronological order):
 27. [LazyK](https://esolangs.org/wiki/Lazy_K)
 28. [ALPL](https://esolangs.org/wiki/ALPL)
 29. [LazyBird](https://esolangs.org/wiki/Lazy_Bird)
-30. Scala
+30. [Senpai](https://esolangs.org/wiki/Senpai) (Currently missing module import command)
+31. Scala
 
 ### Current features:
 * Run programs from text files

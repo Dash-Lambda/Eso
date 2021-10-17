@@ -317,6 +317,15 @@ FracTran++
 FracTran
 - should run primes.ft correctly
 - should return a referentially transparent function for primes.ft
+SenpaiSpec:
+Senpai
+- should run hworld.senpai correctly
+- should run cat.senpai correctly
+- should run truthmachine0.senpai correctly
+- should run truthmachine1.senpai correctly
+- should run fizzbuzz.senpai correctly
+- should run quine.senpai correctly
+- should run beer.senpai correctly
 SlashesSpec:
 ///
 - should run hworld.slash correctly
@@ -450,8 +459,8 @@ Metatape
 - should run bitWidth.mt correctly
 - should return a referentially transparent function for hworld.mt
 - should return a referentially transparent function for bitWidth.mt
-Run completed in 1 minute, 27 seconds.
-Total number of tests run: 286
-Suites: completed 81, aborted 0
-Tests: succeeded 286, failed 0, canceled 0, ignored 0, pending 0
+Run completed in 1 minute, 46 seconds.
+Total number of tests run: 293
+Suites: completed 82, aborted 0
+Tests: succeeded 293, failed 0, canceled 0, ignored 0, pending 0
 All tests passed.

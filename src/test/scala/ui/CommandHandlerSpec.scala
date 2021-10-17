@@ -499,59 +499,7 @@ class SetDefaultsHandlerSpec extends CommandHandlerSpec{
 class ListLangsHandlerSpec extends CommandHandlerSpec{
   def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = ListLangsHandler(eio)
   
-  val ref: String =
-    """Languages...
-      |- ///
-      |- ALPL
-      |- Befunge-93
-      |- Befunge-98
-      |- BrainFuck
-      |- Deadfish
-      |- Emmental
-      |- FracTran
-      |- FracTran++
-      |- Glypho
-      |- Grass
-      |- LazyBird
-      |- LazyK
-      |- Metatape
-      |- NULL
-      |- P''
-      |- PATH
-      |- Platts
-      |- Prelude
-      |- SNUSP
-      |- Scala
-      |- Thue
-      |- Unlambda
-      |- Volatile
-      |- WhiteSpace
-      |- Wierd
-      |- WordLang
-      |
-      |Translators...
-      |- FlufflePuff <=> BrainFuck
-      |- GlyphoShorthand <=> Glypho
-      |- LazyK_CC <=> LazyK
-      |- LazyK_Iota <=> LazyK
-      |- LazyK_Jot <=> LazyK
-      |- LazyK_Unlambda <=> LazyK
-      |- Ook <=> BrainFuck
-      |- WSAssembly <=> WhiteSpace
-      |
-      |Transpilers...
-      |- BrainFuck => C++
-      |- BrainFuck => LazyK
-      |- BrainFuck => Metatape
-      |- BrainFuck => Prelude
-      |- BrainFuck => SNUSP
-      |- BrainFuck => Scala
-      |- Deadfish => BrainFuck
-      |- Lambda_Calculus => LazyK_Unlambda
-      |- Lambda_Calculus => Unlambda
-      |- WhiteSpace => Scala
-      |
-      |""".stripMargin
+  val ref: String = grabFile("list_langs_reference.txt")
   
   "ListLangsHandler" should "correctly list the default language components" in {
     val (_, res) = runWithArgs()()()
@@ -561,33 +509,7 @@ class ListLangsHandlerSpec extends CommandHandlerSpec{
 class listVarsHandlerSpec extends CommandHandlerSpec{
   def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = ListVarsHandler(eio)
   
-  val ref: String =
-    """Runtime Parameters...
-      |- appendInp     	= false	(append console input to the end of file input (useful for some self-interpreters))
-      |- bfDiv         	= true 	(toggle whether or not divison by 0 evaluates to 0 in Befunge-98)
-      |- bfRetCode     	= false	(toggle whether or not the Befunge-98 return code is displayed)
-      |- cache         	= true 	(cache initialized state of programs for faster repeated loading)
-      |- debug         	= false	(toggle debug information for the interface and languages that support it)
-      |- dfChar        	= true 	(toggle whether or not to print Deadfish output as char values)
-      |- dyn           	= false	(resize tape as needed for BF interpreter to eliminate memory limitations)
-      |- echoFileInp   	= false	(print file input to the console as it is used, makes it look as if the input was entered into the console directly)
-      |- fPtr          	= true 	(toggle whether output for P'' programs starts at the read head going right or at the end of the tape going left)
-      |- indent        	= false	(toggle whether or not to neatly indent generated Scala code)
-      |- log           	= false	(toggle detailed console logging)
-      |- normLineBreaks	= true 	(normalize all line breaks to '\n' when reading source files (for instance, '\r\n' => '\n'))
-      |- pNull         	= false	(toggle whether to print the null/empty character in the output of P'' programs)
-      |- preludePar    	= false	(run Prelude voices in parallel, can speed up execution of some programs)
-      |- printNum      	= false	(print output as numerical values rather than characters)
-      |- sHead         	= true 	(toggle whether the read head starts at the beginning of the initial tape or the right end of the tape for P'')
-      |- time          	= false	(print program duration on completion)
-      |- bfOpt         	= 2    	(BrainFuck interpreter selection: 0=base, 1=optimized, 2=compiled)
-      |- charWidth     	= 8    	(bit width of input characters for languages that do bitwise I/O)
-      |- fileEOF       	= 0    	(character value to end file input strings with)
-      |- init          	= 40000	(initial tape size for interpreters with a data tape)
-      |- methSize      	= 1000 	(maximum number of blocks in a generated method (for compiling interpreters)
-      |- olen          	= -1   	(maximum output length, useful for non-terminating programs, -1=infinite)
-      |
-      |""".stripMargin
+  val ref: String = grabFile("help_reference.txt")
   
   "listVarsHandler" should "correctly list the default runtime parameters" in {
     val (_, res) = runWithArgs()()()
@@ -597,42 +519,7 @@ class listVarsHandlerSpec extends CommandHandlerSpec{
 class listFileAssociationsHandlerSpec extends CommandHandlerSpec{
   def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = ListFileAssociationsHandler(eio)
   
-  val ref: String =
-    """|File Associations...
-       |- .alpl => ALPL
-       |- .b => BrainFuck
-       |- .b93 => Befunge-93
-       |- .b98 => Befunge-98
-       |- .cpp => C++
-       |- .df => Deadfish
-       |- .emm => Emmental
-       |- .fl => FlufflePuff
-       |- .ft => FracTran
-       |- .ftp => FracTran++
-       |- .glo => Glypho
-       |- .glos => GlyphoShorthand
-       |- .grs => Grass
-       |- .lazy => LazyK
-       |- .lzb => LazyBird
-       |- .mt => Metatape
-       |- .nul => NULL
-       |- .ook => Ook
-       |- .path => PATH
-       |- .pdp => P''
-       |- .pld => Prelude
-       |- .plts => Platts
-       |- .scala => Scala
-       |- .slash => ///
-       |- .snusp => SNUSP
-       |- .th => Thue
-       |- .unl => Unlambda
-       |- .vol => Volatile
-       |- .wd => Wierd
-       |- .wl => WordLang
-       |- .ws => WhiteSpace
-       |- .wsa => WSAssembly
-       |
-       |""".stripMargin
+  val ref: String = grabFile("file_association_reference.txt")
   
   "ListFileAssociationsHandler" should "correctly list the default file associations" in {
     val (_, res) = runWithArgs()()()
@@ -654,7 +541,7 @@ class listFileAssociationsHandlerSpec extends CommandHandlerSpec{
 class SaveFileAssociationsHandlerSpec extends CommandHandlerSpec{
   def currentHandler(eio: EsoTestInterface, efi: EsoFileInterface): CommandHandler = SaveFileAssociationsHandler(efi)
   
-  val refStr: String = """{"alpl":"ALPL","b":"BrainFuck","b93":"Befunge-93","b98":"Befunge-98","cpp":"C++","df":"Deadfish","emm":"Emmental","fl":"FlufflePuff","ft":"FracTran","ftp":"FracTran++","glo":"Glypho","glos":"GlyphoShorthand","grs":"Grass","lazy":"LazyK","lzb":"LazyBird","mt":"Metatape","names":["ftp","lazy","slash","th","df","b98","wl","b93","ws","pld","plts","grs","path","mt","pdp","cpp","lzb","glo","nul","glos","b","emm","fl","vol","alpl","unl","scala","ft","ook","wd","wsa","snusp"],"nul":"NULL","ook":"Ook","path":"PATH","pdp":"P''","pld":"Prelude","plts":"Platts","scala":"Scala","slash":"///","snusp":"SNUSP","th":"Thue","unl":"Unlambda","vol":"Volatile","wd":"Wierd","wl":"WordLang","ws":"WhiteSpace","wsa":"WSAssembly"}"""
+  val refStr: String = grabFile("file_association_reference.json")
   
   "SaveFileAssociationsHandler" should "correctly save file associations to the default file with no arguments" in {
     val efi = MutableContainedFileInterface.withElms()

@@ -1,0 +1,28 @@
+Senpai? Can I see your range? 
+Your range is very 100!
+Senpai? Can I see your d?
+Your d is very 0!
+Senpai? Can I see your b?
+Let's keep this going as long as you no-likey d is equal to range:
+    Your d is very d and 1!
+    If you likey (d mod 5 is equal to 0) and also (d mod 15 is not equal to 0):
+        Your b is very "Buzz"!
+        Show me your b!
+    Otherwise:
+        If you likey (d mod 3 is equal to 0) and also (d mod 15 is not equal to 0):
+            Your b is very "Fizz"!
+            Show me your b!
+        Otherwise: 
+            If you no-likey d mod 15:
+                Your b is very "FizzBuzz"!
+                Show me your b!
+            Otherwise:
+                    If you likey (d mod 3) either or (d mod 5):
+                        Show me your d!
+                    Let's move on now!
+            Let's move on now!
+        Let's move on now!
+    Let's move on now!
+    Show me your love!
+    Notice me, senpai!
+We can stop now!
