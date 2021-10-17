@@ -96,6 +96,7 @@ case class RunProgHandler(eio: EsoIOInterface = EsoConsoleInterface, efi: EsoFil
     
     def printer(out: Seq[Char]): Unit = args.get("o") match{
       case Some(onam) =>
+        efi.writeFile(onam, "")
         out foreach{c =>
           val str = if(printNum) c.toInt.toString + ' ' else c.toString
           eio.print(str)

@@ -1,8 +1,7 @@
 package ui
 
-import java.io.{File, PrintWriter}
+import java.io.{File, FileOutputStream, PrintWriter}
 import java.nio.file.{Files, Paths}
-
 import common.{EsoExcep, EsoObj}
 
 import scala.collection.{immutable, mutable}
@@ -51,7 +50,7 @@ object SystemFileInterface extends EsoFileInterface{
     this}
   
   def appendFile(fnam: String, str: String): EsoFileInterface = {
-    val of = new PrintWriter(new File(fnam))
+    val of = new PrintWriter(new FileOutputStream(new File(fnam), true))
     of.append(str)
     of.close()
     this}
