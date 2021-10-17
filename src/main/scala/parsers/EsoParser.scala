@@ -15,6 +15,7 @@ trait EsoParser[+A] extends ((String, Int) => ParseTramp[(A, String, Int, Int)])
   def matches(inp: String): Boolean = apply(inp).passed
   
   def iterator(inp: String): Iterator[(A, String, Int, Int)] = Iterator.unfold(0: Int)(i => apply(inp, i).result.get.map(r => (r, r._4)))
+  def lazily(inp: String): LazyList[(A, String, Int, Int)] = iterator(inp).to(LazyList)
   def alternatives: LazyList[EsoParser[A]] = LazyList(this)
   
   def <|[B](q: => EsoParser[B]): EsoParser[A] = lcond(this, q)
@@ -34,7 +35,16 @@ trait EsoParser[+A] extends ((String, Int) => ParseTramp[(A, String, Int, Int)])
   
   def ^^[U](f: A => U): EsoParser[U] = map(f)
   def ^^^[U](v: => U): EsoParser[U] = map(_ => v)
+  def collect[U](f: PartialFunction[A, U]): EsoParser[U] = (inp, ind) => delay(inp, ind) flatMap{
+    case (r, i, s, e) => f.lift(r) match{
+      case Some(x) => Parsed((x, i, s, e))
+      case None => ParseFail}}
+  def collectAll[U](f: PartialFunction[(A, String, Int, Int), U]): EsoParser[U] = (inp, ind) => delay(inp, ind) flatMap{
+    case (r, i, s, e) => f.lift((r, i, s, e)) match{
+      case Some(x) => Parsed((x, i, s, e))
+      case None => ParseFail}}
   def map[U](f: A => U): EsoParser[U] = mapped(this)(f)
+  def mapAll[U](f: (A, String, Int, Int) => U): EsoParser[U] = allMapped(this)(f)
   def flatMap[U](f: A => EsoParser[U]): EsoParser[U] = (inp, ind) => delay(inp, ind) flatMap{
     case (r, i, s, e) =>
       f(r).delay(i, e) map{
@@ -51,6 +61,7 @@ trait EsoParser[+A] extends ((String, Int) => ParseTramp[(A, String, Int, Int)])
 object EsoParser{
   import CombinatorFuncs.{RegexParser, StringParser, alt}
   def empty[A](v: => A): EsoParser[A] = (inp, ind) => Parsed((v, inp, ind, ind))
+  def C(ch: Char): EsoParser[String] = StringParser(ch.toString)
   def S(str: String): EsoParser[String] = StringParser(str)
   def R(regex: Regex): EsoParser[String] = RegexParser(regex)
   def R(regex: String): EsoParser[String] = RegexParser(regex.r)
@@ -187,6 +198,9 @@ object CombinatorFuncs{
   def allFlatMapped[A, B](p: => EsoParser[A])(comp: (A, String, Int, Int) => ParseTramp[(B, String, Int, Int)]): EsoParser[B] = AllFlatMapParser(() => p, comp)
   def mapped[A, B](p: => EsoParser[A])(f: A => B): EsoParser[B] = {
     def fun(r: A, i: String, s: Int, e: Int): ParseTramp[(B, String, Int, Int)] = Parsed((f(r), i, s, e)) // Maybe Scala 3 will have more robust lambda typing...
+    AllFlatMapParser(() => p, fun)}
+  def allMapped[A, B](p: => EsoParser[A])(f: (A, String, Int, Int) => B): EsoParser[B] = {
+    def fun(r: A, i: String, s: Int, e: Int): ParseTramp[(B, String, Int, Int)] = Parsed((f(r, i, s, e), i, s, e))
     AllFlatMapParser(() => p, fun)}
   def combine[A, B, C](p: => EsoParser[A], q: => EsoParser[B])(f: ((A, String, Int, Int), (B, String, Int, Int)) => (C, String, Int, Int)): CombineParser[A, B, C] = CombineParser(() => p, () => q, f)
   
