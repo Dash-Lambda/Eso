@@ -1,6 +1,6 @@
 package ui
 
-import brainfuck.{BFTranslator, GenBFT}
+import languages.brainfuck.{BFTranslator, GenBFT}
 import common.{DoOrErr, DoOrNull, DoOrOp, Done, EsoExcep, EsoObj, TimeIt, Trampoline}
 import org.typelevel.jawn.Parser
 import org.typelevel.jawn.ast.{JArray, JNull, JObject, JString, JValue}

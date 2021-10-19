@@ -1,32 +1,32 @@
 package ui
 
-import alpl.ALPL
-import brainfuck._
+import languages.alpl.ALPL
+import languages.brainfuck._
 import common.{EsoObj, Interpreter, Translator, Transpiler}
-import deadfish.Deadfish
-import emmental.Emmental
-import fractran.{FracTran, FracTranpp}
-import funge.{Befunge93, Befunge98}
-import glypho.{Glypho, GlyphoShorthand}
-import grass.Grass
-import lazybird.LazyBird
-import lazyk._
-import metatape.{BFToMetatape, Metatape}
-import null_lang.NULL
-import path.PATH
-import pdoubleprime.PDP
-import platts.Platts
-import prelude.{BFToPrelude, Prelude}
-import scala_run.ScalaRun
-import senpai.Senpai
-import slashes.Slashes
-import snusp.{BFToSNUSP, SNUSP}
-import thue.Thue
-import unlambda.{LambdaToUnlambda, Unlambda}
-import volatile.Volatile
-import whitespace.{WSAssembly, WhiteSpace, WhiteSpaceToScala}
-import wierd.Wierd
-import wordlang.WordLang
+import languages.deadfish.Deadfish
+import languages.emmental.Emmental
+import languages.fractran.{FracTran, FracTranpp}
+import languages.funge.{Befunge93, Befunge98}
+import languages.glypho.{Glypho, GlyphoShorthand}
+import languages.grass.Grass
+import languages.lazybird.LazyBird
+import languages.lazyk._
+import languages.metatape.{BFToMetatape, Metatape}
+import languages.null_lang.NULL
+import languages.path.PATH
+import languages.pdoubleprime.PDP
+import languages.platts.Platts
+import languages.prelude.{BFToPrelude, Prelude}
+import languages.scala_run.ScalaRun
+import languages.senpai.Senpai
+import languages.slashes.Slashes
+import languages.snusp.{BFToSNUSP, SNUSP}
+import languages.thue.Thue
+import languages.unlambda.{LambdaToUnlambda, Unlambda}
+import languages.volatile.Volatile
+import languages.whitespace.{WSAssembly, WhiteSpace, WhiteSpaceToScala}
+import languages.wierd.Wierd
+import languages.wordlang.WordLang
 
 import scala.collection.immutable
 

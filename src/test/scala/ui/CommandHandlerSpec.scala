@@ -1,8 +1,8 @@
 package ui
 
-import brainfuck.{BFOpt, BFTranslator, GenBFT, Ook}
+import languages.brainfuck.{BFOpt, BFTranslator, GenBFT, Ook}
 import common_test.EsoSpec
-import metatape.Metatape
+import languages.metatape.Metatape
 
 import scala.collection.immutable
 import scala.util.{Failure, Success}
